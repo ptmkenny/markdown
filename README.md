@@ -6,12 +6,13 @@ The Markdown syntax is designed to co-exist with HTML, so you can set up input
 formats with both HTML and Markdown support. It is also meant to be as
 human-readable as possible when left as "source".
 
-While there are several types of PHP Markdown parsing libraries out there, this
-module requires [thephpleague/commonmark] as the default/fallback parser.
- 
 There is current an issue open to make CommonMark the "official" [Drupal Coding
 Standard].
 
+While there are several types of PHP Markdown parsing libraries out there, this
+module requires [thephpleague/commonmark] as the default/fallback parser in a
+preemptive acceptance of the [Drupal Coding Standard].
+ 
 This module also supports additional PHP Markdown parsers for backwards
 compatibility reasons and in an effort to open up other options, should you
 desire a different solution:
@@ -82,21 +83,21 @@ If you need to parse Markdown in other services, inject it as a dependency:
 ```php
 <?php
 
-use \Drupal\markdown\Markdown;  
+use \Drupal\markdown\MarkdownInterface;  
 
 class MyService {
   
   /**
    * The Markdown service.
    * 
-   * @var \Drupal\markdown\Markdown
+   * @var \Drupal\markdown\MarkdownInterface
    */
   protected $markdown;
   
   /**
    * MyService constructor. 
    */
-  public function __construct(Markdown $markdown) {
+  public function __construct(MarkdownInterface $markdown) {
     $this->markdown = $markdown;
   }
   
@@ -137,11 +138,61 @@ class MyController {
 }
 ```
 
+## Twig Extensions
+
+This module also provides the following Twig extensions for use in templates:
+
+### Filter/Function
+
+For simple strings or variables, you can use the `markdown` filter or function:
+
+Filter:
+```twig
+{{ "# Some Markdown"|markdown }}
+{{ variableContiningMarkdown|markdown }}
+```
+
+Function:
+```twig
+{{ markdown("# Some Markdown") }}
+{{ markdown(variableContiningMarkdown) }}
+```
+
+### Tag
+
+If you have more than a single line of Markdown, use the `markdown` tag:
+
+```twig
+{% markdown %}
+  # Some Markdown
+  
+  > This is some _simple_ **markdown** content.
+{% endmarkdown %}
+```
+    
+### Global
+
+For more advanced use cases, you can use the `markdown` global for direct
+access to the `MarkdownInterface` instance.
+
+Generally speaking, it is not recommended that you use this. Doing so will
+bypass any existing permissions the current user may have in regards to
+filters.
+
+However, this is particularly useful if you want to specify a specific parser
+to use (if you have multiple installed):
+
+```twig
+{{ markdown.getParser('parsedown').parse("# Some Markdown") }}
+{{ markdown.getParser('parsedown').parse(variableContiningMarkdown) }}
+```
+
+
 ## Markdown editor
 If you are interested in a Markdown editor please check out
 the Markdown editor for BUEditor module.
 
-<http://drupal.org/project/markdowneditor>
+<https://drupal.org/project/markdowneditor>
 
 ## Notes
 Markdown may conflict with other input filters, depending on the order
@@ -175,17 +226,13 @@ This module is a continuation of the Markdown with Smartypants module.
 It only includes Markdown support and it is now suggested that you use
 Typogrify module if you are interested in Smartypants support.
 
-<http://drupal.org/project/typogrify>
+<https://drupal.org/project/typogrify>
 
 [CommonMark]: http://commonmark.org/
 [CommonMark Attributes Extension]: https://github.com/webuni/commonmark-attributes-extension
 [CommonMark Table Extension]: https://github.com/webuni/commonmark-table-extension
-[Composer Manager]: https://www.drupal.org/project/composer_manager
-[Drupal Composer Packagist]: https://packagist.drupal-composer.org/packages/drupal/commonmark
 [Drupal Coding Standard]: https://www.drupal.org/project/coding_standards/issues/2952616
 [erusev/parsedown]: https://github.com/erusev/parsedown
 [michelf/php-markdown]: https://github.com/michelf/php-markdown
 [thephpleague/commonmark]: https://github.com/thephpleague/commonmark
-[Registry Autoload]: https://www.drupal.org/project/registry_autoload
-[The League of Extraordinary Packages]: http://commonmark.thephpleague.com/
-[X Autoload]: https://www.drupal.org/project/xautoload
+[The League of Extraordinary Packages]: https://commonmark.thephpleague.com/
