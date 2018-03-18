@@ -1,0 +1,12 @@
+services:
+  markdown:
+    class: \Drupal\markdown\Markdown
+    arguments: ['@plugin.manager.markdown.parser']
+
+  plugin.manager.markdown.parser:
+    class: \Drupal\markdown\MarkdownParserPluginManager
+    arguments: ['@container.namespaces', '@cache.discovery', '@module_handler', '@config.factory']
+
+  plugin.manager.markdown.extension:
+    class: \Drupal\markdown\MarkdownExtensionPluginManager
+    arguments: ['@container.namespaces', '@cache.discovery', '@module_handler']

@@ -1,3 +1,5 @@
+# @todo Remove/refactor before release.
+
 php-markdown:
   remote: https://github.com/michelf/php-markdown
   version: VERSION

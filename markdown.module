@@ -2,13 +2,15 @@
 
 /**
  * @file
- * Provides a Markdown input filter.
+ * Markdown module.
  */
 
 use Drupal\Core\Routing\RouteMatchInterface;
 
 /**
  * Implements hook_help().
+ *
+ * @todo Refactor before release.
  */
 function markdown_help($route_name, RouteMatchInterface $route_match) {
   switch ($route_name) {
@@ -19,6 +21,8 @@ function markdown_help($route_name, RouteMatchInterface $route_match) {
 
 /**
  * Implements hook_libraries_info().
+ *
+ * @todo Remove/refactor before release.
  */
 function markdown_libraries_info() {
   $libraries['php-markdown'] = [
@@ -67,4 +71,57 @@ function markdown_migration_plugins_alter(array &$migrations) {
     // Add mapping from filter_markdown to markdown for D7 migratins.
     $migration['process']['filters']['process']['id']['map']['filter_markdown'] = 'markdown';
   }
+}
+
+/**
+ * Retrieves the path to a vendor/package based library from Packagist.
+ *
+ * @param string $vendor
+ *   The vendor name.
+ * @param string $package
+ *   The package name.
+ * @param bool $absolute
+ *   Toggle determining whether or not to return an absolute path.
+ *
+ * @return string|false
+ *   The path to the commonmark library or FALSE if not found.
+ *
+ * @todo Remove/refactor before release.
+ */
+function markdown_get_library_path($vendor, $package, $absolute = TRUE) {
+  $path = FALSE;
+  $site_path = \Drupal::service('site.path');
+
+  // Search directories (similar to libraries_get_libraries() implementation).
+  $directories = [
+    'libraries',
+    $site_path . '/libraries',
+    drupal_get_path('profile', \Drupal::installProfile()) . '/libraries',
+    'sites/all/libraries',
+  ];
+
+  // Variant sub-directories based on the vendor or package names.
+  $variants = [
+    "$vendor/$package",
+    "$vendor-$package",
+    $vendor . '_' . $package,
+    $package,
+  ];
+
+  // Iterate over each search directory and variant.
+  foreach ($directories as $key => $directory) {
+    if (!is_dir($directory)) {
+      unset($directories[$key]);
+      continue;
+    }
+    foreach ($variants as $variant) {
+      if (file_exists("$directory/$variant")) {
+        $path = "$directory/$variant";
+        break 2;
+      }
+    }
+  }
+
+  // Return the path, absolute if necessary.
+  return $path && $absolute ? \Drupal::root() . $path : $path;
 }

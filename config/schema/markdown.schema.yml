@@ -1,7 +1,7 @@
 markdown.settings:
   type: config_object
-  label: 'Markdown settings'
+  label: 'Markdown Settings'
   mapping:
-    markdown_library:
+    parser:
       type: string
-      label: 'Markdown library'
+      label: 'Markdown Parser'

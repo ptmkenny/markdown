@@ -1,1 +1,1 @@
-markdown_library: 'php-markdown'
+parser: 'commonmark'

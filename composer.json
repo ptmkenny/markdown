@@ -3,14 +3,26 @@
   "description": "Allows content to be submitted using Markdown, a simple plain-text syntax that is transformed into valid HTML.",
   "type": "drupal-module",
   "homepage": "https://www.drupal.org/project/markdown",
+  "license": "GPL-2.0+",
+  "authors": [
+    {
+      "name": "Mark Carver (markcarver)",
+      "homepage": "https://www.drupal.org/u/markcarver",
+      "role": "Maintainer"
+    },
+    {
+      "name": "Gisle Hannemyr (gisle)",
+      "homepage": "https://www.drupal.org/u/gisle",
+      "role": "Co-Maintainer"
+    }
+  ],
   "support": {
     "issues": "https://www.drupal.org/project/markdown",
     "source": "https://cgit.drupalcode.org/markdown"
   },
-  "license": "GPL-2.0+",
   "minimum-stability": "dev",
   "require": {
-    "league/commonmark": "^0.15.0",
-    "michelf/php-markdown": "^1.6"
+    "php": ">=5.6.0",
+    "league/commonmark": "^0.15|^1.0"
   }
 }
