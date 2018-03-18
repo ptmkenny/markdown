@@ -3,13 +3,13 @@
 namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Component\Plugin\PluginInspectionInterface;
-use Drupal\markdown\MarkdownInterface;
+use Drupal\Core\Language\LanguageInterface;
 use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
 
 /**
  * Interface MarkdownInterface.
  */
-interface MarkdownParserInterface extends MarkdownInterface, PluginInspectionInterface {
+interface MarkdownParserInterface extends PluginInspectionInterface {
 
   /**
    * Builds a guide on how to use the Markdown Parser.
@@ -64,14 +64,6 @@ interface MarkdownParserInterface extends MarkdownInterface, PluginInspectionInt
   public function getVersion();
 
   /**
-   * Indicates whether the parser is available.
-   *
-   * @return bool
-   *   TRUE or FALSE
-   */
-  public function isAvailable();
-
-  /**
    * Displays the human-readable label of the MarkdownParser plugin.
    *
    * @param bool $show_version
@@ -81,6 +73,19 @@ interface MarkdownParserInterface extends MarkdownInterface, PluginInspectionInt
    *   The label.
    */
   public function label($show_version = TRUE);
+
+  /**
+   * Parse markdown into HTML.
+   *
+   * @param string $markdown
+   *   The markdown string to parse.
+   * @param \Drupal\Core\Language\LanguageInterface $language
+   *   Optional. The language of the text that is being converted.
+   *
+   * @return string
+   *   The converted markup.
+   */
+  public function parse($markdown, LanguageInterface $language = NULL);
 
   /**
    * Generates a filter's tip.

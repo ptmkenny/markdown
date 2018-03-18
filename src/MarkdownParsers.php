@@ -2,10 +2,9 @@
 
 namespace Drupal\markdown;
 
-use Drupal\Component\Plugin\FallbackPluginManagerInterface;
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\Core\Session\AccountInterface;
@@ -14,14 +13,13 @@ use Drupal\filter\Plugin\FilterInterface;
 use Drupal\markdown\Annotation\MarkdownParser;
 use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Class MarkdownParserPluginManager.
+ * Class MarkdownParsers.
  */
-class MarkdownParserPluginManager extends DefaultPluginManager implements ContainerAwareInterface, ContainerInjectionInterface, FallbackPluginManagerInterface {
+class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInterface {
 
   use ContainerAwareTrait;
   use StringTranslationTrait;
@@ -59,6 +57,19 @@ class MarkdownParserPluginManager extends DefaultPluginManager implements Contai
 
   /**
    * {@inheritdoc}
+   */
+  protected function alterDefinitions(&$definitions) {
+    // Remove any plugins that don't actually have the parser installed.
+    foreach ($definitions as $plugin_id => $definition) {
+      if (!class_exists($definition['checkClass'])) {
+        unset($definitions[$plugin_id]);
+      }
+    }
+    parent::alterDefinitions($definitions);
+  }
+
+  /**
+   * {@inheritdoc}
    *
    * @return \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
    *   A MarkdownParser plugin.
@@ -69,6 +80,9 @@ class MarkdownParserPluginManager extends DefaultPluginManager implements Contai
 
     $plugin_id = $filter ? $filter->getSetting('parser', $plugin_id) : $plugin_id;
 
+    // Set the settings.
+    $configuration['settings'] = NestedArray::mergeDeep($this->settings->get($plugin_id) ?: [], $filter ? $filter->getParserSettings() : []);
+
     /** @var \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface $parser */
     $parser = parent::createInstance($plugin_id, $configuration);
 
@@ -76,17 +90,9 @@ class MarkdownParserPluginManager extends DefaultPluginManager implements Contai
   }
 
   /**
-   * Retrieves the a filter plugin instance based on passed configuration.
-   *
-   * @param string $plugin_id
-   *   The ID of the plugin being instantiated.
-   * @param array $configuration
-   *   An array of configuration relevant to the plugin instance.
-   *
-   * @return \Drupal\markdown\Plugin\Filter\MarkdownFilterInterface|null
-   *   A MarkdownFilter instance or NULL if it could not be determined.
+   * {@inheritdoc}
    */
-  protected function getFilter($plugin_id = 'commonmark', array &$configuration = []) {
+  public function getFilter($parser = 'commonmark', array &$configuration = []) {
     $filter = isset($configuration['filter']) ? $configuration['filter'] : NULL;
     $account = isset($configuration['account']) ? $configuration['account'] : NULL;
     unset($configuration['account']);
@@ -99,7 +105,7 @@ class MarkdownParserPluginManager extends DefaultPluginManager implements Contai
         $format_filter = $format->filters()->get('markdown');
 
         // Skip formats that don't match the desired parser.
-        if ($format_filter->status || !($format_filter instanceof MarkdownFilterInterface) || ($plugin_id && ($format_filter->getSetting('parser') !== $plugin_id))) {
+        if ($format_filter->status || !($format_filter instanceof MarkdownFilterInterface) || ($parser && ($format_filter->getSetting('parser') !== $parser))) {
           continue;
         }
 
@@ -128,22 +134,28 @@ class MarkdownParserPluginManager extends DefaultPluginManager implements Contai
   }
 
   /**
-   * Retrieves a parser based on a filter and its settings.
-   *
-   * @param \Drupal\filter\Plugin\FilterInterface $filter
-   *   Optional A filter plugin to use.
-   * @param \Drupal\Core\Session\AccountInterface $account
-   *   Optional. An account used to retrieve filters available filters if one
-   *   wasn't already specified.
-   *
-   * @return \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
-   *   A MarkdownParser plugin.
+   * {@inheritdoc}
    */
   public function getParser(FilterInterface $filter = NULL, AccountInterface $account = NULL) {
     return $this->createInstance(NULL, [
       'filter' => $filter,
       'account' => $account,
     ]);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getParsers($include_broken = FALSE) {
+    /** @var \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface[] $parsers */
+    $parsers = [];
+    foreach (array_keys($this->getDefinitions()) as $plugin_id) {
+      if (!$include_broken && $plugin_id === '_broken') {
+        continue;
+      }
+      $parsers[$plugin_id] = $this->createInstance($plugin_id);
+    }
+    return $parsers;
   }
 
 }

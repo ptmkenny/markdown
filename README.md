@@ -1,20 +1,23 @@
 # Markdown
 
-This module provides Markdown integration for Drupal. The Markdown syntax is
-designed to co-exist with HTML, so you can set up input formats with both HTML
-and Markdown support. It is also meant to be as human-readable as possible when
-left as "source".
+This module provides Markdown integration for Drupal.
 
-There are several types of PHP Markdown parsing libraries. This module
-currently supports the following:
+The Markdown syntax is designed to co-exist with HTML, so you can set up input
+formats with both HTML and Markdown support. It is also meant to be as
+human-readable as possible when left as "source".
 
-- [thephpleague/commonmark] (required, [Drupal Standard])
+While there are several types of PHP Markdown parsing libraries out there, this
+module requires [thephpleague/commonmark] as the default/fallback parser.
+ 
+There is current an issue open to make CommonMark the "official" [Drupal Coding
+Standard].
+
+This module also supports additional PHP Markdown parsers for backwards
+compatibility reasons and in an effort to open up other options, should you
+desire a different solution:
+
 - [erusev/parsedown]
 - [michelf/php-markdown]
-
-This module provides a text format filter that converts Markdown to HTML based
-on the [CommonMark] spec via [thephpleague/commonmark] PHP library, created and
-maintained by [The League of Extraordinary Packages].
 
 ## Try out a demonstration!
 https://commonmark.unicorn.fail (@todo)
@@ -23,27 +26,7 @@ To see a full list of "long tips" provided by this filter, visit:
 https://commonmark.unicorn.fail/filter/tips
 
 ## Requirements
-- **PHP >= 5.6** - This is a hard requirement due to [thephpleague/commonmark].
-
-## Soft Requirements
-This modules supports the following methods for installing the necessary PHP
-libraries and autoloading the module and library PSR-4 classes. You must choose
-one of the following methods:
-
-- **Composer**  
-  Composer is the preferred method for installing PHP libraries and autoloading
-  the module and library PSR-4 classes. Works with [Composer Manager] and
-  [Drupal Composer Packagist].
-- **Registry Autoload or X Autoload**  
-  This module supports using the [Registry Autoload] module or the [X Autoload]
-  module. If you use either of these modules, you must also install the
-  necessary PHP libraries. You can do this automatically using the following
-  Drush command or by manually placing the necessary PHP libraries in
-  `sites/*/libraries`:  
-    
-  ```sh
-  drush markdown-download
-  ```
+- **PHP >= 5.6.5** - This is a hard requirement due to [thephpleague/commonmark].
 
 ## Installation
 If you are comfortable with composer that is the best way to install both PHP
@@ -199,7 +182,7 @@ Typogrify module if you are interested in Smartypants support.
 [CommonMark Table Extension]: https://github.com/webuni/commonmark-table-extension
 [Composer Manager]: https://www.drupal.org/project/composer_manager
 [Drupal Composer Packagist]: https://packagist.drupal-composer.org/packages/drupal/commonmark
-[Drupal Standard]: https://www.drupal.org/project/coding_standards/issues/2952616
+[Drupal Coding Standard]: https://www.drupal.org/project/coding_standards/issues/2952616
 [erusev/parsedown]: https://github.com/erusev/parsedown
 [michelf/php-markdown]: https://github.com/michelf/php-markdown
 [thephpleague/commonmark]: https://github.com/thephpleague/commonmark

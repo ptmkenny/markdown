@@ -7,7 +7,7 @@ use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
 
 /**
- * Provides a filter for markdown.
+ * Provides a filter for Markdown.
  *
  * @Filter(
  *   id = "markdown",
@@ -28,7 +28,7 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
   /**
    * The MarkdownParser Plugin Manager service.
    *
-   * @var \Drupal\markdown\MarkdownParserPluginManager
+   * @var \Drupal\markdown\MarkdownParsers
    */
   protected $parsers;
 
@@ -44,7 +44,15 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
    * {@inheritdoc}
    */
   public function getSetting($name, $default = NULL) {
-    return isset($this->settings[$name]) ? $this->settings[$name] : $default;
+    $settings = $this->getSettings();
+    return isset($settings[$name]) ? $settings[$name] : $default;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getSettings() {
+    return $this->settings;
   }
 
   /**
@@ -60,6 +68,21 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
   /**
    * {@inheritdoc}
    */
+  public function getParserSetting($name, $default = NULL) {
+    $settings = $this->getParserSettings();
+    return isset($settings[$name]) ? $settings[$name] : $default;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getParserSettings() {
+    return $this->getSetting('parser_settings', []);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function isEnabled() {
     return !!$this->status;
   }
@@ -70,12 +93,13 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
    * @todo Refactor before release.
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
-    $parser = $this->getParser();
-
     $parser_options = [];
-    foreach ($this->parsers->getDefinitions() as $plugin_id => $definition) {
-      $parser_options[$plugin_id] = $definition['label'];
+    foreach ($this->parsers->getParsers() as $plugin_id => $plugin) {
+      $parser_options[$plugin_id] = $plugin->label();
     }
+
+    // Get the currently set parser.
+    $parser = $this->getParser();
 
     if ($parser_options) {
       $form['parser'] = [
@@ -96,73 +120,31 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
       ];
     }
 
-    $form['extensions'] = ['#type' => 'container'];
+    // @todo Add parser specific settings.
+    $form['parser_settings'] = ['#type' => 'container'];
+
+    // Add any specific extension settings.
+    $form['parser_settings']['extensions'] = ['#type' => 'container'];
     foreach ($parser->getExtensions($this) as $extension) {
       $form['extensions'] += $extension->settingsForm($form['extensions'], $form_state, $this);
     }
-
-//    $libraries_options = [];
-//
-//    if (class_exists('Michelf\MarkdownExtra')) {
-//      $libraries_options['php-markdown'] = 'PHP Markdown';
-//    }
-//    elseif (\Drupal::moduleHandler()->moduleExists('libraries')) {
-//      $library = libraries_detect('php-markdown');
-//      if (!empty($library['installed'])) {
-//        $libraries_options['php-markdown'] = 'PHP Markdown';
-//      }
-//    }
-//
-//    if (class_exists('League\CommonMark\CommonMarkConverter')) {
-//      $libraries_options['commonmark'] = 'Commonmark';
-//    }
-//
-//    if (isset($library['name'])) {
-//      $form['markdown_status'] = [
-//        '#title' => $this->t('Version'),
-//        '#theme' => 'item_list',
-//        '#items' => [
-//          $library['name'] . ' ' . $library['version'],
-//        ],
-//      ];
-//    }
 
     return $form;
   }
 
   /**
    * {@inheritdoc}
-   *
-   * @todo Refactor before release.
    */
   public function process($text, $langcode) {
-    // Immediately return if text is empty.
-    if (empty($text)) {
-      return new FilterProcessResult($text);
+    // Only use the parser to process the text if it's not empty.
+    if (!empty($text)) {
+      $text = $this->getParser()->parse($text, \Drupal::languageManager()->getLanguage($langcode));
     }
-
-//    if (!empty($text)) {
-//      switch ($this->settings['library']) {
-//        case 'commonmark':
-//          $converter = new CommonMarkConverter();
-//          $text = $converter->convertToHtml($text);
-//          break;
-//        case 'php-markdown':
-//          if (!class_exists('Michelf\MarkdownExtra') && \Drupal::moduleHandler()->moduleExists('libraries')) {
-//            libraries_load('php-markdown', 'markdown-extra');
-//          }
-//          $text = MarkdownExtra::defaultTransform($text);
-//          break;
-//      }
-//    }
-
-    return new FilterProcessResult($this->getParser()->parse($text, \Drupal::languageManager()->getLanguage($langcode)));
+    return new FilterProcessResult($text);
   }
 
   /**
    * {@inheritdoc}
-   *
-   * @todo Refactor before release.
    */
   public function tips($long = FALSE) {
     $this->getParser()->tips($this, $long);

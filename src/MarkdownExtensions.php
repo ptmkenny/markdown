@@ -3,21 +3,18 @@
 namespace Drupal\markdown;
 
 use Drupal\Core\Cache\CacheBackendInterface;
-use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\markdown\Annotation\MarkdownExtension;
 use Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Class MarkdownExtensionPluginManager.
- *
- * @method MarkdownExtensionInterface createInstance($plugin_id, array $configuration = [])
+ * Class MarkdownExtensions.
  */
-class MarkdownExtensionPluginManager extends DefaultPluginManager implements ContainerAwareInterface, ContainerInjectionInterface {
+class MarkdownExtensions extends DefaultPluginManager implements MarkdownExtensionsInterface {
 
   use ContainerAwareTrait;
 
@@ -54,6 +51,11 @@ class MarkdownExtensionPluginManager extends DefaultPluginManager implements Con
    *   An array of MarkdownExtension plugins.
    */
   public function getExtensions($parser = NULL) {
+    // Normalize parser to a string representation of its plugin identifier.
+    if ($parser instanceof MarkdownParserInterface) {
+      $parser = $parser->getPluginId();
+    }
+
     $extensions = [];
     foreach ($this->getDefinitions() as $plugin_id => $definition) {
       // Skip extensions that don't belong to a particular parser.

@@ -2,8 +2,8 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Language\LanguageInterface;
-use Drupal\markdown\Plugin\Markdown\BaseMarkdownParser;
 use Drupal\markdown\Plugin\Markdown\Extension\CommonMarkRendererInterface;
 use League\CommonMark\Block\Parser\BlockParserInterface;
 use League\CommonMark\Block\Renderer\BlockRendererInterface;
@@ -21,6 +21,7 @@ use League\CommonMark\Inline\Renderer\InlineRendererInterface;
  * @MarkdownParser(
  *   id = "commonmark",
  *   label = @Translation("CommonMark"),
+ *   checkClass = "League\CommonMark\CommonMarkConverter",
  * )
  */
 class CommonMark extends BaseMarkdownParser {
@@ -40,37 +41,34 @@ class CommonMark extends BaseMarkdownParser {
   protected static $environments;
 
   /**
-   * @param null $format
+   * Retrieves a CommonMark converter, creating it if necessary.
    *
    * @return \League\CommonMark\Converter
+   *   A CommonMark converter.
    */
-  protected function getConverter($format = NULL) {
-    $format = $this->getFilterFormat($format);
-    $format_id = $format->id();
-    if (!isset(static::$converters[$format_id])) {
-      $environment = $this->getEnvironment($format);
-      static::$converters[$format_id] = new CommonMarkConverter([], $environment);
+  protected function getConverter() {
+    if (!isset(static::$converters[$this->filterId])) {
+      $environment = $this->getEnvironment();
+      static::$converters[$this->filterId] = new CommonMarkConverter($this->settings, $environment);
     }
-    return static::$converters[$format_id];
+    return static::$converters[$this->filterId];
   }
 
   /**
-   * Retrieves current CommonMark environment, creating it if necessary.
-   *
-   * @param string $format
-   *   A filter format identifier or entity instance..
+   * Retrieves a CommonMark environment, creating it if necessary.
    *
    * @return \League\CommonMark\Environment
-   *   The CommonMark Environment instance.
+   *   The CommonMark environment.
    */
-  protected function getEnvironment($format = NULL) {
-    $format = $this->getFilterFormat($format);
-    $format_id = $format->id();
-    if (!isset(static::$environments[$format_id])) {
+  protected function getEnvironment() {
+    if (!isset(static::$environments[$this->filterId])) {
       $environment = Environment::createCommonMarkEnvironment();
-      $filter = $format->filters('markdown');
+      $extensions = $this->getExtensions($this->filter);
+      foreach ($extensions as $extension) {
+        if ($settings = $extension->getSettings()) {
+          $environment->setConfig(NestedArray::mergeDeep($environment->getConfig(), $settings));
+        }
 
-      foreach ($this->getExtensions($filter) as $extension) {
         if ($extension instanceof ExtensionInterface) {
           $environment->addExtension($extension);
         }
@@ -106,9 +104,9 @@ class CommonMark extends BaseMarkdownParser {
         }
       }
 
-      static::$environments[$format_id] = $environment;
+      static::$environments[$this->filterId] = $environment;
     }
-    return static::$environments[$format_id];
+    return static::$environments[$this->filterId];
   }
 
   /**
@@ -121,15 +119,8 @@ class CommonMark extends BaseMarkdownParser {
   /**
    * {@inheritdoc}
    */
-  public function isAvailable() {
-    return class_exists('League\CommonMark\CommonMarkConverter');
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function parse($markdown, LanguageInterface $language = NULL) {
-    return $this->getConverter($this->format)->convertToHtml($markdown);
+    return $this->getConverter()->convertToHtml($markdown);
   }
 
 }

@@ -23,24 +23,42 @@ class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface {
   /**
    * MarkdownExtension plugins specific to a parser.
    *
-   * @var \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface[]
+   * @var array
    */
   protected static $extensions;
 
   /**
-   * The current filter format being used.
+   * The current filter being used.
+   *
+   * @var \Drupal\markdown\Plugin\Filter\MarkdownFilterInterface
+   */
+  protected $filter;
+
+  /**
+   * The filter identifier.
    *
    * @var string
    */
-  protected $format;
+  protected $filterId = '_default';
+
+  /**
+   * The parser settings.
+   *
+   * @var array
+   */
+  protected $settings = [];
 
   /**
    * {@inheritdoc}
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    if (isset($configuration['format'])) {
-      $this->format = $configuration['format'];
+    if (isset($configuration['filter'])) {
+      $this->filter = $configuration['filter'];
+      $this->filterId = $this->filter->getPluginId();
+    }
+    if (isset($configuration['settings'])) {
+      $this->settings = $configuration['settings'];
     }
   }
 
@@ -430,26 +448,22 @@ class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface {
    * {@inheritdoc}
    */
   public function getExtensions(MarkdownFilterInterface $filter = NULL) {
-    // Immediately return if filter is disabled.
-    if ($filter && !$filter->isEnabled()) {
-      return [];
-    }
-
     if (!isset(static::$extensions[$this->pluginId])) {
-      /** @var \Drupal\markdown\MarkdownExtensionPluginManager $markdown_extensions */
+      /** @var \Drupal\markdown\MarkdownExtensions $markdown_extensions */
       $markdown_extensions = \Drupal::service('plugin.manager.markdown.extension');
-      static::$extensions[$this->pluginId] = $markdown_extensions->getExtensions($this->pluginId);
+      static::$extensions[$this->pluginId] = !$filter || $filter->isEnabled() ? $markdown_extensions->getExtensions($this->pluginId) : [];
     }
 
     /* @type \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface $extension */
-    $settings = $filter ? $filter->getConfiguration()['settings'] : [];
     foreach (static::$extensions[$this->pluginId] as $id => $extension) {
-      if (isset($settings[$id])) {
-        $extension->setSettings($settings[$id]);
+      if (isset($this->settings[$id])) {
+        $extension->setSettings($this->settings[$id]);
       }
     }
 
-    return static::$extensions[$this->pluginId];
+    /** @var \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface[] $extensions */
+    $extensions = static::$extensions[$this->pluginId];
+    return $extensions;
   }
 
   /**
@@ -505,13 +519,6 @@ class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface {
    */
   public function getVersion() {
     return '';
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function isAvailable() {
-    return FALSE;
   }
 
   /**
