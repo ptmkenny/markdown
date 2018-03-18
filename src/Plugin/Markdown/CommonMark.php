@@ -115,13 +115,7 @@ class CommonMark extends BaseMarkdownParser {
    * {@inheritdoc}
    */
   public function getVersion() {
-    // @todo Refactor this once CommonMark has a constant we can rely on.
-    // @see https://github.com/thephpleague/commonmark/issues/314
-    $reflector = new \ReflectionClass(CommonMarkConverter::class);
-    $path = dirname(dirname($reflector->getFileName()));
-    $changelog = file_get_contents("$path/CHANGELOG.md");
-    preg_match('/\[(\d+.\d+.\d+)\]/', $changelog, $matches);
-    return $matches && $matches[1];
+    return CommonMarkConverter::VERSION;
   }
 
   /**
