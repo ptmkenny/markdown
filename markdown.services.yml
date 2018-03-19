@@ -12,9 +12,8 @@ services:
     class: \Drupal\markdown\MarkdownExtensions
     arguments: ['@container.namespaces', '@cache.discovery', '@module_handler']
 
-  markdown.twig.markdown:
-    class: Drupal\markdown\Twig\Markdown\Extension
+  markdown.twig.markdown:
+    class: \Drupal\markdown\Twig\Markdown\Extension
     arguments: ['@markdown']
     tags:
       - { name: twig.extension }
-

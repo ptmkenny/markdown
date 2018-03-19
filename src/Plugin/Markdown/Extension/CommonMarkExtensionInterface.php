@@ -2,8 +2,6 @@
 
 namespace Drupal\markdown\Plugin\Markdown\Extension;
 
-use Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface;
-
 /**
  * Interface CommonMarkExtensionInterface.
  */

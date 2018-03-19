@@ -4,6 +4,7 @@ namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Component\Utility\Html;
+use Drupal\Core\Annotation\Translation;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Plugin\PluginBase;
 use Drupal\Core\Render\Element;
@@ -15,7 +16,9 @@ use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
  * Class BaseMarkdownParser.
  *
  * @MarkdownParser(
- *   id = "_broken"
+ *   id = "_broken",
+ *   label = @Translation("Missing Parser"),
+ *   checkClass = "",
  * )
  */
 class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface {
@@ -527,7 +530,7 @@ class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface {
   public function label($show_version = TRUE) {
     $variables['@label'] = $this->pluginDefinition['label'];
     $variables['@version'] = $show_version ? $this->getVersion() : '';
-    return $variables['@version'] ? $this->t('@label (@version)') : $variables['@label'];
+    return $variables['@version'] ? $this->t('@label (@version)', $variables) : $variables['@label'];
   }
 
   /**

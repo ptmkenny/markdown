@@ -2,19 +2,26 @@
 
 namespace Drupal\markdown\Annotation;
 
-use Drupal\Component\Annotation\PluginID;
+use Drupal\Component\Annotation\Plugin;
 
 /**
  * Class MarkdownParser.
  *
  * @Annotation
  *
- * @Attributes(
- *   @Attribute(name = "id", type = "string", required = true),
- *   @Attribute(name = "checkClass", type = "string", required = true),
- * )
+ * @Attributes({
+ *    @Attribute("id", required = true, type = "string"),
+ *    @Attribute("checkClass", required = true, type = "string"),
+ * })
  */
-class MarkdownParser extends PluginID {
+class MarkdownParser extends Plugin {
+
+  /**
+   * The parser identifier.
+   *
+   * @var string
+   */
+  protected $id;
 
   /**
    * The class to check if the parser is available.
@@ -26,7 +33,7 @@ class MarkdownParser extends PluginID {
   /**
    * The human-readable label.
    *
-   * @var string
+   * @var string|\Drupal\Core\Annotation\Translation
    */
   protected $label;
 

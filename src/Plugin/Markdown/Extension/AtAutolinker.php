@@ -13,8 +13,8 @@ use League\CommonMark\InlineParserContext;
  * Class AtAutolinker.
  *
  * @MarkdownExtension(
- *   parser = "commonmark",
  *   id = "at_autolinker",
+ *   parser = "commonmark",
  *   label = @Translation("@ Autolinker"),
  *   description = @Translation("Automatically link commonly used references that come after an at character (@) without having to use the link syntax."),
  * )

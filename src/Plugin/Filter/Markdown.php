@@ -60,7 +60,7 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
    */
   public function getParser() {
     if (!isset($this->parser)) {
-      $this->parser = $this->parsers->createInstance($this->getSetting('parser'), ['filter' => $this]);
+      $this->parser = $this->parsers->createInstance($this->getSetting('parser', 'commonmark'), ['filter' => $this]);
     }
     return $this->parser;
   }
@@ -95,7 +95,8 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
   public function settingsForm(array $form, FormStateInterface $form_state) {
     $parser_options = [];
     foreach ($this->parsers->getParsers() as $plugin_id => $plugin) {
-      $parser_options[$plugin_id] = $plugin->label();
+      // Cast to string for Drupal 7.
+      $parser_options[$plugin_id] = (string) $plugin->label();
     }
 
     // Get the currently set parser.
@@ -104,7 +105,7 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
     if ($parser_options) {
       $form['parser'] = [
         '#type' => 'select',
-        '#title' => $this->t('Markdown Parser'),
+        '#title' => $this->t('Parser'),
         '#options' => $parser_options,
         '#default_value' => $parser->getPluginId(),
       ];

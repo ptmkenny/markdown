@@ -61,7 +61,7 @@ class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInt
   protected function alterDefinitions(&$definitions) {
     // Remove any plugins that don't actually have the parser installed.
     foreach ($definitions as $plugin_id => $definition) {
-      if (!class_exists($definition['checkClass'])) {
+      if ($plugin_id !== '_broken' && $definition['checkClass'] && !class_exists($definition['checkClass'])) {
         unset($definitions[$plugin_id]);
       }
     }
@@ -93,19 +93,33 @@ class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInt
    * {@inheritdoc}
    */
   public function getFilter($parser = 'commonmark', array &$configuration = []) {
+    global $user;
+
     $filter = isset($configuration['filter']) ? $configuration['filter'] : NULL;
     $account = isset($configuration['account']) ? $configuration['account'] : NULL;
     unset($configuration['account']);
 
     if ($filter === NULL) {
       if ($account === NULL) {
-        $account = \Drupal::currentUser();
+        $account = (int) \Drupal::VERSION[0] >= 8 ? \Drupal::currentUser() : $user;
       }
       foreach (filter_formats($account) as $format) {
-        $format_filter = $format->filters()->get('markdown');
+        $format_filter = FALSE;
+
+        // Drupal 7.
+        if (function_exists('filter_list_format')) {
+          $filters = filter_list_format($format->format);
+          if (isset($filters['markdown'])) {
+            $format_filter = \Drupal::service('plugin.manager.filter')->createInstance('markdown', (array) $filters['markdown']);
+          }
+        }
+        // Drupal 8.
+        else {
+          $format_filter = $format->filters()->get('markdown');
+        }
 
         // Skip formats that don't match the desired parser.
-        if ($format_filter->status || !($format_filter instanceof MarkdownFilterInterface) || ($parser && ($format_filter->getSetting('parser') !== $parser))) {
+        if (!$format_filter || $format_filter->status || !($format_filter instanceof MarkdownFilterInterface) || ($parser && ($format_filter->getSetting('parser') !== $parser))) {
           continue;
         }
 

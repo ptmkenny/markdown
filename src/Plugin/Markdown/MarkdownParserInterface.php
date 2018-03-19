@@ -69,7 +69,7 @@ interface MarkdownParserInterface extends PluginInspectionInterface {
    * @param bool $show_version
    *   Flag indicating whether to show the version with the label.
    *
-   * @return string
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The label.
    */
   public function label($show_version = TRUE);

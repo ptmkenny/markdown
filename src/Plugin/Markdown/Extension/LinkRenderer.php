@@ -16,11 +16,10 @@ use League\CommonMark\Inline\Renderer\InlineRendererInterface;
  * Class LinkRenderer.
  *
  * @MarkdownExtension(
- *   parser = "commonmark",
  *   id = "enhanced_links",
+ *   parser = "commonmark",
  *   label = @Translation("Enhanced Links"),
- *   description = @Translation("Extends CommonMark to provide additional
- *   enhancements when rendering links."),
+ *   description = @Translation("Extends CommonMark to provide additional enhancements when rendering links."),
  * )
  */
 class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInterface, InlineRendererInterface {

@@ -14,12 +14,10 @@ use League\CommonMark\InlineParserContext;
  * Class HashAutolinker.
  *
  * @MarkdownExtension(
- *   parser = "commonmark",
  *   id = "hash_autolinker",
+ *   parser = "commonmark",
  *   label = @Translation("# Autolinker"),
- *   description = @Translation("Automatically link commonly used references
- *   that come after a hash character (#) without having to use the link
- *   syntax."),
+ *   description = @Translation("Automatically link commonly used references that come after a hash character (#) without having to use the link syntax."),
  * )
  */
 class HashAutolinker extends CommonMarkExtension implements InlineParserInterface {
