@@ -50,6 +50,14 @@ interface MarkdownExtensionInterface extends ConfigurablePluginInterface {
   public function getSettings();
 
   /**
+   * Indicates whether the extension is being used.
+   *
+   * @return bool
+   *   TRUE or FALSE
+   */
+  public function isEnabled();
+
+  /**
    * Returns the human readable label of the plugin.
    *
    * @return string

@@ -36,7 +36,7 @@ class Parsedown extends BaseMarkdownParser {
    *   A PHP Markdown parser.
    */
   public function getParser() {
-    if (isset(static::$parsers[$this->filterId])) {
+    if (!isset(static::$parsers[$this->filterId])) {
       $parser = new \ParsedownExtra();
       if ($this->filter) {
         foreach ($this->settings as $name => $value) {

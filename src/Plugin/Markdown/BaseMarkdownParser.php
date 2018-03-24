@@ -450,11 +450,11 @@ class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface {
   /**
    * {@inheritdoc}
    */
-  public function getExtensions(MarkdownFilterInterface $filter = NULL) {
+  public function getExtensions(MarkdownFilterInterface $filter = NULL, $enabled = TRUE) {
     if (!isset(static::$extensions[$this->pluginId])) {
       /** @var \Drupal\markdown\MarkdownExtensions $markdown_extensions */
       $markdown_extensions = \Drupal::service('plugin.manager.markdown.extension');
-      static::$extensions[$this->pluginId] = !$filter || $filter->isEnabled() ? $markdown_extensions->getExtensions($this->pluginId) : [];
+      static::$extensions[$this->pluginId] = !$filter || $filter->isEnabled() ? $markdown_extensions->getExtensions($this->pluginId, $enabled) : [];
     }
 
     /* @type \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface $extension */

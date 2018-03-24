@@ -116,13 +116,13 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
 
     $attributes = [];
     foreach ($inline->getData('attributes', []) as $key => $value) {
-      $attributes[$key] = $html_renderer->escape($value, TRUE);
+      $attributes[$key] = $html_renderer->renderInlines([$value]);
     }
 
     // Retrieve the URL.
     $url = $inline->getUrl();
     $external = $this->isExternalUrl($url);
-    $attributes['href'] = $html_renderer->escape($url, TRUE);
+    $attributes['href'] = $html_renderer->renderInlines([$url]);
 
     // Make external links open in a new window.
     if ($this->getSetting('external_new_window') && $external) {
@@ -136,10 +136,10 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
     }
 
     if (isset($inline->data['title'])) {
-      $attributes['title'] = $html_renderer->escape($inline->data['title'], TRUE);
+      $attributes['title'] = $html_renderer->renderInlines([$inline->data['title']]);
     }
 
-    return new HtmlElement('a', $attributes, $html_renderer->renderInlines($inline->getChildren()));
+    return new HtmlElement('a', $attributes, $html_renderer->renderInlines($inline->children()));
   }
 
   /**

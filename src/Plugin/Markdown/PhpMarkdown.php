@@ -9,7 +9,7 @@ use Michelf\MarkdownExtra;
  * Class PhpMarkdown.
  *
  * @MarkdownParser(
- *   id = "php-markdown",
+ *   id = "php_markdown",
  *   label = @Translation("PHP Markdown"),
  *   checkClass = "Michelf\MarkdownExtra",
  * )
@@ -30,7 +30,7 @@ class PhpMarkdown extends BaseMarkdownParser {
    *   A PHP Markdown parser.
    */
   public function getParser() {
-    if (isset(static::$parsers[$this->filterId])) {
+    if (!isset(static::$parsers[$this->filterId])) {
       $parser = new MarkdownExtra();
       if ($this->filter) {
         foreach ($this->settings as $name => $value) {

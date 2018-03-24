@@ -31,7 +31,7 @@ abstract class BaseExtension extends PluginBase implements MarkdownExtensionInte
       'id' => $this->getPluginId(),
       'label' => '',
       'provider' => $this->pluginDefinition['provider'],
-      'settings' => $this->defaultSettings(),
+      'settings' => $this->defaultSettings() + ['enabled' => FALSE],
     ];
   }
 
@@ -75,6 +75,13 @@ abstract class BaseExtension extends PluginBase implements MarkdownExtensionInte
   public function getSetting($name) {
     $settings = $this->getSettings();
     return isset($settings[$name]) ? $settings[$name] : NULL;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function isEnabled() {
+    return !!$this->getSetting('enabled');
   }
 
   /**

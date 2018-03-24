@@ -140,7 +140,7 @@ class AtAutolinker extends CommonMarkExtension implements InlineParserInterface 
   public function settingsForm(array $form, FormStateInterface $form_state, MarkdownFilterInterface $filter) {
     $form = parent::settingsForm($form, $form_state, $filter);
 
-    $selector = _commonmark_get_states_selector($filter, $this, 'type');
+    $selector = '';//_commonmark_get_states_selector($filter, $this, 'type');
 
     $form['type'] = [
       '#type' => 'select',

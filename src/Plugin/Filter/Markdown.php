@@ -122,13 +122,14 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
     }
 
     // @todo Add parser specific settings.
-    $form['parser_settings'] = ['#type' => 'container'];
-
-    // Add any specific extension settings.
-    $form['parser_settings']['extensions'] = ['#type' => 'container'];
-    foreach ($parser->getExtensions($this) as $extension) {
-      $form['extensions'] += $extension->settingsForm($form['extensions'], $form_state, $this);
-    }
+//    $form['parser_settings'] = ['#type' => 'container'];
+//
+//    // Add any specific extension settings.
+//    $form['parser_settings']['extensions'] = ['#type' => 'container'];
+//    foreach ($parser->getExtensions($this) as $plugin_id => $extension) {
+//      $form['parser_settings']['extensions'][$plugin_id] = [];
+//      $form['parser_settings']['extensions'][$plugin_id] = $extension->settingsForm($form['parser_settings']['extensions'][$plugin_id], $form_state, $this);
+//    }
 
     return $form;
   }

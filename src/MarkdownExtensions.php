@@ -13,6 +13,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Class MarkdownExtensions.
+ *
+ * @method \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface createInstance($plugin_id, array $configuration = [])
  */
 class MarkdownExtensions extends DefaultPluginManager implements MarkdownExtensionsInterface {
 
@@ -50,7 +52,7 @@ class MarkdownExtensions extends DefaultPluginManager implements MarkdownExtensi
    * @return \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface[]
    *   An array of MarkdownExtension plugins.
    */
-  public function getExtensions($parser = NULL) {
+  public function getExtensions($parser = NULL, $enabled = TRUE) {
     // Normalize parser to a string representation of its plugin identifier.
     if ($parser instanceof MarkdownParserInterface) {
       $parser = $parser->getPluginId();
@@ -62,7 +64,16 @@ class MarkdownExtensions extends DefaultPluginManager implements MarkdownExtensi
       if (isset($parser) && (!isset($definition['parser']) || $definition['parser'] !== $parser)) {
         continue;
       }
-      $extensions[$plugin_id] = $this->createInstance($plugin_id);
+      $extension = $this->createInstance($plugin_id);
+      if ($enabled === TRUE && $extension->isEnabled()) {
+        $extensions[$plugin_id] = $extension;
+      }
+      elseif ($enabled === FALSE && !$extension->isEnabled()) {
+        $extensions[$plugin_id] = $extension;
+      }
+      elseif ($enabled === NULL) {
+        $extensions[$plugin_id] = $extension;
+      }
     }
     return $extensions;
   }
