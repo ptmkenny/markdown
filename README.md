@@ -21,10 +21,10 @@ desire a different solution:
 - [michelf/php-markdown]
 
 ## Try out a demonstration!
-https://commonmark.unicorn.fail (@todo)
+https://markdown.unicorn.fail
 
 To see a full list of "long tips" provided by this filter, visit:
-https://commonmark.unicorn.fail/filter/tips
+https://markdown.unicorn.fail/filter/tips
 
 ## Requirements
 - **PHP >= 5.6.5** - This is a hard requirement due to [thephpleague/commonmark].
