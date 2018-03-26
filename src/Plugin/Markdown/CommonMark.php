@@ -3,6 +3,7 @@
 namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Component\Utility\NestedArray;
+use Drupal\Component\Utility\Xss;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\markdown\Plugin\Markdown\Extension\CommonMarkRendererInterface;
 use League\CommonMark\Block\Parser\BlockParserInterface;
@@ -120,7 +121,7 @@ class CommonMark extends BaseMarkdownParser {
    * {@inheritdoc}
    */
   public function parse($markdown, LanguageInterface $language = NULL) {
-    return $this->getConverter()->convertToHtml($markdown);
+    return trim(Xss::filterAdmin($this->getConverter()->convertToHtml($markdown)));
   }
 
 }

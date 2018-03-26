@@ -4,6 +4,7 @@ namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Component\Utility\Html;
+use Drupal\Component\Utility\Xss;
 use Drupal\Core\Annotation\Translation;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Plugin\PluginBase;
@@ -537,7 +538,7 @@ class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface {
    * {@inheritdoc}
    */
   public function parse($markdown, LanguageInterface $language = NULL) {
-    return $markdown;
+    return Xss::filterAdmin($markdown);
   }
 
   /**

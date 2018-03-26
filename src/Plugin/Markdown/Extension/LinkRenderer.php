@@ -93,6 +93,7 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
    */
   public function defaultSettings() {
     return [
+      'enabled' => TRUE,
       'external_new_window' => TRUE,
       'internal_host_whitelist' => \Drupal::request()->getHost(),
       'no_follow' => 'external',
@@ -122,7 +123,7 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
     // Retrieve the URL.
     $url = $inline->getUrl();
     $external = $this->isExternalUrl($url);
-    $attributes['href'] = $html_renderer->renderInlines([$url]);
+    $attributes['href'] = $url;
 
     // Make external links open in a new window.
     if ($this->getSetting('external_new_window') && $external) {
