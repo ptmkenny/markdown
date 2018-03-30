@@ -86,7 +86,7 @@ HTML. In procedural functions, you can accomplish this in the following manner:
 use \Drupal\markdown\Markdown;
 
 function my_module_callback_function($markdown) {
-  return ['#markup' => Markdown::create()->parse($markdown)];
+  return ['#markup' => Markdown::create()->render($markdown)];
 }
 
 $markdown = '# Hello World!';
@@ -121,7 +121,7 @@ class MyService {
   public function render(array $items) {
     $output = '';
     foreach ($items as $markdown) {
-      $output .= $this->markdown->parse($markdown);
+      $output .= $this->markdown->render($markdown);
     }
     return ['#markup' => $output];
   }
@@ -144,7 +144,7 @@ class MyController {
   public function render(array $items) {
     $output = '';
     foreach ($items as $markdown) {
-      $output .= $this->markdown()->parse($markdown);
+      $output .= $this->markdown()->render($markdown);
     }
     return ['#markup' => $output];
   }

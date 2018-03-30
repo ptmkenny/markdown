@@ -2,7 +2,6 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
-use Drupal\Component\Utility\Xss;
 use Drupal\Core\Language\LanguageInterface;
 use Michelf\MarkdownExtra;
 
@@ -54,7 +53,7 @@ class PhpMarkdown extends BaseMarkdownParser {
    * {@inheritdoc}
    */
   public function parse($markdown, LanguageInterface $language = NULL) {
-    return trim(Xss::filterAdmin($this->getParser()->transform($markdown)));
+    return trim($this->getParser()->transform($markdown));
   }
 
 }

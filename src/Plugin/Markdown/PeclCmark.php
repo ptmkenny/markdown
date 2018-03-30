@@ -2,7 +2,6 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
-use Drupal\Component\Utility\Xss;
 use Drupal\Core\Language\LanguageInterface;
 
 /**
@@ -42,7 +41,16 @@ class PeclCmark extends BaseMarkdownParser {
    * {@inheritdoc}
    */
   public function parse($markdown, LanguageInterface $language = NULL) {
-    return trim(Xss::filterAdmin(\CommonMark\Render\HTML(\CommonMark\Parse($markdown))));
+    try {
+      if (is_string($markdown)) {
+        $node = \CommonMark\Parse($markdown);
+        return trim(\CommonMark\Render\HTML($node));
+      }
+    }
+    catch (\Exception $e) {
+      // Intentionally left blank.
+    }
+    return '';
   }
 
 }

@@ -54,6 +54,10 @@ interface MarkdownInterface extends ContainerAwareInterface, ContainerInjectionI
   /**
    * Parses markdown into HTML.
    *
+   * Note: this method may not be safe from XSS attacks. This is the raw output
+   * from the parser itself. If you need to render the parsed output, use
+   * \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface::render instead.
+   *
    * @param string $markdown
    *   The markdown string to parse.
    * @param \Drupal\Core\Language\LanguageInterface $language
@@ -66,7 +70,29 @@ interface MarkdownInterface extends ContainerAwareInterface, ContainerInjectionI
    *
    * @return string
    *   The converted markup.
+   *
+   * @see \Drupal\markdown\MarkdownInterface::render()
    */
   public function parse($markdown, LanguageInterface $language = NULL, FilterInterface $filter = NULL, AccountInterface $account = NULL);
+
+  /**
+   * Renders markdown into HTML.
+   *
+   * @param string $markdown
+   *   The markdown string to parse.
+   * @param \Drupal\Core\Language\LanguageInterface $language
+   *   Optional. The language of the text that is being converted.
+   * @param \Drupal\filter\Plugin\FilterInterface $filter
+   *   Optional A filter plugin to use.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   Optional. An account used to retrieve filters available filters if one
+   *   wasn't already specified.
+   *
+   * @return \Drupal\Component\Render\MarkupInterface
+   *   The rendered markdown.
+   *
+   * @see \Drupal\markdown\MarkdownInterface::parser()
+   */
+  public function render($markdown, LanguageInterface $language = NULL, FilterInterface $filter = NULL, AccountInterface $account = NULL);
 
 }

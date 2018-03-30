@@ -44,7 +44,7 @@ class Extension extends \Twig_Extension implements \Twig_Extension_GlobalsInterf
    */
   public function getFilters() {
     return [
-      'markdown' => new \Twig_SimpleFilter('markdown', [$this, 'parse'], ['is_safe' => ['html']]),
+      'markdown' => new \Twig_SimpleFilter('markdown', [$this, 'render'], ['is_safe' => ['html']]),
     ];
   }
 
@@ -53,7 +53,7 @@ class Extension extends \Twig_Extension implements \Twig_Extension_GlobalsInterf
    */
   public function getFunctions() {
     return [
-      'markdown' => new \Twig_SimpleFunction('markdown', [$this, 'parse'], ['is_safe' => ['html']]),
+      'markdown' => new \Twig_SimpleFunction('markdown', [$this, 'render'], ['is_safe' => ['html']]),
     ];
   }
 
@@ -65,16 +65,16 @@ class Extension extends \Twig_Extension implements \Twig_Extension_GlobalsInterf
   }
 
   /**
-   * Helper method for parsing markdown.
+   * Helper method for rendering markdown.
    *
-   * @param string $text
-   *   The markdown to parse.
+   * @param string $markdown
+   *   The markdown to render.
    *
    * @return string
-   *   The parsed markdown into HTML.
+   *   The rendered markdown into HTML.
    */
-  public function parse($text) {
-    return $this->markdown->parse($text);
+  public function render($markdown) {
+    return $this->markdown->render($markdown);
   }
 
 }

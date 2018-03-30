@@ -4,11 +4,13 @@ namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Component\Utility\Html;
+use Drupal\Component\Utility\SafeMarkup;
 use Drupal\Component\Utility\Xss;
 use Drupal\Core\Annotation\Translation;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Plugin\PluginBase;
 use Drupal\Core\Render\Element;
+use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
 use Drupal\filter\FilterFormatInterface;
 use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
@@ -357,13 +359,13 @@ class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface {
           }
           foreach ($examples as $markdown) {
             $row = [];
-            $rendered = $this->parse($markdown);
+            $rendered = (string) $this->render($markdown);
             if (!isset($item['strip_p']) || !empty($item['strip_p'])) {
               $rendered = preg_replace('/^<p>|<\/p>\n?$/', '', $rendered);
             }
 
             $row[] = [
-              'data' => '<pre><code class="language-markdown">' . Html::escape($markdown) . '</code></pre><hr/><pre><code class="language-html">' . trim(Html::escape($rendered)) . '</code></pre>',
+              'data' => '<pre><code class="language-markdown">' . Html::escape($markdown) . '</code></pre><hr/><pre><code class="language-html">' . Html::escape($rendered) . '</code></pre>',
               'style' => 'padding-right: 2em; vertical-align: middle; width: 66.666%',
             ];
             $row[] = [
@@ -538,7 +540,14 @@ class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface {
    * {@inheritdoc}
    */
   public function parse($markdown, LanguageInterface $language = NULL) {
-    return Xss::filterAdmin($markdown);
+    return $markdown;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function render($markdown, LanguageInterface $language = NULL) {
+    return Markup::create(Xss::filterAdmin($this->parse($markdown, $language)));
   }
 
   /**

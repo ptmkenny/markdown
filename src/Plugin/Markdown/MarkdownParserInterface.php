@@ -77,15 +77,36 @@ interface MarkdownParserInterface extends PluginInspectionInterface {
   /**
    * Parse markdown into HTML.
    *
+   * Note: this method may not be safe from XSS attacks. This is the raw output
+   * from the parser itself. If you need to render the parsed output, use
+   * \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface::render instead.
+   *
    * @param string $markdown
    *   The markdown string to parse.
    * @param \Drupal\Core\Language\LanguageInterface $language
    *   Optional. The language of the text that is being converted.
    *
    * @return string
-   *   The converted markup.
+   *   The parsed markdown.
+   *
+   * @see \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface::render()
    */
   public function parse($markdown, LanguageInterface $language = NULL);
+
+  /**
+   * Renders markdown into HTML.
+   *
+   * @param string $markdown
+   *   The markdown string to parse.
+   * @param \Drupal\Core\Language\LanguageInterface $language
+   *   Optional. The language of the text that is being converted.
+   *
+   * @return \Drupal\Component\Render\MarkupInterface
+   *   The rendered markdown.
+   *
+   * @see \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface::parse()
+   */
+  public function render($markdown, LanguageInterface $language = NULL);
 
   /**
    * Generates a filter's tip.

@@ -85,8 +85,14 @@ class Markdown implements MarkdownInterface {
    * {@inheritdoc}
    */
   public function parse($markdown, LanguageInterface $language = NULL, FilterInterface $filter = NULL, AccountInterface $account = NULL) {
-    return $this->getParserFromFilter($filter, $account)
-      ->parse($markdown, $language);
+    return $this->getParserFromFilter($filter, $account)->parse($markdown, $language);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function render($markdown, LanguageInterface $language = NULL, FilterInterface $filter = NULL, AccountInterface $account = NULL) {
+    return $this->getParserFromFilter($filter, $account)->render($markdown, $language);
   }
 
 }

@@ -140,7 +140,7 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
   public function process($text, $langcode) {
     // Only use the parser to process the text if it's not empty.
     if (!empty($text)) {
-      $text = $this->getParser()->parse($text, \Drupal::languageManager()->getLanguage($langcode));
+      $text = (string) $this->getParser()->render($text, \Drupal::languageManager()->getLanguage($langcode));
     }
     return new FilterProcessResult($text);
   }
