@@ -6,15 +6,15 @@ use Drupal\Component\Utility\Xss;
 use Drupal\Core\Language\LanguageInterface;
 
 /**
- * Class Parsedown.
+ * Class ParsedownExtra.
  *
  * @MarkdownParser(
- *   id = "parsedown",
- *   label = @Translation("Parsedown/ParsedownExtra"),
+ *   id = "erusev/parsedown-extra",
+ *   label = @Translation("erusev/parsedown-extra"),
  *   checkClass = "ParsedownExtra",
  * )
  */
-class Parsedown extends BaseMarkdownParser {
+class ParsedownExtra extends BaseMarkdownParser {
 
   /**
    * MarkdownExtra parsers, keyed by filter identifier.

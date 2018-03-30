@@ -10,8 +10,8 @@ use Michelf\MarkdownExtra;
  * Class PhpMarkdown.
  *
  * @MarkdownParser(
- *   id = "php_markdown",
- *   label = @Translation("PHP Markdown"),
+ *   id = "michelf/php-markdown",
+ *   label = @Translation("michelf/php-markdown"),
  *   checkClass = "Michelf\MarkdownExtra",
  * )
  */

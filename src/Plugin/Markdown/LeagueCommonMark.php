@@ -17,15 +17,15 @@ use League\CommonMark\Inline\Processor\InlineProcessorInterface;
 use League\CommonMark\Inline\Renderer\InlineRendererInterface;
 
 /**
- * Class CommonMark.
+ * Class LeagueCommonMark.
  *
  * @MarkdownParser(
- *   id = "commonmark",
- *   label = @Translation("CommonMark"),
+ *   id = "thephpleague/commonmark",
+ *   label = @Translation("thephpleague/commonmark"),
  *   checkClass = "League\CommonMark\CommonMarkConverter",
  * )
  */
-class CommonMark extends BaseMarkdownParser {
+class LeagueCommonMark extends BaseMarkdownParser {
 
   /**
    * CommonMark converters, keyed by format filter identifiers.

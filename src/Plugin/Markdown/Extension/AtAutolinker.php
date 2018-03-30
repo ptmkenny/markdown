@@ -14,7 +14,7 @@ use League\CommonMark\InlineParserContext;
  *
  * @MarkdownExtension(
  *   id = "at_autolinker",
- *   parser = "commonmark",
+ *   parser = "thephpleague/commonmark",
  *   label = @Translation("@ Autolinker"),
  *   description = @Translation("Automatically link commonly used references that come after an at character (@) without having to use the link syntax."),
  * )

@@ -17,7 +17,7 @@ use League\CommonMark\Inline\Renderer\InlineRendererInterface;
  *
  * @MarkdownExtension(
  *   id = "enhanced_links",
- *   parser = "commonmark",
+ *   parser = "thephpleague/commonmark",
  *   label = @Translation("Enhanced Links"),
  *   description = @Translation("Extends CommonMark to provide additional enhancements when rendering links."),
  * )
@@ -93,7 +93,6 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
    */
   public function defaultSettings() {
     return [
-      'enabled' => TRUE,
       'external_new_window' => TRUE,
       'internal_host_whitelist' => \Drupal::request()->getHost(),
       'no_follow' => 'external',
