@@ -12,7 +12,7 @@ Standard].
 While there are several types of PHP Markdown parsing libraries out there, this
 module requires [thephpleague/commonmark] as the default/fallback parser in a
 preemptive acceptance of the [Drupal Coding Standard].
- 
+
 This module also supports additional PHP Markdown parsers for backwards
 compatibility reasons and in an effort to open up other options, should you
 desire a different solution:
@@ -21,15 +21,21 @@ desire a different solution:
 - [michelf/php-markdown]
 
 ## Try out a demonstration!
-https://markdown.unicorn.fail
+
+<https://markdown.unicorn.fail>
 
 To see a full list of "long tips" provided by this filter, visit:
-https://markdown.unicorn.fail/filter/tips
+
+<https://markdown.unicorn.fail/filter/tips>
 
 ## Requirements
+
 - **PHP >= 5.6.5** - This is a hard requirement due to [thephpleague/commonmark].
 
 ## Installation
+
+> @todo Update this section.
+
 If you are comfortable with composer that is the best way to install both PHP
 Markdown and CommonMark. They will then be autoloaded just like other parts of
 Drupal 8.
@@ -46,33 +52,42 @@ Markdown. The libraries module is then needed to load the library.
 Make sure the path becomes
 `/libraries/php-markdown/Michelf/MarkdownExtra.inc.php`.
 
+## Editor.md
+
+If you are interested in a Markdown editor please check out the [Editor.md]
+module for Drupal. The demonstration site for this module also uses it if
+you want to take a peek!
+
 ## CommonMark Extensions
-- **Enhanced Links** - _Built in, enabled by default_  
-  Extends CommonMark to provide additional enhancements when rendering links.
-- **@ Autolinker** - _Built in, disabled by default_  
-  Automatically link commonly used references that come after an at character
-  (@) without having to use the link syntax.
-- **# Autolinker** - _Built in, disabled by default_  
-  Automatically link commonly used references that come after a hash character
-  (#) without having to use the link syntax.
+
+> @todo Update this section.
+
+- **Enhanced Links** - _Built in, enabled by default_
+    Extends CommonMark to provide additional enhancements when rendering links.
+- **@ Autolinker** - _Built in, disabled by default_
+    Automatically link commonly used references that come after an at character
+    (@) without having to use the link syntax.
+- **# Autolinker** - _Built in, disabled by default_
+    Automatically link commonly used references that come after a hash character
+    (#) without having to use the link syntax.
 - **[CommonMark Attributes Extension]**
-  Adds syntax to define attributes on various HTML elements inside a CommonMark
-  markdown document. To install, enable the `commonmark_attributes` sub-module.
-- **[CommonMark Table Extension]**  
-  Adds syntax to create tables in a CommonMark markdown document.  To install,
-  enable the `commonmark_table` sub-module.
+    Adds syntax to define attributes on various HTML elements inside a CommonMark
+    markdown document. To install, enable the `commonmark_attributes` sub-module.
+- **[CommonMark Table Extension]**
+    Adds syntax to create tables in a CommonMark markdown document.  To install,
+    enable the `commonmark_table` sub-module.
 
 ## Programmatic Conversion
+
 In some cases you may need to programmatically convert CommonMark Markdown to
 HTML. In procedural functions, you can accomplish this in the following manner:
+
 ```php
-<?php
 use \Drupal\markdown\Markdown;
 
 function my_module_callback_function($markdown) {
-  return ['#markup' => Markdown::create()->parse($markdown)];  
+  return ['#markup' => Markdown::create()->parse($markdown)];
 }
-
 
 $markdown = '# Hello World!';
 $build = my_module_callback_function('# Hello World!');
@@ -80,29 +95,28 @@ $build = my_module_callback_function('# Hello World!');
 ```
 
 If you need to parse Markdown in other services, inject it as a dependency:
-```php
-<?php
 
-use \Drupal\markdown\MarkdownInterface;  
+```php
+use \Drupal\markdown\MarkdownInterface;
 
 class MyService {
-  
+
   /**
    * The Markdown service.
-   * 
+   *
    * @var \Drupal\markdown\MarkdownInterface
    */
   protected $markdown;
-  
+
   /**
-   * MyService constructor. 
+   * MyService constructor.
    */
   public function __construct(MarkdownInterface $markdown) {
     $this->markdown = $markdown;
   }
-  
+
   /**
-   * MyService renderer. 
+   * MyService renderer.
    */
   public function render(array $items) {
     $output = '';
@@ -116,17 +130,16 @@ class MyService {
 
 Or if using it in classes where modifying the constructor may prove difficult,
 use the `MarkdownTrait`:
-```php
-<?php
 
-use \Drupal\markdown\Traits\MarkdownTrait;  
+```php
+use \Drupal\markdown\Traits\MarkdownTrait;
 
 class MyController {
-  
+
   use MarkdownTrait;
-  
+
   /**
-   * MyService renderer. 
+   * MyService renderer.
    */
   public function render(array $items) {
     $output = '';
@@ -165,11 +178,11 @@ If you have more than a single line of Markdown, use the `markdown` tag:
 ```twig
 {% markdown %}
   # Some Markdown
-  
+
   > This is some _simple_ **markdown** content.
 {% endmarkdown %}
 ```
-    
+
 ### Global
 
 For more advanced use cases, you can use the `markdown` global for direct
@@ -187,14 +200,10 @@ to use (if you have multiple installed):
 {{ markdown.getParser('parsedown').parse(variableContiningMarkdown) }}
 ```
 
-
-## Markdown editor
-If you are interested in a Markdown editor please check out
-the Markdown editor for BUEditor module.
-
-<https://drupal.org/project/markdowneditor>
-
 ## Notes
+
+> @todo Update this section.
+
 Markdown may conflict with other input filters, depending on the order
 in which filters are configured to apply. If using Markdown produces
 unexpected markup when configured with other filters, experimenting with
@@ -221,6 +230,7 @@ with Markdown doesn't work in this case since "Limit allowed HTML tags" filter
 converts the ">" in to "&gt;".
 
 ## Smartypants Support
+> @todo Update this section.
 
 This module is a continuation of the Markdown with Smartypants module.
 It only includes Markdown support and it is now suggested that you use
@@ -228,10 +238,14 @@ Typogrify module if you are interested in Smartypants support.
 
 <https://drupal.org/project/typogrify>
 
+
+
+
 [CommonMark]: http://commonmark.org/
 [CommonMark Attributes Extension]: https://github.com/webuni/commonmark-attributes-extension
 [CommonMark Table Extension]: https://github.com/webuni/commonmark-table-extension
 [Drupal Coding Standard]: https://www.drupal.org/project/coding_standards/issues/2952616
+[Editor.md]: https://drupal.org/project/editor_md
 [erusev/parsedown]: https://github.com/erusev/parsedown
 [michelf/php-markdown]: https://github.com/michelf/php-markdown
 [thephpleague/commonmark]: https://github.com/thephpleague/commonmark
