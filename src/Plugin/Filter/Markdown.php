@@ -14,6 +14,7 @@ use Drupal\filter\Plugin\FilterBase;
  *   title = @Translation("Markdown"),
  *   description = @Translation("Allows content to be submitted using Markdown, a simple plain-text syntax that is filtered into valid HTML."),
  *   type = Drupal\filter\Plugin\FilterInterface::TYPE_MARKUP_LANGUAGE,
+ *   weight = -15,
  * )
  */
 class Markdown extends FilterBase implements MarkdownFilterInterface {
