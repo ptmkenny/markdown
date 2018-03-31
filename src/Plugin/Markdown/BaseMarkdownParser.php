@@ -4,7 +4,6 @@ namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Component\Utility\Html;
-use Drupal\Component\Utility\SafeMarkup;
 use Drupal\Component\Utility\Xss;
 use Drupal\Core\Annotation\Translation;
 use Drupal\Core\Language\LanguageInterface;
@@ -13,6 +12,7 @@ use Drupal\Core\Render\Element;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
 use Drupal\filter\FilterFormatInterface;
+use Drupal\markdown\MarkdownBenchmark;
 use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
 
 /**
@@ -25,6 +25,20 @@ use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
  * )
  */
 class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface {
+
+  /**
+   * Flag indicating whether this is currently in the process of a benchmark.
+   *
+   * @var bool
+   */
+  protected static $benchmark = FALSE;
+
+  /**
+   * The benchmarked parsed result.
+   *
+   * @var string|false
+   */
+  protected static $benchmarkParsedResult = FALSE;
 
   /**
    * MarkdownExtension plugins specific to a parser.
@@ -66,6 +80,47 @@ class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface {
     if (isset($configuration['settings'])) {
       $this->settings = $configuration['settings'];
     }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function benchmark($markdown, $format = NULL) {
+    static::$benchmark = TRUE;
+
+    // Parse.
+    $parsed_start = microtime(TRUE);
+    $parsed_result = $this->parse($markdown);
+    $parsed_end = microtime(TRUE);
+
+    static::$benchmarkParsedResult = $parsed_result;
+
+    // Render.
+    if ($format === NULL) {
+      $rendered_start = microtime(TRUE);
+      $rendered_result = $this->render($markdown);
+      $rendered_end = microtime(TRUE);
+    }
+    else {
+      $rendered_start = microtime(TRUE);
+      $rendered_result = check_markup($markdown, $format);
+      $rendered_end = microtime(TRUE);
+    }
+
+    // Reset benchmark.
+    static::$benchmark = FALSE;
+    static::$benchmarkParsedResult = FALSE;
+
+    return [
+      // Parsed.
+      MarkdownBenchmark::create($parsed_start, $parsed_end, $parsed_result),
+
+      // Rendered.
+      MarkdownBenchmark::create($rendered_start, $rendered_end, $rendered_result),
+
+      // Total.
+      MarkdownBenchmark::create($parsed_start, $rendered_end, $rendered_result),
+    ];
   }
 
   /**
@@ -547,7 +602,7 @@ class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface {
    * {@inheritdoc}
    */
   public function render($markdown, LanguageInterface $language = NULL) {
-    return Markup::create(Xss::filterAdmin($this->parse($markdown, $language)));
+    return Markup::create(Xss::filterAdmin(static::$benchmarkParsedResult ?: $this->parse($markdown, $language)));
   }
 
   /**

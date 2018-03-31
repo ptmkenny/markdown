@@ -22,12 +22,25 @@ class ParsedownExtra extends BaseMarkdownParser {
    */
   protected static $parsers = [];
 
+  /**
+   * A map of setting <-> method.
+   *
+   * @var array
+   */
   protected static $settingsMethodMap = [
     'breaks_enabled' => 'setBreaksEnabled',
     'markup_escaped' => 'setMarkupEscaped',
     'safe_mode' => 'setSafeMode',
     'urls_linked' => 'setUrlsLinked',
   ];
+
+  /**
+   * {@inheritdoc}
+   */
+  public function __construct(array $configuration, $plugin_id, $plugin_definition) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition);
+    $this->getParser();
+  }
 
   /**
    * Retrieves the PHP Markdown parser.

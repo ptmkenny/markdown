@@ -24,6 +24,14 @@ class PhpMarkdown extends BaseMarkdownParser {
   protected static $parsers = [];
 
   /**
+   * {@inheritdoc}
+   */
+  public function __construct(array $configuration, $plugin_id, $plugin_definition) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition);
+    $this->getParser();
+  }
+
+  /**
    * Retrieves the PHP Markdown parser.
    *
    * @return \Michelf\MarkdownExtra

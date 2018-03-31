@@ -41,6 +41,14 @@ class LeagueCommonMark extends BaseMarkdownParser {
   protected static $environments;
 
   /**
+   * {@inheritdoc}
+   */
+  public function __construct(array $configuration, $plugin_id, $plugin_definition) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition);
+    $this->getConverter();
+  }
+
+  /**
    * Retrieves a CommonMark converter, creating it if necessary.
    *
    * @return \League\CommonMark\Converter

@@ -12,6 +12,24 @@ use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
 interface MarkdownParserInterface extends PluginInspectionInterface {
 
   /**
+   * Benchmarks the MarkdownParser.
+   *
+   * @param string $markdown
+   *   The markdown string to parse.
+   * @param string $format
+   *   A specific filter format identifier to use. If provided, the "rendered"
+   *   benchmark will be that of check_markup(). If not, it will be that of
+   *   the MarkdownParser's render() method.
+   *
+   * @return \Drupal\markdown\MarkdownBenchmark[]
+   *   An array containing three benchmarks to be used with list():
+   *   - parsing
+   *   - rendering
+   *   - total
+   */
+  public function benchmark($markdown, $format = NULL);
+
+  /**
    * Builds a guide on how to use the Markdown Parser.
    *
    * @param \Drupal\markdown\Plugin\Filter\MarkdownFilterInterface $filter
