@@ -3,6 +3,7 @@
 namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\markdown\Traits\MarkdownParserBenchmarkTrait;
 
 /**
  * Class ParsedownExtra.
@@ -13,7 +14,9 @@ use Drupal\Core\Language\LanguageInterface;
  *   checkClass = "ParsedownExtra",
  * )
  */
-class ParsedownExtra extends BaseMarkdownParser {
+class ParsedownExtra extends BaseMarkdownParser implements MarkdownParserBenchmarkInterface {
+
+  use MarkdownParserBenchmarkTrait;
 
   /**
    * MarkdownExtra parsers, keyed by filter identifier.
@@ -37,9 +40,8 @@ class ParsedownExtra extends BaseMarkdownParser {
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->getParser();
+  public function convertToHtml($markdown, LanguageInterface $language = NULL) {
+    return $this->getParser()->text($markdown);
   }
 
   /**
@@ -81,13 +83,6 @@ class ParsedownExtra extends BaseMarkdownParser {
    */
   public function getVersion() {
     return \Parsedown::version . '/' . \ParsedownExtra::version;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function parse($markdown, LanguageInterface $language = NULL) {
-    return trim($this->getParser()->text($markdown));
   }
 
 }

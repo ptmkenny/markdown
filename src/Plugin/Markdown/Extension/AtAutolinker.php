@@ -4,6 +4,7 @@ namespace Drupal\markdown\Plugin\Markdown\Extension;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
+use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
 use Drupal\user\Entity\User;
 use League\CommonMark\Inline\Element\Link;
 use League\CommonMark\Inline\Parser\InlineParserInterface;
@@ -19,12 +20,12 @@ use League\CommonMark\InlineParserContext;
  *   description = @Translation("Automatically link commonly used references that come after an at character (@) without having to use the link syntax."),
  * )
  */
-class AtAutolinker extends CommonMarkExtension implements InlineParserInterface {
+class AtAutolinker extends CommonMarkExtension implements InlineParserInterface, MarkdownGuidelinesAlterInterface {
 
   /**
    * {@inheritdoc}
    */
-  public function buildGuide(array &$build = []) {
+  public function alterGuidelines(array &$guides = []) {
     $user = \Drupal::currentUser();
     if ($user->isAnonymous()) {
       $user = User::load(1);
@@ -36,7 +37,7 @@ class AtAutolinker extends CommonMarkExtension implements InlineParserInterface 
         $description[] = $this->t('The formatted user name will be used in place of the text.');
       }
       $description[] = $this->t('If the user does not exist, it will not automatically link.');
-      $build['links']['items'][] = [
+      $guides['links']['items'][] = [
         'title' => $this->t('@ Autolinker'),
         'description' => $description,
         'tags' => [
@@ -45,7 +46,7 @@ class AtAutolinker extends CommonMarkExtension implements InlineParserInterface 
       ];
     }
     elseif ($this->getSetting('type') === 'url') {
-      $build['links']['items'][] = [
+      $guides['links']['items'][] = [
         'title' => $this->t('@ Autolinker'),
         'description' => $this->t('Text that starts with an at symbol (@) followed by any character other than a space will automatically be linked to the following URL: <code>@url</code>', [
           '@url' => $this->getSetting('url'),

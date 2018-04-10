@@ -5,6 +5,7 @@ namespace Drupal\markdown\Plugin\Markdown;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\markdown\Plugin\Markdown\Extension\CommonMarkRendererInterface;
+use Drupal\markdown\Traits\MarkdownParserBenchmarkTrait;
 use League\CommonMark\Block\Parser\BlockParserInterface;
 use League\CommonMark\Block\Renderer\BlockRendererInterface;
 use League\CommonMark\CommonMarkConverter;
@@ -24,7 +25,9 @@ use League\CommonMark\Inline\Renderer\InlineRendererInterface;
  *   checkClass = "League\CommonMark\CommonMarkConverter",
  * )
  */
-class LeagueCommonMark extends BaseMarkdownParser {
+class LeagueCommonMark extends ExtensibleMarkdownParser implements MarkdownParserBenchmarkInterface {
+
+  use MarkdownParserBenchmarkTrait;
 
   /**
    * CommonMark converters, keyed by format filter identifiers.
@@ -43,9 +46,8 @@ class LeagueCommonMark extends BaseMarkdownParser {
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->getConverter();
+  public function convertToHtml($markdown, LanguageInterface $language = NULL) {
+    return $this->getConverter()->convertToHtml($markdown);
   }
 
   /**
@@ -71,7 +73,7 @@ class LeagueCommonMark extends BaseMarkdownParser {
   protected function getEnvironment() {
     if (!isset(static::$environments[$this->filterId])) {
       $environment = Environment::createCommonMarkEnvironment();
-      $extensions = $this->getExtensions($this->filter);
+      $extensions = $this->getExtensions(TRUE);
       foreach ($extensions as $extension) {
         if ($settings = $extension->getSettings()) {
           $environment->setConfig(NestedArray::mergeDeep($environment->getConfig(), $settings));
@@ -122,13 +124,6 @@ class LeagueCommonMark extends BaseMarkdownParser {
    */
   public function getVersion() {
     return CommonMarkConverter::VERSION;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function parse($markdown, LanguageInterface $language = NULL) {
-    return trim($this->getConverter()->convertToHtml($markdown));
   }
 
 }

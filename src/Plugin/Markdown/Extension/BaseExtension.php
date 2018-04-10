@@ -38,12 +38,6 @@ abstract class BaseExtension extends PluginBase implements MarkdownExtensionInte
   /**
    * {@inheritdoc}
    */
-  public function buildGuide(array &$build = []) {
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function defaultSettings() {
     return [];
   }

@@ -3,6 +3,7 @@
 namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\markdown\Traits\MarkdownParserBenchmarkTrait;
 
 /**
  * Class PeclCmark.
@@ -13,7 +14,25 @@ use Drupal\Core\Language\LanguageInterface;
  *   checkClass = "CommonMark\Parser",
  * )
  */
-class PeclCmark extends BaseMarkdownParser {
+class PeclCmark extends BaseMarkdownParser implements MarkdownParserBenchmarkInterface {
+
+  use MarkdownParserBenchmarkTrait;
+
+  /**
+   * {@inheritdoc}
+   */
+  public function convertToHtml($markdown, LanguageInterface $language = NULL) {
+    try {
+      if (is_string($markdown)) {
+        $node = \CommonMark\Parse($markdown);
+        return \CommonMark\Render\HTML($node);
+      }
+    }
+    catch (\Exception $e) {
+      // Intentionally left blank.
+    }
+    return '';
+  }
 
   /**
    * {@inheritdoc}
@@ -35,22 +54,6 @@ class PeclCmark extends BaseMarkdownParser {
     }
 
     return $version;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function parse($markdown, LanguageInterface $language = NULL) {
-    try {
-      if (is_string($markdown)) {
-        $node = \CommonMark\Parse($markdown);
-        return trim(\CommonMark\Render\HTML($node));
-      }
-    }
-    catch (\Exception $e) {
-      // Intentionally left blank.
-    }
-    return '';
   }
 
 }

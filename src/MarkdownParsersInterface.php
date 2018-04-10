@@ -6,7 +6,6 @@ use Drupal\Component\Plugin\FallbackPluginManagerInterface;
 use Drupal\Component\Plugin\PluginManagerInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\filter\Plugin\FilterInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 
 /**
@@ -33,8 +32,9 @@ interface MarkdownParsersInterface extends ContainerAwareInterface, ContainerInj
   /**
    * Retrieves a parser based on a filter and its settings.
    *
-   * @param \Drupal\filter\Plugin\FilterInterface $filter
-   *   Optional A filter plugin to use.
+   * @param string|\Drupal\filter\Plugin\FilterInterface|\Drupal\filter\FilterFormatInterface $filter
+   *   Optional A specific filter plugin to use, a string representing a filter
+   *   format or a FilterFormatInterface object containing a "markdown" filter.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   Optional. An account used to retrieve filters available filters if one
    *   wasn't already specified.
@@ -42,7 +42,7 @@ interface MarkdownParsersInterface extends ContainerAwareInterface, ContainerInj
    * @return \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
    *   A MarkdownParser plugin.
    */
-  public function getParser(FilterInterface $filter = NULL, AccountInterface $account = NULL);
+  public function getParser($filter = NULL, AccountInterface $account = NULL);
 
   /**
    * Retrieves all available MarkdownParser plugins.

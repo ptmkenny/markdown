@@ -5,7 +5,7 @@ namespace Drupal\markdown;
 /**
  * Class MarkdownBenchmark.
  */
-class MarkdownBenchmark {
+class MarkdownBenchmark implements \Serializable {
 
   /**
    * The start time.
@@ -36,18 +36,28 @@ class MarkdownBenchmark {
   protected $result;
 
   /**
+   * The type of benchmark this is.
+   *
+   * @var string
+   */
+  protected $type;
+
+  /**
    * MarkdownBenchmark constructor.
    *
-   * @param float $start
-   *   The start microtime(TRUE).
-   * @param $end
-   *   The end microtime(TRUE).
+   * @param string $type
+   *   The type of benchmark.
+   * @param \DateTime $start
+   *   The start time.
+   * @param \DateTime $end
+   *   The end end time.
    * @param mixed $result
    *   The result of what was benchmarked.
    */
-  public function __construct($start, $end, $result = NULL) {
-    $this->start = \DateTime::createFromFormat('U.u', sprintf('%.6F', $start));
-    $this->end = \DateTime::createFromFormat('U.u', sprintf('%.6F', $end));
+  public function __construct($type, \DateTime $start, \DateTime $end, $result = NULL) {
+    $this->type = $type;
+    $this->start = $start;
+    $this->end = $end;
     $this->diff = $this->start->diff($this->end);
     $this->result = $result;
   }
@@ -55,17 +65,34 @@ class MarkdownBenchmark {
   /**
    * Creates a new MarkdownBenchmark instance.
    *
-   * @param float $start
+   * @param string $type
+   *   The type of benchmark.
+   * @param float|\DateTime $start
    *   The start microtime(TRUE).
-   * @param $end
+   * @param float|\DateTime $end
    *   The end microtime(TRUE).
    * @param mixed $result
    *   The result of what was benchmarked.
    *
    * @return static
    */
-  public static function create($start, $end, $result = NULL) {
-    return new static($start, $end, $result);
+  public static function create($type = NULL, $start = NULL, $end = NULL, $result = NULL) {
+    if ($type === NULL) {
+      $type = 'unknown';
+    }
+    if (!$start instanceof \DateTime) {
+      if ($start === NULL) {
+        $start = microtime(TRUE);
+      }
+      $start = \DateTime::createFromFormat('U.u', sprintf('%.6F', (float) $start));
+    }
+    if (!$end instanceof \DateTime) {
+      if ($end === NULL) {
+        $end = microtime(TRUE);
+      }
+      $end = \DateTime::createFromFormat('U.u', sprintf('%.6F', (float) $end));
+    }
+    return new static($type, $start, $end, $result);
   }
 
   /**
@@ -76,6 +103,16 @@ class MarkdownBenchmark {
    */
   public function getDiff() {
     return $this->diff;
+  }
+
+  /**
+   * Retrieves the benchmark end time.
+   *
+   * @return \DateTime
+   *   The benchmark end time.
+   */
+  public function getEnd() {
+    return $this->end;
   }
 
   /**
@@ -119,13 +156,77 @@ class MarkdownBenchmark {
   }
 
   /**
-   * Retrieves the benchmark end time.
+   * Retrieves the type of benchmark.
    *
-   * @return \DateTime
-   *   The benchmark end time.
+   * @return string
+   *   The benchmark type.
    */
-  public function getEnd() {
-    return $this->end;
+  public function getType() {
+    return $this->type;
+  }
+
+  /**
+   * Removes the result from the benchmark.
+   *
+   * This is primarily only useful when there are a bunch of benchmarks being
+   * grouped together and only the last one needs to retrain the result.
+   *
+   * @see \Drupal\markdown\MarkdownBenchmarkAverages::iterate()
+   *
+   * @return static
+   */
+  public function clearResult() {
+    $this->result = NULL;
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function serialize() {
+    // Create a new unreferenced array (this is needed as PHP sometimes
+    // stores objects as references when they're passed around). This can
+    // cause reference/recursion issues in the serialized data.
+    $array = [];
+    foreach (get_object_vars($this) as $key => $value) {
+      $array[$key] = is_object($value) ? clone $value : $value;
+    }
+
+    $data['object'] = serialize($array);
+
+    // Determine if PHP has gzip capabilities.
+    $data['gzip'] = extension_loaded('zlib');
+
+    // Compress and encode the markdown and html output.
+    if ($data['gzip']) {
+      $data['object'] = base64_encode(gzencode($data['object'], 9));
+    }
+
+    return serialize($data);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function unserialize($serialized) {
+    $data = unserialize($serialized);
+
+    // Data was gzipped.
+    if ($data['gzip']) {
+      // Decompress data if PHP has gzip capabilities.
+      if (extension_loaded('zlib')) {
+        $data['object'] = gzdecode(base64_decode($data['object']));
+      }
+      else {
+        $this->result = sprintf('This cached %s object was stored using gzip compression. Unable to decompress. The PHP on this server must have the "zlib" extension installed.', static::class);
+        return;
+      }
+    }
+
+    $object = unserialize($data['object']);
+    foreach ($object as $prop => $value) {
+      $this->$prop = $value;
+    }
   }
 
 }

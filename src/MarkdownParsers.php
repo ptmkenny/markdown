@@ -9,7 +9,7 @@ use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\filter\Plugin\FilterInterface;
+use Drupal\filter\FilterFormatInterface;
 use Drupal\markdown\Annotation\MarkdownParser;
 use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
@@ -74,7 +74,9 @@ class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInt
    * @return \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
    *   A MarkdownParser plugin.
    */
-  public function createInstance($plugin_id = 'commonmark', array $configuration = []) {
+  public function createInstance($plugin_id = NULL, array $configuration = []) {
+    $plugin_id = $this->getFallbackPluginId($plugin_id, $configuration);
+
     // Retrieve the filter from the configuration.
     $filter = $this->getFilter($plugin_id, $configuration);
 
@@ -92,8 +94,33 @@ class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInt
   /**
    * {@inheritdoc}
    */
-  public function getFilter($parser = 'commonmark', array &$configuration = []) {
+  public function getFallbackPluginId($plugin_id = NULL, array $configuration = []) {
+    // Default to thephpleague/commonmark parser.
+    if ($plugin_id === NULL) {
+      $plugin_id = 'thephpleague/commonmark';
+    }
+
+    // Check if the provided parser is valid.
+    $plugin_ids = array_keys($this->getDefinitions());
+    if (!in_array($plugin_id, $plugin_ids)) {
+      $plugin_id = array_shift($plugin_ids);
+    }
+
+    if (!$plugin_id) {
+      \Drupal::logger('markdown')->warning($this->t('Unknown MarkdownParser: "@parser".', ['@parser' => $plugin_id]));
+      $plugin_id = '_broken';
+    }
+
+    return $plugin_id;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getFilter($parser = NULL, array &$configuration = []) {
     global $user;
+
+    $parser = $this->getFallbackPluginId($parser, $configuration);
 
     $filter = isset($configuration['filter']) ? $configuration['filter'] : NULL;
     $account = isset($configuration['account']) ? $configuration['account'] : NULL;
@@ -119,7 +146,7 @@ class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInt
         }
 
         // Skip formats that don't match the desired parser.
-        if (!$format_filter || $format_filter->status || !($format_filter instanceof MarkdownFilterInterface) || ($parser && ($format_filter->getSetting('parser') !== $parser))) {
+        if (!$format_filter || $format_filter->status || !($format_filter instanceof MarkdownFilterInterface) || !$format_filter->isEnabled() || ($parser && ($format_filter->getSetting('parser') !== $parser))) {
           continue;
         }
 
@@ -127,12 +154,27 @@ class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInt
         break;
       }
     }
-
-    if ($filter && !($filter instanceof MarkdownFilterInterface)) {
-      throw new \InvalidArgumentException($this->t('Filter provided in configuration must be an instance of \\Drupal\\markdown\\Plugin\\Filter\\MarkdownFilterInterface.'));
+    elseif (is_string($filter)) {
+      if ($account === NULL) {
+        $account = (int) \Drupal::VERSION[0] >= 8 ? \Drupal::currentUser() : $user;
+      }
+      $formats = filter_formats($account);
+      if (isset($formats[$filter])) {
+        $filter = $formats[$filter]->filters()->get('markdown');
+      }
+      else {
+        $filter = NULL;
+      }
+    }
+    elseif ($filter instanceof FilterFormatInterface) {
+      $filter = $filter->filters()->get('markdown');
     }
 
-    // Now set the filter.
+    if ($filter && !($filter instanceof MarkdownFilterInterface)) {
+      throw new \InvalidArgumentException($this->t('Filter provided in configuration must be an instance of \\Drupal\\markdown\\Plugin\\Filter\\MarkdownFilterInterface a string representing a filter format or instance of \\Drupal\\filter\\FilterFormatInterface that contains a markdown filter.'));
+    }
+
+    // Now reset the filter.
     $configuration['filter'] = $filter;
 
     return $filter;
@@ -141,16 +183,7 @@ class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInt
   /**
    * {@inheritdoc}
    */
-  public function getFallbackPluginId($plugin_id, array $configuration = []) {
-    \Drupal::logger('markdown')
-      ->warning($this->t('Unknown MarkdownParser: "@parser".', ['@parser' => $plugin_id]));
-    return '_broken';
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getParser(FilterInterface $filter = NULL, AccountInterface $account = NULL) {
+  public function getParser($filter = NULL, AccountInterface $account = NULL) {
     return $this->createInstance(NULL, [
       'filter' => $filter,
       'account' => $account,

@@ -6,6 +6,7 @@ use Drupal\Component\Utility\Html;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
+use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
 use League\CommonMark\ElementRendererInterface;
 use League\CommonMark\HtmlElement;
 use League\CommonMark\Inline\Element\AbstractInline;
@@ -22,35 +23,35 @@ use League\CommonMark\Inline\Renderer\InlineRendererInterface;
  *   description = @Translation("Extends CommonMark to provide additional enhancements when rendering links."),
  * )
  */
-class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInterface, InlineRendererInterface {
+class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInterface, InlineRendererInterface, MarkdownGuidelinesAlterInterface {
 
   /**
    * {@inheritdoc}
    */
-  public function buildGuide(array &$build = []) {
-    if (!isset($build['links']['items'][0]['description'])) {
-      $build['links']['items'][0]['description'] = [];
+  public function alterGuidelines(array &$guides = []) {
+    if (!isset($guides['links']['items'][0]['description'])) {
+      $guides['links']['items'][0]['description'] = [];
     }
-    elseif (isset($build['links']['items'][0]['description']) && !is_array($build['links']['items'][0]['description'])) {
-      $build['links']['items'][0]['description'] = [$build['links']['items'][0]['description']];
+    elseif (isset($guides['links']['items'][0]['description']) && !is_array($guides['links']['items'][0]['description'])) {
+      $guides['links']['items'][0]['description'] = [$guides['links']['items'][0]['description']];
     }
 
     if ($this->getSetting('external_new_window')) {
-      $build['links']['items'][0]['description'][] = '<p>' . $this->t('All external links will open in a new window or tab.') . '</p>';
-      $build['links']['items'][0]['tags']['a'][] = '[' . $this->t('External link opens in new window') . '](http://example.com)';
+      $guides['links']['items'][0]['description'][] = '<p>' . $this->t('All external links will open in a new window or tab.') . '</p>';
+      $guides['links']['items'][0]['tags']['a'][] = '[' . $this->t('External link opens in new window') . '](http://example.com)';
     }
     else {
-      $build['links']['items'][0]['tags']['a'][] = '[' . $this->t('External link') . '](http://example.com)';
+      $guides['links']['items'][0]['tags']['a'][] = '[' . $this->t('External link') . '](http://example.com)';
     }
 
     if ($this->getSetting('no_follow') === 'all') {
-      $build['links']['items'][0]['description'][] = '<p>' . $this->t('All links will have the <code>rel="nofollow"</code> attribute applied to it.') . '</p>';
+      $guides['links']['items'][0]['description'][] = '<p>' . $this->t('All links will have the <code>rel="nofollow"</code> attribute applied to it.') . '</p>';
     }
     elseif ($this->getSetting('no_follow') === 'external') {
-      $build['links']['items'][0]['description'][] = '<p>' . $this->t('All external links will have the <code>rel="nofollow"</code> attribute applied to it.') . '</p>';
+      $guides['links']['items'][0]['description'][] = '<p>' . $this->t('All external links will have the <code>rel="nofollow"</code> attribute applied to it.') . '</p>';
     }
     elseif ($this->getSetting('no_follow') === 'internal') {
-      $build['links']['items'][0]['description'][] = '<p>' . $this->t('All internal links will have the <code>rel="nofollow"</code> attribute applied to it.') . '</p>';
+      $guides['links']['items'][0]['description'][] = '<p>' . $this->t('All internal links will have the <code>rel="nofollow"</code> attribute applied to it.') . '</p>';
     }
 
     // Determine the internal whitelist host names.
@@ -68,13 +69,13 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
       foreach ($hosts as &$host) {
         $host = '<code>' . Html::escape($host) . '</code>';
       }
-      $build['links']['items'][0]['description'][] = '<p>' . $this->t('Links with the following URL host names will be treated as "internal" links: !hosts.', ['!hosts' => implode(', ', $hosts)]) . '</p>';
+      $guides['links']['items'][0]['description'][] = '<p>' . $this->t('Links with the following URL host names will be treated as "internal" links: !hosts.', ['!hosts' => implode(', ', $hosts)]) . '</p>';
     }
 
     $base_url = Url::fromRoute('<front>', [], ['absolute' => TRUE])->toString();
     $site_name = \Drupal::config('system.site')->get('name');
 
-    $build['links']['items'][] = [
+    $guides['links']['items'][] = [
       'title' => $this->t('Manual links (using raw HTML)'),
       'description' => $this->t('The above examples are only for links using the Markdown syntax. Manually defined links using raw HTML are always processed "as is". You will be responsible for adding all attributes and values. Suffice it to say, it is always best to avoid using raw HTML and instead use the Markdown syntax whenever possible.'),
       'tags' => [

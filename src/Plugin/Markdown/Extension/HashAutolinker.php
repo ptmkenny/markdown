@@ -6,6 +6,8 @@ use Drupal\Component\Utility\Html;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
+use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
+use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesInterface;
 use League\CommonMark\Inline\Element\Link;
 use League\CommonMark\Inline\Parser\InlineParserInterface;
 use League\CommonMark\InlineParserContext;
@@ -20,19 +22,19 @@ use League\CommonMark\InlineParserContext;
  *   description = @Translation("Automatically link commonly used references that come after a hash character (#) without having to use the link syntax."),
  * )
  */
-class HashAutolinker extends CommonMarkExtension implements InlineParserInterface {
+class HashAutolinker extends CommonMarkExtension implements InlineParserInterface, MarkdownGuidelinesAlterInterface {
 
   /**
    * {@inheritdoc}
    */
-  public function buildGuide(array &$build = []) {
+  public function alterGuidelines(array &$guides = []) {
     if ($this->getSetting('type') === 'node') {
       $description = [t('Text that starts with hash symbol (#) followed by numbers will be automatically be linked to a node on this site.')];
       if ($this->getSetting('node_title')) {
         $description[] = t('The node title will be used in place the text.');
       }
       $description[] = t('If the node does not exist, it will not automatically link.');
-      $build['links']['items'][] = [
+      $guides['links']['items'][] = [
         'title' => t('# Autolinker'),
         'description' => $description,
       ];
@@ -46,7 +48,7 @@ class HashAutolinker extends CommonMarkExtension implements InlineParserInterfac
       if ($this->getSetting('url_title')) {
         $description[] = t('The URL title will be used in place of the original text.');
       }
-      $build['links']['items'][] = [
+      $guides['links']['items'][] = [
         'title' => t('@ Autolinker'),
         'description' => $description,
         'tags' => [

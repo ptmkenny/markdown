@@ -12,17 +12,6 @@ use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
 interface MarkdownExtensionInterface extends ConfigurablePluginInterface {
 
   /**
-   * Builds a guide on how to use the Markdown Parser.
-   *
-   * @param array $build
-   *   The current build array, passed by reference.
-   *
-   * @return array
-   *   Optional. A specific render array for the extension itself.
-   */
-  public function buildGuide(array &$build = []);
-
-  /**
    * Retrieves the default settings.
    *
    * @return array

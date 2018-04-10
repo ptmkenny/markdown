@@ -80,50 +80,61 @@ you want to take a peek!
 ## Programmatic Conversion
 
 In some cases you may need to programmatically convert CommonMark Markdown to
-HTML. In procedural functions, you can accomplish this in the following manner:
+HTML. This is especially true with support legacy procedural/hook-based
+functions. An example of how to accomplish this can be found in right here
+in this module:
 
 ```php
-use \Drupal\markdown\Markdown;
+<?php
 
-function my_module_callback_function($markdown) {
-  return ['#markup' => Markdown::create()->render($markdown)];
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\markdown\Markdown;
+
+/**
+ * Implements hook_help().
+ *
+ * {@inheritdoc}
+ */
+function markdown_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    case 'help.page.markdown':
+      return Markdown::loadPath('markdown:README.md', __DIR__ . '/README.md');
+  }
 }
-
-$markdown = '# Hello World!';
-$build = my_module_callback_function('# Hello World!');
-// Returns: ['#markup' => '<h1>Hello World!</h1>']
 ```
 
 If you need to parse Markdown in other services, inject it as a dependency:
 
 ```php
+<?php
+
 use \Drupal\markdown\MarkdownInterface;
 
 class MyService {
 
   /**
-   * The Markdown service.
+   * A MarkdownParser instance.
    *
-   * @var \Drupal\markdown\MarkdownInterface
+   * @var \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
    */
-  protected $markdown;
+  protected $markdownParser;
 
   /**
    * MyService constructor.
    */
   public function __construct(MarkdownInterface $markdown) {
-    $this->markdown = $markdown;
+    $this->markdownParser = $markdown->getParser();
   }
 
   /**
    * MyService renderer.
    */
   public function render(array $items) {
-    $output = '';
+    $build = ['#theme' => 'item_list', '#items' => []];
     foreach ($items as $markdown) {
-      $output .= $this->markdown->render($markdown);
+      $build['#items'][] = $this->markdownParser->parse($markdown);
     }
-    return ['#markup' => $output];
+    return $build;
   }
 }
 ```
@@ -132,6 +143,8 @@ Or if using it in classes where modifying the constructor may prove difficult,
 use the `MarkdownTrait`:
 
 ```php
+<?php
+
 use \Drupal\markdown\Traits\MarkdownTrait;
 
 class MyController {
@@ -142,12 +155,13 @@ class MyController {
    * MyService renderer.
    */
   public function render(array $items) {
-    $output = '';
+    $build = ['#theme' => 'item_list', '#items' => []];
     foreach ($items as $markdown) {
-      $output .= $this->markdown()->render($markdown);
+      $build['#items'][] = $this->parseMarkdown($markdown);
     }
-    return ['#markup' => $output];
+    return $build;
   }
+
 }
 ```
 

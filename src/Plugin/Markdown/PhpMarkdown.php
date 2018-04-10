@@ -3,6 +3,8 @@
 namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\markdown\ParsedMarkdown;
+use Drupal\markdown\Traits\MarkdownParserBenchmarkTrait;
 use Michelf\MarkdownExtra;
 
 /**
@@ -14,7 +16,9 @@ use Michelf\MarkdownExtra;
  *   checkClass = "Michelf\MarkdownExtra",
  * )
  */
-class PhpMarkdown extends BaseMarkdownParser {
+class PhpMarkdown extends BaseMarkdownParser implements MarkdownParserBenchmarkInterface {
+
+  use MarkdownParserBenchmarkTrait;
 
   /**
    * MarkdownExtra parsers, keyed by filter identifier.
@@ -29,6 +33,13 @@ class PhpMarkdown extends BaseMarkdownParser {
   public function __construct(array $configuration, $plugin_id, $plugin_definition) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->getParser();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function convertToHtml($markdown, LanguageInterface $language = NULL) {
+    return $this->getParser()->transform($markdown);
   }
 
   /**
@@ -55,13 +66,6 @@ class PhpMarkdown extends BaseMarkdownParser {
    */
   public function getVersion() {
     return MarkdownExtra::MARKDOWNLIB_VERSION;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function parse($markdown, LanguageInterface $language = NULL) {
-    return trim($this->getParser()->transform($markdown));
   }
 
 }

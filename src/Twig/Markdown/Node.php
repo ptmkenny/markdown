@@ -28,7 +28,7 @@ class Node extends \Twig_Node {
       ->write('$content = implode("\n", $content);' . PHP_EOL)
       ->write('echo $this->env->getTags()["markdown"]
                                     ->getMarkdown()
-                                    ->render($content);
+                                    ->parse($content);
                 ' . PHP_EOL);
   }
 

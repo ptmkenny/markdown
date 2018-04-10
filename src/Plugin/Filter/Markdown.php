@@ -2,7 +2,9 @@
 
 namespace Drupal\markdown\Plugin\Filter;
 
+use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
 
@@ -61,7 +63,7 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
    */
   public function getParser() {
     if (!isset($this->parser)) {
-      $this->parser = $this->parsers->createInstance($this->getSetting('parser', 'commonmark'), ['filter' => $this]);
+      $this->parser = $this->parsers->createInstance($this->getSetting('parser', 'thephpleague/commonmark'), ['filter' => $this]);
     }
     return $this->parser;
   }
@@ -135,13 +137,36 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
     return $form;
   }
 
+  public static function processTextFormat(&$element, FormStateInterface $form_state, &$complete_form) {
+    $formats = filter_formats();
+    /** @var \Drupal\filter\FilterFormatInterface $format */
+    $format = isset($formats[$element['#format']]) ? $formats[$element['#format']] : FALSE;
+    if ($format && ($markdown = $format->filters('markdown')) && $markdown instanceof MarkdownFilterInterface && $markdown->isEnabled()) {
+      $element['format']['help']['about'] = [
+        '#type' => 'link',
+        '#title' => t('@iconStyling with Markdown is supported', [
+          // Shamelessly copied from GitHub's Octicon icon set.
+          // @todo Revisit this?
+          // @see https://github.com/primer/octicons/blob/master/lib/svg/markdown.svg
+          '@icon' => new FormattableMarkup('<svg class="octicon octicon-markdown v-align-bottom" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true" style="fill: currentColor;margin-right: 5px;vertical-align: text-bottom;"><path fill-rule="evenodd" d="M14.85 3H1.15C.52 3 0 3.52 0 4.15v7.69C0 12.48.52 13 1.15 13h13.69c.64 0 1.15-.52 1.15-1.15v-7.7C16 3.52 15.48 3 14.85 3zM9 11H7V8L5.5 9.92 4 8v3H2V5h2l1.5 2L7 5h2v6zm2.99.5L9.5 8H11V5h2v3h1.5l-2.51 3.5z"></path></svg>', []),
+        ]),
+        '#url' => Url::fromRoute('filter.tips_all')->setOptions([
+          'attributes' => [
+            'class' => ['markdown'],
+            'target' => '_blank',
+        ]]),
+      ];
+    }
+    return $element;
+  }
+
   /**
    * {@inheritdoc}
    */
   public function process($text, $langcode) {
     // Only use the parser to process the text if it's not empty.
     if (!empty($text)) {
-      $text = (string) $this->getParser()->render($text, \Drupal::languageManager()->getLanguage($langcode));
+      $text = (string) $this->getParser()->parse($text, \Drupal::languageManager()->getLanguage($langcode));
     }
     return new FilterProcessResult($text);
   }
@@ -150,7 +175,7 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
    * {@inheritdoc}
    */
   public function tips($long = FALSE) {
-    $this->getParser()->tips($this, $long);
+    return $this->getParser()->tips($long);
   }
 
 }

@@ -2,11 +2,10 @@
 
 namespace Drupal\markdown;
 
+use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\filter\FilterFormatInterface;
-use Drupal\filter\Plugin\FilterInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -16,6 +15,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class Markdown implements MarkdownInterface {
 
   use ContainerAwareTrait;
+  use DependencySerializationTrait;
   use StringTranslationTrait;
 
   /**
@@ -50,49 +50,52 @@ class Markdown implements MarkdownInterface {
   /**
    * {@inheritdoc}
    */
-  public function getParser($parser = NULL) {
-    return $this->parsers->createInstance($parser);
+  public static function load($id, $markdown = NULL, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL) {
+    return static::create()->getParser($parser, $filter, $account)->load($id, $markdown, $language);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function getParserFromFilter(FilterInterface $filter = NULL, AccountInterface $account = NULL) {
-    return $this->parsers->createInstance('', [
+  public static function loadPath($id, $path, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL) {
+    return static::create()->getParser($parser, $filter, $account)->loadPath($path, $language);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function loadUrl($id, $url, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL) {
+    return static::create()->getParser($parser, $filter, $account)->loadUrl($url, $language);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function parse($markdown, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL) {
+    return static::create()->getParser($parser, $filter, $account)->parse($markdown, $language);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function parsePath($path, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL) {
+    return static::create()->getParser($parser, $filter, $account)->parsePath($path, $language);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function parseUrl($url, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL) {
+    return static::create()->getParser($parser, $filter, $account)->parseUrl($url, $language);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getParser($parser = NULL, $filter = NULL, AccountInterface $account = NULL) {
+    return $this->parsers->createInstance($parser, [
       'filter' => $filter,
       'account' => $account,
     ]);
   }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getParserFromFilterFormat($filter_format) {
-    if (is_string($filter_format)) {
-      /* @noinspection PhpUnhandledExceptionInspection */
-      $filter_format = \Drupal::entityTypeManager()
-        ->getStorage('filter_format')
-        ->load($filter_format);
-    }
-    if (!($filter_format instanceof FilterFormatInterface)) {
-      throw new \InvalidArgumentException($this->t('Invalid filter format specified: @filter_format', ['@filter_format' => (string) $filter_format]));
-    }
-    return $this->getParserFromFilter($filter_format->filters()
-      ->get('markdown'));
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function parse($markdown, LanguageInterface $language = NULL, FilterInterface $filter = NULL, AccountInterface $account = NULL) {
-    return $this->getParserFromFilter($filter, $account)->parse($markdown, $language);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function render($markdown, LanguageInterface $language = NULL, FilterInterface $filter = NULL, AccountInterface $account = NULL) {
-    return $this->getParserFromFilter($filter, $account)->render($markdown, $language);
-  }
-
 }
