@@ -58,14 +58,14 @@ class Markdown implements MarkdownInterface {
    * {@inheritdoc}
    */
   public static function loadPath($id, $path, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL) {
-    return static::create()->getParser($parser, $filter, $account)->loadPath($path, $language);
+    return static::create()->getParser($parser, $filter, $account)->loadPath($id, $path, $language);
   }
 
   /**
    * {@inheritdoc}
    */
   public static function loadUrl($id, $url, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL) {
-    return static::create()->getParser($parser, $filter, $account)->loadUrl($url, $language);
+    return static::create()->getParser($parser, $filter, $account)->loadUrl($id, $url, $language);
   }
 
   /**

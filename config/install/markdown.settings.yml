@@ -1,7 +1,9 @@
-parsers:
+# Default markdown parser.
+parser: thephpleague/commonmark
 
-  # Default settings for CommonMark.
-  commonmark:
+# Default markdown parser settings.
+parsers:
+  thephpleague/commonmark:
     renderer:
       block_separator: '\n'
       inner_separator: '\n'
@@ -10,15 +12,13 @@ parsers:
     allow_unsafe_links: true
     max_nesting_level: 100
 
-  # Default settings for Parsedown.
-  parsedown:
+  erusev/parsedown:
     breaks_enabled: false
     markup_escaped: false
     safe_mode: false
     urls_linked: true
 
-  # Default settings for PHP Markdown.
-  php-markdown:
+  michelf/php-markdown:
     code_attr_on_pre: false
     code_class_prefix: ''
     empty_element_suffix: ' />'

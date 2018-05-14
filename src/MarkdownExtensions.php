@@ -2,6 +2,8 @@
 
 namespace Drupal\markdown;
 
+use Drupal\Component\Plugin\Exception\PluginException;
+use Drupal\Component\Plugin\FallbackPluginManagerInterface;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Plugin\DefaultPluginManager;
@@ -16,7 +18,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @method \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface createInstance($plugin_id, array $configuration = [])
  */
-class MarkdownExtensions extends DefaultPluginManager implements MarkdownExtensionsInterface {
+class MarkdownExtensions extends DefaultPluginManager implements MarkdownExtensionsInterface, FallbackPluginManagerInterface {
 
   use ContainerAwareTrait;
 
@@ -27,6 +29,22 @@ class MarkdownExtensions extends DefaultPluginManager implements MarkdownExtensi
     parent::__construct('Plugin/Markdown/Extension', $namespaces, $module_handler, MarkdownExtensionInterface::class, MarkdownExtension::class);
     $this->setCacheBackend($cache_backend, 'markdown_extensions');
     $this->alterInfo('markdown_extensions');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function alterDefinitions(&$definitions) {
+    // Remove any plugins that don't actually have the parser installed.
+    foreach ($definitions as $plugin_id => $definition) {
+      if ($plugin_id === '_broken' || empty($definition['checkClass'])) {
+        continue;
+      }
+      if (!class_exists($definition['checkClass'])) {
+        unset($definitions[$plugin_id]);
+      }
+    }
+    parent::alterDefinitions($definitions);
   }
 
   /**
@@ -43,19 +61,7 @@ class MarkdownExtensions extends DefaultPluginManager implements MarkdownExtensi
   }
 
   /**
-   * Retrieves MarkdownExtensions.
-   *
-   * @param string $parser
-   *   Optional. A specific parser's extensions to retrieve. If not set, all
-   *   extensions are returned, regardless of the parser.
-   * @param bool $enabled
-   *   Flag indicating whether to filter results based on enabled status. By
-   *   default, all extensions are returned. If set to TRUE, only enabled
-   *   extensions are returned. If set to FALSE, only disabled extensions are
-   *   returned.
-   *
-   * @return \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface[]
-   *   An array of MarkdownExtension plugins.
+   * {@inheritdoc}
    */
   public function getExtensions($parser = NULL, $enabled = NULL) {
     // Normalize parser to a string representation of its plugin identifier.
@@ -69,18 +75,30 @@ class MarkdownExtensions extends DefaultPluginManager implements MarkdownExtensi
       if (isset($parser) && (!isset($definition['parser']) || $definition['parser'] !== $parser)) {
         continue;
       }
-      $extension = $this->createInstance($plugin_id);
-      if ($enabled === TRUE && $extension->isEnabled()) {
-        $extensions[$plugin_id] = $extension;
+      try {
+        $extension = $this->createInstance($plugin_id);
+        if ($enabled === TRUE && $extension->isEnabled()) {
+          $extensions[$plugin_id] = $extension;
+        }
+        elseif ($enabled === FALSE && !$extension->isEnabled()) {
+          $extensions[$plugin_id] = $extension;
+        }
+        elseif ($enabled === NULL) {
+          $extensions[$plugin_id] = $extension;
+        }
       }
-      elseif ($enabled === FALSE && !$extension->isEnabled()) {
-        $extensions[$plugin_id] = $extension;
-      }
-      elseif ($enabled === NULL) {
-        $extensions[$plugin_id] = $extension;
+      catch (PluginException $e) {
+        // Intentionally left empty.
       }
     }
     return $extensions;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getFallbackPluginId($plugin_id, array $configuration = []) {
+    return '_broken';
   }
 
 }

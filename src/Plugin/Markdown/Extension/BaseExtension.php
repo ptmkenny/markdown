@@ -5,12 +5,18 @@ namespace Drupal\markdown\Plugin\Markdown\Extension;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\PluginBase;
+use Drupal\markdown\Annotation\MarkdownExtension;
 use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
 
 /**
  * Base class for markdown extensions.
+ *
+ * @MarkdownExtension(
+ *   id = "_broken",
+ *   parser = "_broken",
+ * )
  */
-abstract class BaseExtension extends PluginBase implements MarkdownExtensionInterface {
+class BaseExtension extends PluginBase implements MarkdownExtensionInterface {
 
   /**
    * {@inheritdoc}
@@ -29,7 +35,7 @@ abstract class BaseExtension extends PluginBase implements MarkdownExtensionInte
   protected function baseConfigurationDefaults() {
     return [
       'id' => $this->getPluginId(),
-      'label' => '',
+      'label' => $this->t('Broken'),
       'provider' => $this->pluginDefinition['provider'],
       'settings' => $this->defaultSettings() + ['enabled' => FALSE],
     ];

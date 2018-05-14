@@ -2,6 +2,8 @@
 
 namespace Drupal\markdown;
 
+use Drupal\Component\Render\FormattableMarkup;
+use Drupal\Component\Utility\ToStringTrait;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 
@@ -12,6 +14,14 @@ class MarkdownBenchmarkAverages {
 
   use DependencySerializationTrait;
   use StringTranslationTrait;
+  use ToStringTrait;
+
+  /**
+   * The Renderer service.
+   *
+   * @var \Drupal\Core\Render\RendererInterface
+   */
+  protected static $renderer;
 
   /**
    * A fallback benchmark.
@@ -63,6 +73,54 @@ class MarkdownBenchmarkAverages {
     return new static($iteration_count, $fallback);
   }
 
+  public function build($type = 'total') {
+    if (!$this->hasBenchmarks()) {
+      $build = MarkdownBenchmark::invalid();
+      $title = $this->t('No available benchmark tests.');
+    }
+    else {
+      $build = $this->getAverage($type);
+      $iterations = $this->getIterationCount() > 1 ? new FormattableMarkup('(@count<em>𝒙</em>) ', ['@count' => $this->getIterationCount()]) : '';
+
+      $variables = [
+        '@iterations' => $iterations,
+      ];
+
+      if ($type !== 'all') {
+        $variables += [
+          '@parsed' => $this->getAverage('parsed', TRUE),
+          '@rendered' => $this->getAverage('rendered', TRUE),
+          '@total' => $this->getAverage('total', TRUE),
+        ];
+      }
+
+      switch ($type) {
+        case 'all':
+          $title = $this->t('@iterationsParsed / Rendered / Total', $variables);
+          break;
+
+        case 'parsed':
+          $title = $this->t('@iterationsParsed (rendered @rendered, total @total)', $variables);
+          break;
+
+        case 'rendered':
+          $title = $this->t('@iterationsRendered (parsed @parsed, total @total)', $variables);
+          break;
+
+        // Total.
+        default:
+          $title = $this->t('@iterationsTotal (parsed @parsed, rendered @rendered)', $variables);
+          break;
+      }
+    }
+
+    $build['#attributes']['data-toggle'] = 'tooltip';
+    $build['#attributes']['data-placement'] = 'bottom';
+    $build['#attributes']['title'] = $title;
+
+    return $build;
+  }
+
   /**
    * Iterates a callback that produces benchmarks.
    *
@@ -100,31 +158,73 @@ class MarkdownBenchmarkAverages {
   }
 
   /**
-   * Retrieves the averaged milliseconds from all benchmarks of a certain type.
+   * Retrieves the averaged time from all benchmarks of a certain type.
    *
    * @param string $type
    *   The type of benchmark to retrieve, can be one of:
    *   - parsed
    *   - rendered
    *   - total (default)
-   * @param bool $format
-   *   Flag indicating whether to format the result to two decimals.
+   * @param bool $render
+   *   Flag indicating whether to render the build array.
    *
-   * @return string|float
-   *   The averaged milliseconds.
+   * @return array|\Drupal\Component\Render\MarkupInterface
+   *   A renderable array containing the averaged time.
    */
-  public function getAverage($type = 'total', $format = TRUE) {
-    $ms = array_map(function ($benchmark) {
-      /** @var \Drupal\markdown\MarkdownBenchmark $benchmark */
-      return $benchmark->getMilliseconds(FALSE);
-    }, $this->getBenchmarks($type));
+  public function getAverage($type = 'total', $render = FALSE) {
+    $build = [
+      '#theme' => 'item_list__markdown_benchmark_average',
+      '#items' => [],
+      '#attributes' => [
+        'class' => [
+          'markdown-benchmark-average',
+          "markdown-benchmark-average--$type",
+        ],
+      ],
+      '#context' => ['type' => $type],
+    ];
 
-    if ($ms) {
-      $averaged_ms = array_sum($ms) / count($ms);
-      return $format ? number_format($averaged_ms, 2) : $averaged_ms;
+    if ($type === 'all') {
+      $build['#items'] = [
+        ['data' => $this->getAverage('parsed', 'all')],
+        ['data' => $this->getAverage('rendered', 'all')],
+        ['data' => $this->getAverage('total', 'all')],
+      ];
+      return $build;
     }
 
-    return $format ? 'N/A' : -999;
+    $benchmarks = $this->getBenchmarks($type);
+
+    if (!$benchmarks) {
+      return [];
+    }
+
+    $last = array_slice($benchmarks, -1, 1)[0];
+    $result = $last->getResult();
+
+    if (count($benchmarks) === 1) {
+      $start = $last->getStart();
+      $end = $last->getEnd();
+    }
+    else {
+      $ms = array_map(function ($benchmark) {
+        /** @var \Drupal\markdown\MarkdownBenchmark $benchmark */
+        return $benchmark->getMilliseconds(FALSE);
+      }, $benchmarks);
+      $averaged_ms = array_sum($ms) / count($ms);
+      $start = microtime(TRUE);
+      $end = $start + ($averaged_ms / 1000);
+    }
+
+    $average = MarkdownBenchmark::create('average', $start, $end, $result)->build();
+
+    if ($render === 'all') {
+      return $average;
+    }
+
+    $build['#items'][] = ['data' => $average];
+
+    return $render ? $this->renderer()->renderPlain($build) : $build;
   }
 
   /**
@@ -140,16 +240,13 @@ class MarkdownBenchmarkAverages {
    */
   public function getBenchmarks($type = NULL) {
     if ($type === NULL) {
-      $benchmarks = $this->benchmarks;
-    }
-    else {
-      $benchmarks = array_filter($this->benchmarks, function ($benchmark) use ($type) {
-        /** @type \Drupal\markdown\MarkdownBenchmark $benchmark */
-        return $benchmark->getType() === $type;
-      });
+      return array_values($this->benchmarks);
     }
 
-    return $benchmarks;
+    return array_values(array_filter($this->benchmarks, function ($benchmark) use ($type) {
+      /** @type \Drupal\markdown\MarkdownBenchmark $benchmark */
+      return $benchmark->getType() === $type;
+    }));
   }
 
   /**
@@ -200,6 +297,26 @@ class MarkdownBenchmarkAverages {
    */
   public function hasBenchmarks() {
     return !!$this->benchmarks;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function render($type = 'total') {
+    $build = $this->build($type);
+    return $this->renderer()->renderPlain($build);
+  }
+
+  /**
+   * Retrieves the Renderer service.
+   *
+   * @return \Drupal\Core\Render\RendererInterface
+   */
+  protected function renderer() {
+    if (static::$renderer === NULL) {
+      static::$renderer = \Drupal::service('renderer');
+    }
+    return static::$renderer;
   }
 
 }

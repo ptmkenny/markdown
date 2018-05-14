@@ -11,6 +11,7 @@ use League\CommonMark\Block\Renderer\BlockRendererInterface;
 use League\CommonMark\CommonMarkConverter;
 use League\CommonMark\DocumentProcessorInterface;
 use League\CommonMark\Environment;
+use League\CommonMark\EnvironmentAwareInterface;
 use League\CommonMark\Extension\ExtensionInterface;
 use League\CommonMark\Inline\Parser\InlineParserInterface;
 use League\CommonMark\Inline\Processor\InlineProcessorInterface;
@@ -79,6 +80,14 @@ class LeagueCommonMark extends ExtensibleMarkdownParser implements MarkdownParse
           $environment->setConfig(NestedArray::mergeDeep($environment->getConfig(), $settings));
         }
 
+        // Allow standalone extensions to be aware of the environment.
+        // This allows extensions to load external instances that may not be
+        // able to be extended from base Drupal plugin class (which is needed
+        // for discovery purposes).
+        if ($extension instanceof EnvironmentAwareInterface && !$extension instanceof BlockParserInterface && !$extension instanceof InlineParserInterface) {
+          $extension->setEnvironment($environment);
+        }
+
         if ($extension instanceof ExtensionInterface) {
           $environment->addExtension($extension);
         }
@@ -99,7 +108,6 @@ class LeagueCommonMark extends ExtensibleMarkdownParser implements MarkdownParse
           if ($extension instanceof BlockRendererInterface) {
             $environment->addBlockRenderer($extension->rendererClass(), $extension);
           }
-          continue;
         }
 
         // Add Inline extensions.
@@ -110,7 +118,6 @@ class LeagueCommonMark extends ExtensibleMarkdownParser implements MarkdownParse
           if ($extension instanceof InlineRendererInterface) {
             $environment->addInlineRenderer($extension->rendererClass(), $extension);
           }
-          continue;
         }
       }
 

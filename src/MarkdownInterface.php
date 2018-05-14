@@ -16,17 +16,17 @@ interface MarkdownInterface extends ContainerAwareInterface, ContainerInjectionI
    * Loads a cached ParsedMarkdown object.
    *
    * @param string $id
-   *   A unique identifier.
+   *   A unique identifier that will be used to cache the parsed markdown.
    * @param string $markdown
    *   Optional. The fallback markdown to parse if the cached ParsedMarkdown
    *   object doesn't yet exist. If provided, it will be parsed
    *   and its identifier set to the provided $id and then cached.
    * @param string $parser
-   *   The plugin identifier of the MarkdownParser to retrieve. If not provided,
-   *   the first enabled Markdown filter in a text formatter available to the
-   *   current user is used.
+   *   Optional. The plugin identifier of the MarkdownParser to retrieve. If
+   *   not provided, the first enabled Markdown filter in a text formatter
+   *   available to the current user is used.
    * @param string|\Drupal\filter\Plugin\FilterInterface|\Drupal\filter\FilterFormatInterface $filter
-   *   Optional A specific filter plugin to use, a string representing a filter
+   *   Optional. A specific filter plugin to use, a string representing a filter
    *   format or a FilterFormatInterface object containing a "markdown" filter.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   Optional. An account used to retrieve filters available filters if one
@@ -44,15 +44,15 @@ interface MarkdownInterface extends ContainerAwareInterface, ContainerInjectionI
    * Loads a cached ParsedMarkdown object.
    *
    * @param string $id
-   *   A unique identifier.
+   *   A unique identifier that will be used to cache the parsed markdown.
    * @param string $path
    *   The local file system path of a markdown file to parse if the cached
    *   ParsedMarkdown object doesn't yet exist. Once parsed, its identifier
    *   will be set to the provided $id and then cached.
    * @param string $parser
-   *   The plugin identifier of the MarkdownParser to retrieve. If not provided,
-   *   the first enabled Markdown filter in a text formatter available to the
-   *   current user is used.
+   *   Optional. The plugin identifier of the MarkdownParser to retrieve. If
+   *   not provided, the first enabled Markdown filter in a text formatter
+   *   available to the current user is used.
    * @param string|\Drupal\filter\Plugin\FilterInterface|\Drupal\filter\FilterFormatInterface $filter
    *   Optional A specific filter plugin to use, a string representing a filter
    *   format or a FilterFormatInterface object containing a "markdown" filter.
@@ -74,15 +74,15 @@ interface MarkdownInterface extends ContainerAwareInterface, ContainerInjectionI
    * Loads a cached ParsedMarkdown object.
    *
    * @param string $id
-   *   A unique identifier.
+   *   A unique identifier that will be used to cache the parsed markdown.
    * @param string $url
    *   The external URL of a markdown file to parse if the cached
    *   ParsedMarkdown object doesn't yet exist. Once parsed, its identifier
    *   will be set to the provided $id and then cached.
    * @param string $parser
-   *   The plugin identifier of the MarkdownParser to retrieve. If not provided,
-   *   the first enabled Markdown filter in a text formatter available to the
-   *   current user is used.
+   *   Optional. The plugin identifier of the MarkdownParser to retrieve. If
+   *   not provided, the first enabled Markdown filter in a text formatter
+   *   available to the current user is used.
    * @param string|\Drupal\filter\Plugin\FilterInterface|\Drupal\filter\FilterFormatInterface $filter
    *   Optional A specific filter plugin to use, a string representing a filter
    *   format or a FilterFormatInterface object containing a "markdown" filter.

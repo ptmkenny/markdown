@@ -2,6 +2,8 @@
 
 namespace Drupal\markdown\Annotation;
 
+use Doctrine\Common\Annotations\Annotation\Attribute;
+use Doctrine\Common\Annotations\Annotation\Attributes;
 use Drupal\Component\Annotation\Plugin;
 
 /**
@@ -29,6 +31,27 @@ class MarkdownExtension extends Plugin {
    * @var string
    */
   protected $parser;
+
+  /**
+   * The class to check if the extension is available.
+   *
+   * @var string
+   */
+  protected $checkClass;
+
+  /**
+   * The composer vendor/name that contains the extension.
+   *
+   * @var string
+   */
+  protected $composer;
+
+  /**
+   * The homepage of the extension.
+   *
+   * @var string
+   */
+  protected $homepage;
 
   /**
    * The human-readable label.

@@ -74,7 +74,7 @@ interface MarkdownParserInterface extends PluginInspectionInterface {
    * Loads a cached ParsedMarkdown object.
    *
    * @param string $id
-   *   A unique identifier.
+   *   A unique identifier that will be used to cache the parsed markdown.
    * @param string $markdown
    *   Optional. The fallback markdown to parse if the cached ParsedMarkdown
    *   object doesn't yet exist. If provided, it will be parsed
@@ -92,7 +92,7 @@ interface MarkdownParserInterface extends PluginInspectionInterface {
    * Loads a cached ParsedMarkdown object for a local file system path.
    *
    * @param string $id
-   *   A unique identifier.
+   *   A unique identifier that will be used to cache the parsed markdown.
    * @param string $path
    *   The local file system path of a markdown file to parse if the cached
    *   ParsedMarkdown object doesn't yet exist. Once parsed, its identifier
@@ -112,7 +112,7 @@ interface MarkdownParserInterface extends PluginInspectionInterface {
    * Loads a cached ParsedMarkdown object for a URL.
    *
    * @param string $id
-   *   A unique identifier.
+   *   A unique identifier that will be used to cache the parsed markdown.
    * @param string $url
    *   The external URL of a markdown file to parse if the cached
    *   ParsedMarkdown object doesn't yet exist. Once parsed, its identifier

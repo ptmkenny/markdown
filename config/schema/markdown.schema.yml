@@ -4,4 +4,8 @@ markdown.settings:
   mapping:
     parser:
       type: string
-      label: 'Markdown Parser'
+      label: 'Default markdown parser'
+
+    parsers:
+      type: mapping
+      label: 'Default markdown parser settings'

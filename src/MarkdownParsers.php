@@ -61,7 +61,10 @@ class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInt
   protected function alterDefinitions(&$definitions) {
     // Remove any plugins that don't actually have the parser installed.
     foreach ($definitions as $plugin_id => $definition) {
-      if ($plugin_id !== '_broken' && $definition['checkClass'] && !class_exists($definition['checkClass'])) {
+      if ($plugin_id === '_broken' || empty($definition['checkClass'])) {
+        continue;
+      }
+      if (!class_exists($definition['checkClass'])) {
         unset($definitions[$plugin_id]);
       }
     }

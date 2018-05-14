@@ -2,10 +2,43 @@
 
 namespace Drupal\markdown;
 
+use Drupal\Component\Utility\ToStringTrait;
+
 /**
  * Class MarkdownBenchmark.
  */
 class MarkdownBenchmark implements \Serializable {
+
+  use ToStringTrait;
+
+  const TYPE_INVALID = 'invalid';
+
+  /**
+   * The Renderer service.
+   *
+   * @var \Drupal\Core\Render\RendererInterface
+   */
+  protected static $renderer;
+
+  /**
+   * Contains the different date interval units.
+   *
+   * This array is keyed by strings representing the unit (e.g.
+   * '1y|@county') and with the amount of values of the unit in
+   * milliseconds.
+   *
+   * @var array
+   */
+  protected static $units = [
+    'y' => 31536000000,
+    'mo' => 2592000000,
+    'w' => 604800000,
+    'd' => 86400000,
+    'h' => 3600000,
+    'm' => 60000,
+    's' => 1000,
+    'ms' => 0,
+  ];
 
   /**
    * The start time.
@@ -22,7 +55,7 @@ class MarkdownBenchmark implements \Serializable {
   protected $end;
 
   /**
-   * The difference between the start and end times.
+   * The time difference.
    *
    * @var \DateInterval
    */
@@ -58,7 +91,7 @@ class MarkdownBenchmark implements \Serializable {
     $this->type = $type;
     $this->start = $start;
     $this->end = $end;
-    $this->diff = $this->start->diff($this->end);
+    $this->diff = $start->diff($end);
     $this->result = $result;
   }
 
@@ -93,6 +126,48 @@ class MarkdownBenchmark implements \Serializable {
       $end = \DateTime::createFromFormat('U.u', sprintf('%.6F', (float) $end));
     }
     return new static($type, $start, $end, $result);
+  }
+
+  public static function invalid() {
+    return static::create(static::TYPE_INVALID);
+  }
+
+  public function build() {
+    $time = 'N/A';
+    $unit = NULL;
+
+    if (!$this->isInvalid()) {
+      $milliseconds = $this->getMilliseconds(FALSE);
+      $time = '0.00';
+      $unit = array_slice(array_keys(static::$units), -1, 1)[0];
+      foreach (static::$units as $unit => $interval) {
+        if ($milliseconds >= $interval) {
+          $time = str_replace('.00', '', rtrim(number_format($interval > 0 ? $milliseconds / $interval : $milliseconds, 2), 0));
+          break;
+        }
+      }
+    }
+
+    return [
+      '#theme' => 'markdown_benchmark',
+      '#time' => $time,
+      '#unit' => $unit,
+    ];
+  }
+
+  /**
+   * Removes the result from the benchmark.
+   *
+   * This is primarily only useful when there are a bunch of benchmarks being
+   * grouped together and only the last one needs to retrain the result.
+   *
+   * @see \Drupal\markdown\MarkdownBenchmarkAverages::iterate()
+   *
+   * @return static
+   */
+  public function clearResult() {
+    $this->result = NULL;
+    return $this;
   }
 
   /**
@@ -166,18 +241,33 @@ class MarkdownBenchmark implements \Serializable {
   }
 
   /**
-   * Removes the result from the benchmark.
+   * Indicates whether the benchmark is invalid.
    *
-   * This is primarily only useful when there are a bunch of benchmarks being
-   * grouped together and only the last one needs to retrain the result.
-   *
-   * @see \Drupal\markdown\MarkdownBenchmarkAverages::iterate()
-   *
-   * @return static
+   * @return bool
+   *   TRUE or FALSE
    */
-  public function clearResult() {
-    $this->result = NULL;
-    return $this;
+  public function isInvalid() {
+    return $this->getType() === static::TYPE_INVALID;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function render() {
+    $build = $this->build();
+    return $this->renderer()->renderPlain($build);
+  }
+
+  /**
+   * Retrieves the Renderer service.
+   *
+   * @return \Drupal\Core\Render\RendererInterface
+   */
+  protected function renderer() {
+    if (static::$renderer === NULL) {
+      static::$renderer = \Drupal::service('renderer');
+    }
+    return static::$renderer;
   }
 
   /**

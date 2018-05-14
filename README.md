@@ -98,7 +98,7 @@ use Drupal\markdown\Markdown;
 function markdown_help($route_name, RouteMatchInterface $route_match) {
   switch ($route_name) {
     case 'help.page.markdown':
-      return Markdown::loadPath('markdown:README.md', __DIR__ . '/README.md');
+      return Markdown::loadPath($route_name, __DIR__ . '/README.md');
   }
 }
 ```
