@@ -507,6 +507,8 @@ class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface, 
    * {@inheritdoc}
    */
   public function loadPath($id, $path, LanguageInterface $language = NULL) {
+    // Append the file modification time as a cache buster in case it changed.
+    $id = "$id:" . filemtime($path);
     return ParsedMarkdown::load($id) ?: $this->parsePath($path, $language)->setId($id)->save();
   }
 
@@ -527,7 +529,7 @@ class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface, 
   /**
    * {@inheritdoc}
    */
-  public function parsePath($path, LanguageInterface $language = NULL) {
+  public function parsePath($path, LanguageInterface $language = NULL, $id = NULL) {
     if (!file_exists($path)) {
       throw new FileNotFoundException((string) $path);
     }
