@@ -2,6 +2,8 @@
 
 namespace Drupal\markdown\Twig\Markdown;
 
+use Twig\Compiler;
+
 /**
  * Class MarkdownNode.
  */
@@ -17,7 +19,7 @@ class Node extends \Twig_Node {
   /**
    * {@inheritdoc}
    */
-  public function compile(\Twig_Compiler $compiler) {
+  public function compile(Compiler $compiler) {
     $compiler->addDebugInfo($this)
       ->write('ob_start();' . PHP_EOL)
       ->subcompile($this->getNode('value'))
@@ -26,10 +28,7 @@ class Node extends \Twig_Node {
       ->write('$lines = explode("\n", $content);' . PHP_EOL)
       ->write('$content = preg_replace(\'/^\' . $matches[0]. \'/\', "", $lines);' . PHP_EOL)
       ->write('$content = implode("\n", $content);' . PHP_EOL)
-      ->write('echo $this->env->getTags()["markdown"]
-                                    ->getMarkdown()
-                                    ->parse($content);
-                ' . PHP_EOL);
+      ->write('echo $this->env->getTags()["markdown"]->getMarkdown()->parse($content);' . PHP_EOL);
   }
 
 }

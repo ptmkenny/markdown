@@ -138,6 +138,7 @@ class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInt
 
         // Drupal 7.
         if (function_exists('filter_list_format')) {
+          /** @var \stdClass $format */
           $filters = filter_list_format($format->format);
           if (isset($filters['markdown'])) {
             $format_filter = \Drupal::service('plugin.manager.filter')->createInstance('markdown', (array) $filters['markdown']);

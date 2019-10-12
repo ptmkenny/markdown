@@ -3,6 +3,7 @@
 namespace Drupal\markdown\Twig\Markdown;
 
 use Drupal\markdown\MarkdownInterface;
+use Twig\Token;
 
 /**
  * Class MarkdownTokenParser.
@@ -26,7 +27,7 @@ class TokenParser extends \Twig_TokenParser {
   /**
    * {@inheritdoc}
    */
-  public function parse(\Twig_Token $token) {
+  public function parse(Token $token) {
     $line = $token->getLine();
     $this->parser->getStream()->expect(\Twig_Token::BLOCK_END_TYPE);
     $body = $this->parser->subparse(function (\Twig_Token $token) {
