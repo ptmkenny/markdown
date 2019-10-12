@@ -17,6 +17,10 @@ use Drupal\filter\Plugin\FilterBase;
  *   description = @Translation("Allows content to be submitted using Markdown, a simple plain-text syntax that is filtered into valid HTML."),
  *   type = Drupal\filter\Plugin\FilterInterface::TYPE_MARKUP_LANGUAGE,
  *   weight = -15,
+ *   settings = {
+ *     "parser" = "thephpleague/commonmark",
+ *     "parser_settings" = {},
+ *   },
  * )
  */
 class Markdown extends FilterBase implements MarkdownFilterInterface {
@@ -124,6 +128,20 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
       ];
     }
 
+    $form['warning'] = [
+      '#theme_wrappers' => ['container__markdown_warning'],
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['messages', 'messages--warning'],
+      ],
+      '#states' => [
+        'visible' => [
+          '[name="filters[filter_html][status]"]' => ['checked' => FALSE],
+        ],
+      ],
+      ['#markup' => $this->t('HTML output of Markdown is currently not filtered against potential XSS attacks. Please enable the "Limit allowed HTML tags and correct faulty HTML" filter bundled with core and ensure it is run after the Markdown filter.')],
+    ];
+
     // @todo Add parser specific settings.
 //    $form['parser_settings'] = ['#type' => 'container'];
 //
@@ -166,7 +184,11 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
   public function process($text, $langcode) {
     // Only use the parser to process the text if it's not empty.
     if (!empty($text)) {
-      $text = (string) $this->getParser()->parse($text, \Drupal::languageManager()->getLanguage($langcode));
+      $language = \Drupal::languageManager()->getLanguage($langcode);
+      $markdown = $this->getParser()->parse($text, $language);
+
+      // Enable all tags, let other filters (i.e. filter_html) handle that.
+      $text = $markdown->setAllowedTags(TRUE)->getHtml();
     }
     return new FilterProcessResult($text);
   }

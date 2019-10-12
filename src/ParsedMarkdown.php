@@ -10,6 +10,16 @@ use Drupal\Core\Language\LanguageInterface;
 class ParsedMarkdown implements ParsedMarkdownInterface {
 
   /**
+   * An array of allowed HTML tags that are permitted in the parsed HTML.
+   *
+   * This is to ensure it is safe from XSS vulnerabilities.
+   * If TRUE, all tags are allowed.
+   *
+   * @var array|true
+   */
+  protected $allowedTags = self::ALLOWED_TAGS;
+
+  /**
    * A UNIX timestamp of when this object is to expire.
    *
    * @var int
@@ -59,28 +69,18 @@ class ParsedMarkdown implements ParsedMarkdownInterface {
   protected $size;
 
   /**
-   * Flag indicating whether the parsed HTML is safe from XSS vulnerabilities.
-   *
-   * @var bool
-   */
-  protected $xssSafe;
-
-  /**
    * ParsedMarkdown constructor.
    *
    * @param string $markdown
    *   The raw markdown.
    * @param string $html
    *   The parsed HTML from $markdown.
-   * @param bool $xss_safe
-   *   Flag indicating whether the parsed HTML is safe from XSS vulnerabilities.
-   * @param \Drupal\Core\Language\LanguageInterface|NULL $language
-   *   The language of the parsed markdown, if known.
+   * @param \Drupal\Core\Language\LanguageInterface|null $language
+   *   Optional. The language of the parsed markdown, if known.
    */
-  public function __construct($markdown = '', $html = '', $xss_safe = FALSE, LanguageInterface $language = NULL) {
-    $this->markdown = trim($markdown);
+  public function __construct($markdown = '', $html = '', LanguageInterface $language = NULL) {
     $this->html = trim($html);
-    $this->xssSafe = $markdown === '' && $html === '' ? TRUE : $xss_safe;
+    $this->markdown = trim($markdown);
     $this->language = $language;
   }
 
@@ -94,8 +94,8 @@ class ParsedMarkdown implements ParsedMarkdownInterface {
   /**
    * {@inheritdoc}
    */
-  public static function create($markdown = '', $html = '', $xss_safe = FALSE, LanguageInterface $language = NULL) {
-    return new static($markdown, $html, $xss_safe, $language);
+  public static function create($markdown = '', $html = '', LanguageInterface $language = NULL) {
+    return new static($markdown, $html, $language);
   }
 
   /**
@@ -135,7 +135,10 @@ class ParsedMarkdown implements ParsedMarkdownInterface {
    * {@inheritdoc}
    */
   public function getHtml() {
-    return $this->xssSafe ? $this->html : Xss::filterAdmin(trim($this->html));
+    if ($this->allowedTags === TRUE) {
+      return $this->html;
+    }
+    return Xss::filter($this->html, $this->allowedTags);
   }
 
   /**
@@ -219,6 +222,17 @@ class ParsedMarkdown implements ParsedMarkdownInterface {
     }
 
     return serialize($data);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setAllowedTags($allowed_tags = self::ALLOWED_TAGS) {
+    if ($allowed_tags !== TRUE && !is_array($allowed_tags)) {
+      $allowed_tags = static::ALLOWED_TAGS;
+    }
+    $this->allowedTags = $allowed_tags;
+    return $this;
   }
 
   /**

@@ -10,6 +10,25 @@ use Drupal\Core\Language\LanguageInterface;
 interface ParsedMarkdownInterface extends MarkupInterface, \Countable, \Serializable {
 
   /**
+   * A list of the default HTML tags that are allowed.
+   *
+   * @var array
+   *
+   * @see \Drupal\Component\Utility\Xss::filterAdmin()
+   */
+  const ALLOWED_TAGS = [
+    'a', 'abbr', 'acronym', 'address', 'article', 'aside', 'b', 'bdi', 'bdo',
+    'big', 'blockquote', 'br', 'caption', 'cite', 'code', 'col', 'colgroup',
+    'command', 'dd', 'del', 'details', 'dfn', 'div', 'dl', 'dt', 'em',
+    'figcaption', 'figure', 'footer', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'header', 'hgroup', 'hr', 'i', 'img', 'ins', 'kbd', 'li', 'mark', 'menu',
+    'meter', 'nav', 'ol', 'output', 'p', 'pre', 'progress', 'q', 'rp', 'rt',
+    'ruby', 's', 'samp', 'section', 'small', 'span', 'strong', 'sub',
+    'summary', 'sup', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'time',
+    'tr', 'tt', 'u', 'ul', 'var', 'wbr',
+  ];
+
+  /**
    * Indicates the item should never be removed unless explicitly deleted.
    */
   const PERMANENT = CacheBackendInterface::CACHE_PERMANENT;
@@ -21,14 +40,12 @@ interface ParsedMarkdownInterface extends MarkupInterface, \Countable, \Serializ
    *   The raw markdown.
    * @param string $html
    *   The parsed HTML from $markdown.
-   * @param bool $xss_safe
-   *   Flag indicating whether the parsed HTML is safe from XSS vulnerabilities.
-   * @param \Drupal\Core\Language\LanguageInterface|NULL $language
+   * @param \Drupal\Core\Language\LanguageInterface|null $language
    *   The language of the parsed markdown, if known.
    *
    * @return static
    */
-  public static function create($markdown = '', $html = '', $xss_safe = FALSE, LanguageInterface $language = NULL);
+  public static function create($markdown = '', $html = '', LanguageInterface $language = NULL);
 
   /**
    * Loads a cached ParsedMarkdown object.
@@ -45,6 +62,7 @@ interface ParsedMarkdownInterface extends MarkupInterface, \Countable, \Serializ
    * Normalizes markdown.
    *
    * @param string $markdown
+   *   The markdown to normalize.
    *
    * @return string
    *   The normalized markdown.
@@ -136,6 +154,18 @@ interface ParsedMarkdownInterface extends MarkupInterface, \Countable, \Serializ
    * @return static
    */
   public function save();
+
+  /**
+   * Sets the allowed tags.
+   *
+   * @param array|true $allowed_tags
+   *   Optional. An array of allowed HTML tags that are permitted in the parsed
+   *   HTML to ensure it is safe from XSS vulnerabilities. Pass TRUE if all
+   *   tags are allowed.
+   *
+   * @return static
+   */
+  public function setAllowedTags($allowed_tags = self::ALLOWED_TAGS);
 
   /**
    * Sets the object's expiration timestamp.

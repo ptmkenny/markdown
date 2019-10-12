@@ -92,7 +92,7 @@ trait MarkdownParserBenchmarkTrait {
    * @return \Drupal\markdown\ParsedMarkdownInterface
    */
   public function parse($markdown, LanguageInterface $language = NULL) {
-    return ParsedMarkdown::create($markdown, static::$benchmark ?: $this->convertToHtml($markdown, $language), FALSE, $language);
+    return ParsedMarkdown::create($markdown, static::$benchmark ?: $this->convertToHtml($markdown, $language), $language);
   }
 
 

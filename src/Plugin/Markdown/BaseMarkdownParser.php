@@ -523,13 +523,13 @@ class BaseMarkdownParser extends PluginBase implements MarkdownParserInterface, 
    * {@inheritdoc}
    */
   public function parse($markdown, LanguageInterface $language = NULL) {
-    return ParsedMarkdown::create($markdown, $this->convertToHtml($markdown, $language), FALSE, $language);
+    return ParsedMarkdown::create($markdown, $this->convertToHtml($markdown, $language), $language);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function parsePath($path, LanguageInterface $language = NULL, $id = NULL) {
+  public function parsePath($path, LanguageInterface $language = NULL) {
     if (!file_exists($path)) {
       throw new FileNotFoundException((string) $path);
     }
