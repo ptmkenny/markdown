@@ -115,10 +115,7 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
       throw new \InvalidArgumentException('Incompatible inline type: ' . get_class($inline));
     }
 
-    $attributes = [];
-    foreach ($inline->getData('attributes', []) as $key => $value) {
-      $attributes[$key] = $html_renderer->renderInlines([$value]);
-    }
+    $attributes = $inline->getData('attributes', []);
 
     // Retrieve the URL.
     $url = $inline->getUrl();
@@ -137,7 +134,7 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
     }
 
     if (isset($inline->data['title'])) {
-      $attributes['title'] = $html_renderer->renderInlines([$inline->data['title']]);
+      $attributes['title'] = Html::escape($inline->data['title']);;
     }
 
     return new HtmlElement('a', $attributes, $html_renderer->renderInlines($inline->children()));
