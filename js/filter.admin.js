@@ -1,48 +1,50 @@
-(function ($) {
+/**
+ * @file
+ * Markdown filter admin JavaScript.
+ */
 
-  Drupal.behaviors.commonMarkFilterStatus = {
-    attach: function (context, settings) {
-      var $document = $(document);
+(function ($, Drupal) {
+  'use strict';
 
-      // Duplicate the "click" event from filter module's filter.admin.js but
-      // for the "checked" States API event.
-      $document.bind('state:checked', function(e) {
-        if (e.target) {
-          var $checkbox = $(e.target);
+  var $document = $(document);
 
-          // Only process checkboxes in the status wrapper.
-          if (!$checkbox.parents('#filters-status-wrapper')[0]) {
-            return;
-          }
+  // Duplicate the "click" event from filter module's filter.admin.js but
+  // for the "checked" States API event.
+  $document.on('state:checked', function (e) {
+    if (e.target) {
+      var $checkbox = $(e.target);
 
-          // Retrieve the tabledrag row belonging to this filter.
-          var $row = $('#' + $checkbox.attr('id').replace(/-status$/, '-weight'), context).closest('tr');
-          // Retrieve the vertical tab belonging to this filter.
-          var tab = $('#' + $checkbox.attr('id').replace(/-status$/, '-settings'), context).data('verticalTab');
-          if ($checkbox.is(':checked')) {
-            $row.show();
-            if (tab) {
-              tab.tabShow().updateSummary();
-            }
-          }
-          else {
-            $row.hide();
-            if (tab) {
-              tab.tabHide().updateSummary();
-            }
-          }
-          // Restripe table after toggling visibility of table row.
-          Drupal.tableDrag['filter-order'].restripeTable();
+      // Only process checkboxes in the status wrapper.
+      if (!$checkbox.parents('#filters-status-wrapper')[0]) {
+        return;
+      }
 
-          // Attach summary for configurable filters (only for screen-readers).
-          if (tab) {
-            tab.fieldset.drupalSetSummary(function () {
-              return $checkbox.is(':checked') ? Drupal.t('Enabled') : Drupal.t('Disabled');
-            });
-          }
+      // Retrieve the tabledrag row belonging to this filter.
+      var $row = $('#' + $checkbox.attr('id').replace(/-status$/, '-weight'), context).closest('tr');
+      // Retrieve the vertical tab belonging to this filter.
+      var tab = $('#' + $checkbox.attr('id').replace(/-status$/, '-settings'), context).data('verticalTab');
+      if ($checkbox.is(':checked')) {
+        $row.show();
+        if (tab) {
+          tab.tabShow().updateSummary();
         }
-      });
-    }
-  };
+      }
+      else {
+        $row.hide();
+        if (tab) {
+          tab.tabHide().updateSummary();
+        }
+      }
+      // Re-stripe table after toggling visibility of table row.
+      Drupal.tableDrag['filter-order'].restripeTable();
 
-})(jQuery);
+      // Attach summary for configurable filters (only for screen-readers).
+      if (tab) {
+        tab.fieldset.drupalSetSummary(function () {
+          return $checkbox.is(':checked') ? Drupal.t('Enabled') : Drupal.t('Disabled');
+        });
+      }
+    }
+  });
+
+})(window.jQuery, window.Drupal);
