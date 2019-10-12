@@ -2,8 +2,8 @@
 
 namespace Drupal\markdown\Plugin\Markdown\Extension;
 
-use League\CommonMark\Environment;
 use League\CommonMark\EnvironmentAwareInterface;
+use League\CommonMark\EnvironmentInterface;
 use Webuni\CommonMark\AttributesExtension\AttributesExtension as WebuniAttributesExtension;
 
 /**
@@ -24,7 +24,7 @@ class AttributesExtension extends CommonMarkExtension implements EnvironmentAwar
   /**
    * {@inheritdoc}
    */
-  public function setEnvironment(Environment $environment) {
+  public function setEnvironment(EnvironmentInterface $environment) {
     $environment->addExtension(new WebuniAttributesExtension());
   }
 

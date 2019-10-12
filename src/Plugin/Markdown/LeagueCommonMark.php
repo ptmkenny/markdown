@@ -9,12 +9,10 @@ use Drupal\markdown\Traits\MarkdownParserBenchmarkTrait;
 use League\CommonMark\Block\Parser\BlockParserInterface;
 use League\CommonMark\Block\Renderer\BlockRendererInterface;
 use League\CommonMark\CommonMarkConverter;
-use League\CommonMark\DocumentProcessorInterface;
 use League\CommonMark\Environment;
 use League\CommonMark\EnvironmentAwareInterface;
 use League\CommonMark\Extension\ExtensionInterface;
 use League\CommonMark\Inline\Parser\InlineParserInterface;
-use League\CommonMark\Inline\Processor\InlineProcessorInterface;
 use League\CommonMark\Inline\Renderer\InlineRendererInterface;
 
 /**
@@ -90,14 +88,6 @@ class LeagueCommonMark extends ExtensibleMarkdownParser implements MarkdownParse
 
         if ($extension instanceof ExtensionInterface) {
           $environment->addExtension($extension);
-        }
-
-        if ($extension instanceof DocumentProcessorInterface) {
-          $environment->addDocumentProcessor($extension);
-        }
-
-        if ($extension instanceof InlineProcessorInterface) {
-          $environment->addInlineProcessor($extension);
         }
 
         // Add Block extensions.

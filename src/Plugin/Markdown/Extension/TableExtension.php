@@ -2,21 +2,21 @@
 
 namespace Drupal\markdown\Plugin\Markdown\Extension;
 
-use League\CommonMark\Environment;
 use League\CommonMark\EnvironmentAwareInterface;
-use Webuni\CommonMark\TableExtension\TableExtension as WebuniTableExtension;
+use League\CommonMark\EnvironmentInterface;
+use League\CommonMark\Ext\Table\TableExtension as LeagueTableExtension;
 
 /**
  * Class TableExtension.
  *
  * @MarkdownExtension(
  *   parser = "thephpleague/commonmark",
- *   id = "webuni/commonmark-table-extension",
- *   checkClass = "\Webuni\CommonMark\TableExtension\TableExtension",
- *   composer = "webuni/commonmark-table-extension",
+ *   id = "thephpleague/commonmark-ext-table",
+ *   checkClass = "\League\CommonMark\Ext\Table\TableExtension",
+ *   composer = "league/commonmark-ext-table",
  *   label = @Translation("Table"),
  *   description = @Translation("Adds the ability to create tables in CommonMark documents."),
- *   homepage = "https://github.com/webuni/commonmark-table-extension",
+ *   homepage = "https://github.com/thephpleague/commonmark-ext-table",
  * )
  */
 class TableExtension extends CommonMarkExtension implements EnvironmentAwareInterface {
@@ -24,8 +24,8 @@ class TableExtension extends CommonMarkExtension implements EnvironmentAwareInte
   /**
    * {@inheritdoc}
    */
-  public function setEnvironment(Environment $environment) {
-    $environment->addExtension(new WebuniTableExtension());
+  public function setEnvironment(EnvironmentInterface $environment) {
+    $environment->addExtension(new LeagueTableExtension());
   }
 
 }
