@@ -74,14 +74,14 @@ class AtAutolinker extends CommonMarkExtension implements InlineParserInterface,
   /**
    * {@inheritdoc}
    */
-  public function getCharacters() {
+  public function getCharacters(): array {
     return ['@'];
   }
 
   /**
    * {@inheritdoc}
    */
-  public function parse(InlineParserContext $inline_context) {
+  public function parse(InlineParserContext $inline_context): bool {
     $cursor = $inline_context->getCursor();
 
     // The @ symbol must not have any other characters immediately prior.
