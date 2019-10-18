@@ -77,6 +77,12 @@ class MarkdownExtensions extends DefaultPluginManager implements MarkdownExtensi
       }
       try {
         $extension = $this->createInstance($plugin_id);
+
+        // Set settings from the definition (i.e. added via alter).
+        if (isset($definition['settings'])) {
+          $extension->setSettings($definition['settings']);
+        }
+
         if ($enabled === TRUE && $extension->isEnabled()) {
           $extensions[$plugin_id] = $extension;
         }
