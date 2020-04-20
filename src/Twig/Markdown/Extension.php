@@ -4,9 +4,6 @@ namespace Drupal\markdown\Twig\Markdown;
 
 use Drupal\markdown\MarkdownInterface;
 
-/**
- * Class Extension.
- */
 class Extension extends \Twig_Extension implements \Twig_Extension_GlobalsInterface {
 
   /**

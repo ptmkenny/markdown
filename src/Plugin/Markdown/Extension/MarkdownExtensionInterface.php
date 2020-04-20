@@ -2,14 +2,14 @@
 
 namespace Drupal\markdown\Plugin\Markdown\Extension;
 
-use Drupal\Component\Plugin\ConfigurablePluginInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
+use Drupal\markdown\Plugin\Markdown\MarkdownInstallablePluginInterface;
 
 /**
  * Interface ExtensionInterface.
  */
-interface MarkdownExtensionInterface extends ConfigurablePluginInterface {
+interface MarkdownExtensionInterface extends MarkdownInstallablePluginInterface {
 
   /**
    * Retrieves the default settings.
@@ -47,14 +47,6 @@ interface MarkdownExtensionInterface extends ConfigurablePluginInterface {
   public function isEnabled();
 
   /**
-   * Returns the human readable label of the plugin.
-   *
-   * @return string
-   *   The label.
-   */
-  public function label();
-
-  /**
    * Sets a specific setting.
    *
    * @param string $name
@@ -75,9 +67,9 @@ interface MarkdownExtensionInterface extends ConfigurablePluginInterface {
   /**
    * Returns the configuration form elements specific to this plugin.
    *
-   * @param array $form
-   *   The form definition array for the block configuration form.
-   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   * @param array $element
+   *   The element render array for the extension configuration form.
+   * @param \Drupal\Core\Form\FormStateInterface $formState
    *   The current state of the form.
    * @param \Drupal\markdown\Plugin\Filter\MarkdownFilterInterface $filter
    *   The filter this form belongs to.
@@ -85,6 +77,6 @@ interface MarkdownExtensionInterface extends ConfigurablePluginInterface {
    * @return array
    *   The renderable form array representing the entire configuration form.
    */
-  public function settingsForm(array $form, FormStateInterface $form_state, MarkdownFilterInterface $filter);
+  public function settingsForm(array $element, FormStateInterface $formState, MarkdownFilterInterface $filter);
 
 }

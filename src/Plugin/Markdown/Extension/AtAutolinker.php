@@ -11,13 +11,12 @@ use League\CommonMark\Inline\Parser\InlineParserInterface;
 use League\CommonMark\InlineParserContext;
 
 /**
- * Class AtAutolinker.
- *
  * @MarkdownExtension(
  *   id = "at_autolinker",
- *   parser = "thephpleague/commonmark",
  *   label = @Translation("@ Autolinker"),
+ *   installed = TRUE,
  *   description = @Translation("Automatically link commonly used references that come after an at character (@) without having to use the link syntax."),
+ *   parsers = {"thephpleague/commonmark", "thephpleague/commonmark-gfm"},
  * )
  */
 class AtAutolinker extends CommonMarkExtension implements InlineParserInterface, MarkdownGuidelinesAlterInterface {
@@ -138,12 +137,12 @@ class AtAutolinker extends CommonMarkExtension implements InlineParserInterface,
   /**
    * {@inheritdoc}
    */
-  public function settingsForm(array $form, FormStateInterface $form_state, MarkdownFilterInterface $filter) {
-    $form = parent::settingsForm($form, $form_state, $filter);
+  public function settingsForm(array $element, FormStateInterface $formState, MarkdownFilterInterface $filter) {
+    $element = parent::settingsForm($element, $formState, $filter);
 
-    $selector = '';//_commonmark_get_states_selector($filter, $this, 'type');
+    $selector = $this->getSatesSelector($this->getElementParents($element, [$this->getPluginId()]), 'type');
 
-    $form['type'] = [
+    $element['type'] = [
       '#type' => 'select',
       '#title' => $this->t('Map text to'),
       '#default_value' => $this->getSetting('type'),
@@ -153,7 +152,7 @@ class AtAutolinker extends CommonMarkExtension implements InlineParserInterface,
       ],
     ];
 
-    $form['format_username'] = [
+    $element['format_username'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Replace username with formatted display name'),
       '#description' => $this->t('If enabled, it will replace the matched text with the formatted username.'),
@@ -165,7 +164,7 @@ class AtAutolinker extends CommonMarkExtension implements InlineParserInterface,
       ],
     ];
 
-    $form['url'] = [
+    $element['url'] = [
       '#type' => 'textfield',
       '#title' => $this->t('URL'),
       '#description' => $this->t('A URL to format text with. Use the token "[text]" where it is needed. If you need to include the @, use the URL encoded equivalent: <code>%40</code>. Example: <code>https://twitter.com/search?q=%40[text]</code>.'),
@@ -177,7 +176,7 @@ class AtAutolinker extends CommonMarkExtension implements InlineParserInterface,
       ],
     ];
 
-    return $form;
+    return $element;
   }
 
 }

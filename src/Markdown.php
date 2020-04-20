@@ -21,17 +21,17 @@ class Markdown implements MarkdownInterface {
   /**
    * The MarkdownParser Plugin Manager.
    *
-   * @var \Drupal\markdown\MarkdownParsersInterface
+   * @var \Drupal\markdown\MarkdownParserManagerInterface
    */
   protected $parsers;
 
   /**
    * Markdown constructor.
    *
-   * @param \Drupal\markdown\MarkdownParsersInterface $markdown_parsers
+   * @param \Drupal\markdown\MarkdownParserManagerInterface $markdown_parsers
    *   The MarkdownParser Plugin Manager service.
    */
-  public function __construct(MarkdownParsersInterface $markdown_parsers) {
+  public function __construct(MarkdownParserManagerInterface $markdown_parsers) {
     $this->parsers = $markdown_parsers;
   }
 

@@ -6,23 +6,14 @@ use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
-use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\filter\FilterFormatInterface;
 use Drupal\markdown\Annotation\MarkdownParser;
 use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-/**
- * Class MarkdownParsers.
- */
-class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInterface {
-
-  use ContainerAwareTrait;
-  use StringTranslationTrait;
+class MarkdownParserManager extends BaseMarkdownPluginManager implements MarkdownParserManagerInterface {
 
   /**
    * The configuration settings for the Markdown module.
@@ -57,22 +48,6 @@ class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInt
 
   /**
    * {@inheritdoc}
-   */
-  protected function alterDefinitions(&$definitions) {
-    // Remove any plugins that don't actually have the parser installed.
-    foreach ($definitions as $plugin_id => $definition) {
-      if ($plugin_id === '_broken' || empty($definition['checkClass'])) {
-        continue;
-      }
-      if (!class_exists($definition['checkClass'])) {
-        unset($definitions[$plugin_id]);
-      }
-    }
-    parent::alterDefinitions($definitions);
-  }
-
-  /**
-   * {@inheritdoc}
    *
    * @return \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
    *   A MarkdownParser plugin.
@@ -82,8 +57,6 @@ class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInt
 
     // Retrieve the filter from the configuration.
     $filter = $this->getFilter($plugin_id, $configuration);
-
-    $plugin_id = $filter ? $filter->getSetting('parser', $plugin_id) : $plugin_id;
 
     // Set the settings.
     $configuration['settings'] = NestedArray::mergeDeep($this->settings->get($plugin_id) ?: [], $filter ? $filter->getParserSettings() : []);
@@ -187,26 +160,11 @@ class MarkdownParsers extends DefaultPluginManager implements MarkdownParsersInt
   /**
    * {@inheritdoc}
    */
-  public function getParser($filter = NULL, AccountInterface $account = NULL) {
+  public function getParser($filter = NULL, AccountInterface $account = NULL): MarkdownParserInterface {
     return $this->createInstance(NULL, [
       'filter' => $filter,
       'account' => $account,
     ]);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getParsers($include_broken = FALSE) {
-    /** @var \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface[] $parsers */
-    $parsers = [];
-    foreach (array_keys($this->getDefinitions()) as $plugin_id) {
-      if (!$include_broken && $plugin_id === '_broken') {
-        continue;
-      }
-      $parsers[$plugin_id] = $this->createInstance($plugin_id);
-    }
-    return $parsers;
   }
 
 }

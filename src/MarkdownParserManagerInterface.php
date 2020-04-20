@@ -2,18 +2,15 @@
 
 namespace Drupal\markdown;
 
-use Drupal\Component\Plugin\FallbackPluginManagerInterface;
-use Drupal\Component\Plugin\PluginManagerInterface;
-use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Session\AccountInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
 
 /**
- * Interface MarkdownParsersInterface.
- *
+ * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface[] all($includeBroken = FALSE) : array
+ * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface[] getInstalled(array $configuration = []) : array
  * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface createInstance($plugin_id, array $configuration = [])
  */
-interface MarkdownParsersInterface extends ContainerAwareInterface, ContainerInjectionInterface, PluginManagerInterface, FallbackPluginManagerInterface {
+interface MarkdownParserManagerInterface extends MarkdownPluginManagerInterface {
 
   /**
    * Retrieves the a filter plugin instance based on passed configuration.
@@ -42,17 +39,6 @@ interface MarkdownParsersInterface extends ContainerAwareInterface, ContainerInj
    * @return \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
    *   A MarkdownParser plugin.
    */
-  public function getParser($filter = NULL, AccountInterface $account = NULL);
-
-  /**
-   * Retrieves all available MarkdownParser plugins.
-   *
-   * @param bool $include_broken
-   *   Flag indicating whether to include the "_broken" fallback parser.
-   *
-   * @return \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface[]
-   *   An array of MarkdownParser plugins.
-   */
-  public function getParsers($include_broken = FALSE);
+  public function getParser($filter = NULL, AccountInterface $account = NULL): MarkdownParserInterface;
 
 }

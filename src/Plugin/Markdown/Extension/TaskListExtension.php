@@ -4,22 +4,21 @@ namespace Drupal\markdown\Plugin\Markdown\Extension;
 
 use League\CommonMark\EnvironmentAwareInterface;
 use League\CommonMark\EnvironmentInterface;
-use League\CommonMark\Ext\TaskList\TaskListExtension as LeagueTaskListExtension;
+use League\CommonMark\Extension\TaskList\TaskListExtension as LeagueTaskListExtension;
 
 /**
  * Class TableExtension.
  *
  * @MarkdownExtension(
- *   parser = "thephpleague/commonmark",
  *   id = "thephpleague/commonmark-ext-task-list",
- *   checkClass = "\League\CommonMark\Ext\TaskList\TaskListExtension",
- *   composer = "league/commonmark-ext-task-list",
- *   label = @Translation("Table - Task Lists"),
+ *   label = @Translation("Task List"),
+ *   installed = "\League\CommonMark\Extension\TaskList\TaskListExtension",
  *   description = @Translation("Adds GFM-style task list items to the league/commonmark Markdown parser for PHP."),
- *   homepage = "https://github.com/thephpleague/commonmark-ext-task-list",
+ *   url = "https://github.com/thephpleague/commonmark",
+ *   parsers = {"thephpleague/commonmark", "thephpleague/commonmark-gfm"},
  * )
  */
-class TableListExtension extends CommonMarkExtension implements EnvironmentAwareInterface {
+class TaskListExtension extends CommonMarkExtension implements EnvironmentAwareInterface {
 
   /**
    * {@inheritdoc}

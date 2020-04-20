@@ -9,9 +9,11 @@ use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 /**
  * Interface MarkdownExtensionsInterface.
  *
+ * @method \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface[] all($includeBroken = FALSE) : array
+ * @method \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface[] getInstalled(array $configuration = []) : array
  * @method \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface createInstance($plugin_id, array $configuration = [])
  */
-interface MarkdownExtensionsInterface extends ContainerAwareInterface, ContainerInjectionInterface, PluginManagerInterface {
+interface MarkdownExtensionManagerInterface extends MarkdownPluginManagerInterface {
 
   /**
    * Retrieves MarkdownExtension plugins.

@@ -7,19 +7,17 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
-use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesInterface;
 use League\CommonMark\Inline\Element\Link;
 use League\CommonMark\Inline\Parser\InlineParserInterface;
 use League\CommonMark\InlineParserContext;
 
 /**
- * Class HashAutolinker.
- *
  * @MarkdownExtension(
  *   id = "hash_autolinker",
- *   parser = "thephpleague/commonmark",
  *   label = @Translation("# Autolinker"),
+ *   installed = TRUE,
  *   description = @Translation("Automatically link commonly used references that come after a hash character (#) without having to use the link syntax."),
+ *   parsers = {"thephpleague/commonmark", "thephpleague/commonmark-gfm"},
  * )
  */
 class HashAutolinker extends CommonMarkExtension implements InlineParserInterface, MarkdownGuidelinesAlterInterface {
@@ -179,12 +177,12 @@ class HashAutolinker extends CommonMarkExtension implements InlineParserInterfac
   /**
    * {@inheritdoc}
    */
-  public function settingsForm(array $form, FormStateInterface $form_state, MarkdownFilterInterface $filter) {
-    $form = parent::settingsForm($form, $form_state, $filter);
+  public function settingsForm(array $element, FormStateInterface $formState, MarkdownFilterInterface $filter) {
+    $element = parent::settingsForm($element, $formState, $filter);
 
-    $selector = '';//_commonmark_get_states_selector($filter, $this, 'type');
+    $selector = $this->getSatesSelector($this->getElementParents($element, [$this->getPluginId()]), 'type');
 
-    $form['type'] = [
+    $element['type'] = [
       '#type' => 'select',
       '#title' => $this->t('Map text to'),
       '#default_value' => $this->getSetting('type'),
@@ -194,7 +192,7 @@ class HashAutolinker extends CommonMarkExtension implements InlineParserInterfac
       ],
     ];
 
-    $form['node_title'] = [
+    $element['node_title'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Replace text with title of node'),
       '#description' => $this->t('If enabled, it will replace the matched text with the title of the node.'),
@@ -206,7 +204,7 @@ class HashAutolinker extends CommonMarkExtension implements InlineParserInterfac
       ],
     ];
 
-    $form['url'] = [
+    $element['url'] = [
       '#type' => 'textfield',
       '#title' => $this->t('URL'),
       '#description' => $this->t('A URL to format text with. Use the token "[text]" where it is needed. If you need to include the #, use the URL encoded equivalent: <code>%23</code>. Example: <code>https://twitter.com/search?q=%23[text]</code>.'),
@@ -218,7 +216,7 @@ class HashAutolinker extends CommonMarkExtension implements InlineParserInterfac
       ],
     ];
 
-    $form['url_title'] = [
+    $element['url_title'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Replace text with title of URL'),
       '#description' => $this->t('If enabled, it will replace the matched text with the title of the URL.'),
@@ -229,7 +227,7 @@ class HashAutolinker extends CommonMarkExtension implements InlineParserInterfac
         ],
       ],
     ];
-    return $form;
+    return $element;
   }
 
 }

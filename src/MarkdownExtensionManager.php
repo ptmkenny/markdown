@@ -3,22 +3,15 @@
 namespace Drupal\markdown;
 
 use Drupal\Component\Plugin\Exception\PluginException;
-use Drupal\Component\Plugin\FallbackPluginManagerInterface;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
-use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\markdown\Annotation\MarkdownExtension;
 use Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-/**
- * Class MarkdownExtensions.
- *
- * @method \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface createInstance($plugin_id, array $configuration = [])
- */
-class MarkdownExtensions extends DefaultPluginManager implements MarkdownExtensionsInterface, FallbackPluginManagerInterface {
+class MarkdownExtensionManager extends BaseMarkdownPluginManager implements MarkdownExtensionManagerInterface {
 
   use ContainerAwareTrait;
 
@@ -72,7 +65,7 @@ class MarkdownExtensions extends DefaultPluginManager implements MarkdownExtensi
     $extensions = [];
     foreach ($this->getDefinitions() as $plugin_id => $definition) {
       // Skip extensions that don't belong to a particular parser.
-      if (isset($parser) && (!isset($definition['parser']) || $definition['parser'] !== $parser)) {
+      if ($plugin_id === $this->getFallbackPluginId() || (isset($parser) && $definition['parsers'] && !in_array($parser, $definition['parsers'], TRUE))) {
         continue;
       }
       try {
@@ -103,8 +96,12 @@ class MarkdownExtensions extends DefaultPluginManager implements MarkdownExtensi
   /**
    * {@inheritdoc}
    */
-  public function getFallbackPluginId($plugin_id, array $configuration = []) {
-    return '_broken';
+  public function processDefinition(&$definition, $plugin_id) {
+    parent::processDefinition($definition, $plugin_id);
+    if (!is_array($definition)) {
+      return;
+    }
+    $definition['parsers'] = (array) $definition['parsers'];
   }
 
 }

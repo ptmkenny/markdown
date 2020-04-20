@@ -14,13 +14,12 @@ use League\CommonMark\Inline\Element\Link;
 use League\CommonMark\Inline\Renderer\InlineRendererInterface;
 
 /**
- * Class LinkRenderer.
- *
  * @MarkdownExtension(
  *   id = "enhanced_links",
- *   parser = "thephpleague/commonmark",
  *   label = @Translation("Enhanced Links"),
+ *   installed = TRUE,
  *   description = @Translation("Extends CommonMark to provide additional enhancements when rendering links."),
+ *   parsers = {"thephpleague/commonmark", "thephpleague/commonmark-gfm"},
  * )
  */
 class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInterface, InlineRendererInterface, MarkdownGuidelinesAlterInterface {
@@ -188,12 +187,19 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
   /**
    * {@inheritdoc}
    */
-  public function settingsForm(array $form, FormStateInterface $form_state, MarkdownFilterInterface $filter) {
-    $form = parent::settingsForm($form, $form_state, $filter);
+  public function settingsForm(array $element, FormStateInterface $formState, MarkdownFilterInterface $filter) {
+    $element = parent::settingsForm($element, $formState, $filter);
 
-    $form['#description'] = '<p>' . $form['#description'] . '</p><p><strong>' . $this->t('NOTE: These settings ONLY apply to CommonMark Markdown links, if a user manually enters an <code>&lt;a&gt;</code> tag, then these settings will not be processed on them.') . '</strong></p>';
+    if (!empty($element['#description'])) {
+      $element['#description'] = '<p>' . $element['#description'] . '</p>';
+    }
+    elseif (!isset($element['#description'])) {
+      $element['#description'] = '';
+    }
 
-    $form['internal_host_whitelist'] = [
+    $element['#description'] .= '<p><strong>' . $this->t('NOTE: These settings ONLY apply to CommonMark Markdown links, if a user manually enters an <code>&lt;a&gt;</code> tag, then these settings will not be processed on them.') . '</strong></p>';
+
+    $element['internal_host_whitelist'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Internal Host Whitelist'),
       '#description' => $this->t('Allows additional host names to be treated as "internal" when they would normally be considered as "external". This is useful in cases where a multi-site is using different sub-domains. The current host name, %host, will always be considered "internal" (even if removed from this list). Enter one host name per line. No regular expressions are allowed, just exact host name matches.', [
@@ -202,14 +208,14 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
       '#default_value' => $this->getSetting('internal_host_whitelist'),
     ];
 
-    $form['external_new_window'] = [
+    $element['external_new_window'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Open external links in new windows'),
       '#description' => $this->t('When this setting is enabled, any link that does not contain one of the above internal whitelisted host names will automatically be considered as an "external" link. All external links will then have the <code>target="_blank"</code> attribute and value added to it.'),
       '#default_value' => $this->getSetting('external_new_window'),
     ];
 
-    $form['no_follow'] = [
+    $element['no_follow'] = [
       '#type' => 'select',
       '#title' => $this->t('Add <code>rel="nofollow"</code> to'),
       '#description' => $this->t('The rel="nofollow" attribute and value instructs some search engines that the link should not influence the ranking of the link\'s target in the search engine\'s index.'),
@@ -222,7 +228,7 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
       ],
     ];
 
-    return $form;
+    return $element;
   }
 
 }

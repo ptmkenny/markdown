@@ -5,6 +5,8 @@
  * Markdown module.
  */
 
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\markdown\Markdown;
 
@@ -27,6 +29,37 @@ function markdown_help($route_name, RouteMatchInterface $route_match) {
  */
 function markdown_element_info_alter(array &$info) {
   $info['text_format']['#process'][] = ['\Drupal\markdown\Plugin\Filter\Markdown', 'processTextFormat'];
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * {@inheritdoc}
+ */
+function markdown_form_filter_format_edit_form_alter(&$form, FormStateInterface $form_state) {
+  static $compatibleFilters;
+  if (!isset($compatibleFilters)) {
+    /** @var \Drupal\filter\FilterPluginManager $filterManager */
+    $filterManager = \Drupal::service('plugin.manager.filter');
+    $compatibleFilters = array_fill_keys(array_keys($filterManager->getDefinitions()), TRUE);
+    $compatibleFilters['filter_autop'] = FALSE;
+    $compatibleFilters['filter_html'] = FALSE;
+    $compatibleFilters['filter_htmlcorrector'] = FALSE;
+    $compatibleFilters['filter_html_escape'] = FALSE;
+    $compatibleFilters['filter_url'] = FALSE;
+    \Drupal::moduleHandler()->alter('markdown_compatible_filters', $compatibleFilters);
+    $compatibleFilters = array_keys(array_filter($compatibleFilters));
+  }
+  foreach (Element::children($form['filters']['status']) as $name) {
+    if (!in_array($name, $compatibleFilters, TRUE)) {
+      $form['filters']['status']['markdown']['#states']['enabled']['[name="filters[' . $name . '][status]"]'] = ['checked' => FALSE];
+      $form['filters']['status'][$name]['#states']['enabled']['[name="filters[markdown][status]"]'] = ['checked' => FALSE];
+      if (!isset($form['filters']['status'][$name]['#description'])) {
+        $form['filters']['status'][$name]['#description'] = '';
+      }
+      $form['filters']['status'][$name]['#description'] .= t('Note: not compatible with the Markdown module.');
+    }
+  }
 }
 
 /**

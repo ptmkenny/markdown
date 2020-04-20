@@ -7,16 +7,13 @@ use League\CommonMark\EnvironmentInterface;
 use Webuni\CommonMark\AttributesExtension\AttributesExtension as WebuniAttributesExtension;
 
 /**
- * Class AttributesExtension.
- *
  * @MarkdownExtension(
- *   parser = "thephpleague/commonmark",
  *   id = "webuni/commonmark-attributes-extension",
- *   checkClass = "\Webuni\CommonMark\AttributesExtension\AttributesExtension",
- *   composer = "webuni/commonmark-attributes-extension",
+ *   installed = "\Webuni\CommonMark\AttributesExtension\AttributesExtension",
  *   label = @Translation("Attributes"),
  *   description = @Translation("Adds a syntax to define attributes on the various HTML elements in markdown’s output."),
- *   homepage = "https://github.com/webuni/commonmark-attributes-extension",
+ *   url = "https://github.com/webuni/commonmark-attributes-extension",
+ *   parsers = {"thephpleague/commonmark", "thephpleague/commonmark-gfm"},
  * )
  */
 class AttributesExtension extends CommonMarkExtension implements EnvironmentAwareInterface {

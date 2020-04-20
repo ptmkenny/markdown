@@ -3,10 +3,15 @@
 namespace Drupal\markdown\Plugin\Filter;
 
 use Drupal\Component\Render\FormattableMarkup;
+use Drupal\Component\Utility\Html;
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
+use Drupal\markdown\Plugin\Markdown\ExtensibleMarkdownParserInterface;
+use Drupal\markdown\Traits\MarkdownStatesTrait;
 
 /**
  * Provides a filter for Markdown.
@@ -25,26 +30,28 @@ use Drupal\filter\Plugin\FilterBase;
  */
 class Markdown extends FilterBase implements MarkdownFilterInterface {
 
+  use MarkdownStatesTrait;
+
   /**
-   * The Markdown parser.
+   * The Markdown parser as set by the filter.
    *
    * @var \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
    */
   protected $parser;
 
   /**
-   * The MarkdownParser Plugin Manager service.
+   * The Markdown Parser Manager service.
    *
-   * @var \Drupal\markdown\MarkdownParsers
+   * @var \Drupal\markdown\MarkdownParserManager
    */
-  protected $parsers;
+  protected $parserManager;
 
   /**
    * {@inheritdoc}
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->parsers = \Drupal::service('plugin.manager.markdown.parser');
+    $this->parserManager = \Drupal::service('plugin.manager.markdown.parser');
   }
 
   /**
@@ -67,7 +74,7 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
    */
   public function getParser() {
     if (!isset($this->parser)) {
-      $this->parser = $this->parsers->createInstance($this->getSetting('parser', 'thephpleague/commonmark'), ['filter' => $this]);
+      $this->parser = $this->parserManager->createInstance($this->getSetting('parser', 'thephpleague/commonmark'), ['filter' => $this]);
     }
     return $this->parser;
   }
@@ -100,59 +107,91 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
    * @todo Refactor before release.
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
-    $parser_options = [];
-    foreach ($this->parsers->getParsers() as $plugin_id => $plugin) {
-      // Cast to string for Drupal 7.
-      $parser_options[$plugin_id] = (string) $plugin->label();
-    }
+    $parents = $form['#parents'];
+    $defaultParser = $form_state->getValue(array_merge($parents, ['parser']), $this->getParser()->getPluginId());
+    if ($labels = $this->parserManager->getLabels()) {
+      $id = Html::getUniqueId('markdown-parser-ajax');
 
-    // Get the currently set parser.
-    $parser = $this->getParser();
+      // Build a wrapper for the ajax response.
+      $form['ajax'] = [
+        '#type' => 'container',
+        '#attributes' => ['id' => $id],
+        '#parents' => $parents,
+      ];
 
-    if ($parser_options) {
-      $form['parser'] = [
+      $form['ajax']['parser'] = [
         '#type' => 'select',
         '#title' => $this->t('Parser'),
-        '#options' => $parser_options,
-        '#default_value' => $parser->getPluginId(),
+        '#options' => $labels,
+        '#default_value' => $defaultParser,
+        '#ajax' => [
+          'callback' => [$this, 'ajaxChangeParser'],
+          'event' => 'change',
+          'wrapper' => $id,
+        ],
       ];
     }
     else {
-      $form['parser'] = [
+      $form['ajax']['parser'] = [
         '#type' => 'item',
         '#title' => $this->t('No Markdown Parsers Found'),
-        '#description' => $this->t('You need to use composer to install the <a href=":markdown_link">PHP Markdown Lib</a> and/or the <a href=":commonmark_link">CommonMark Lib</a>. Optionally you can use the Library module and place the PHP Markdown Lib in the root library directory, see more in README.', [
-          ':markdown_link' => 'https://packagist.org/packages/michelf/php-markdown',
-          ':commonmark_link' => 'https://packagist.org/packages/league/commonmark',
+        '#description' => $this->t('Visit the <a href=":system.status">@system.status</a> page for more details.', [
+          '@system.status' => $this->t('Status report'),
+          ':system.status' => \Drupal::urlGenerator()->generate('system.status'),
         ]),
       ];
     }
 
-    $form['warning'] = [
-      '#theme_wrappers' => ['container__markdown_warning'],
-      '#type' => 'container',
-      '#attributes' => [
-        'class' => ['messages', 'messages--warning'],
-      ],
-      '#states' => [
-        'visible' => [
-          '[name="filters[filter_html][status]"]' => ['checked' => FALSE],
-        ],
-      ],
-      ['#markup' => $this->t('HTML output of Markdown is currently not filtered against potential XSS attacks. Please enable the "Limit allowed HTML tags and correct faulty HTML" filter bundled with core and ensure it is run after the Markdown filter.')],
-    ];
+    if ($defaultParser && ($parser = $this->parserManager->createInstance($defaultParser, ['filter' => $this])) && $parser instanceof ExtensibleMarkdownParserInterface && ($extensions = $parser->getExtensions())) {
+      // @todo Add parser specific settings.
+      $form['ajax']['parser_settings'] = [
+        '#type' => 'fieldset',
+        '#title' => $this->t('Extensions'),
+      ];
 
-    // @todo Add parser specific settings.
-//    $form['parser_settings'] = ['#type' => 'container'];
-//
-//    // Add any specific extension settings.
-//    $form['parser_settings']['extensions'] = ['#type' => 'container'];
-//    foreach ($parser->extensionList($this) as $plugin_id => $extension) {
-//      $form['parser_settings']['extensions'][$plugin_id] = [];
-//      $form['parser_settings']['extensions'][$plugin_id] = $extension->settingsForm($form['parser_settings']['extensions'][$plugin_id], $form_state, $this);
-//    }
+      // Add any specific extension settings.
+      $form['ajax']['parser_settings']['extensions'] = ['#type' => 'container'];
+      foreach ($extensions as $pluginId => $extension) {
+        // Extension Details.
+        $form['ajax']['parser_settings']['extensions'][$pluginId] = [
+          '#type' => 'details',
+          '#title' => ($url = $extension->getUrl()) ? Link::fromTextAndUrl($extension->getLabel(), $url) : $extension->getLabel(),
+          '#description' => $extension->getDescription(),
+          '#open' => $extension->isEnabled(),
+          '#array_parents' => array_merge($parents, ['parser_settings', 'extensions']),
+        ];
+
+        // Extension enabled checkbox.
+        $form['ajax']['parser_settings']['extensions'][$pluginId]['enabled'] = [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Enabled'),
+          '#default_value' => $extension->isEnabled(),
+        ];
+
+        // Extension settings.
+        $selector = $this->getSatesSelector(array_merge($parents, ['parser_settings', 'extensions', $pluginId]), 'enabled');
+        $form['ajax']['parser_settings']['extensions'][$pluginId]['settings'] = [
+          '#type' => 'container',
+          '#states' => [
+            'visible' => [
+              $selector => ['checked' => TRUE],
+            ],
+          ],
+        ];
+        $form['ajax']['parser_settings']['extensions'][$pluginId]['settings'] = $extension->settingsForm($form['ajax']['parser_settings']['extensions'][$pluginId]['settings'], $form_state, $this);
+      }
+    }
 
     return $form;
+  }
+
+  /**
+   * The AJAX callback used to return the parser ajax wrapper.
+   */
+  public function ajaxChangeParser(array $form, FormStateInterface $form_state) {
+    $parents = $form_state->getTriggeringElement()['#array_parents'];
+    array_pop($parents);
+    return NestedArray::getValue($form, $parents);
   }
 
   public static function processTextFormat(&$element, FormStateInterface $form_state, &$complete_form) {

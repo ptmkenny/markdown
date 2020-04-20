@@ -11,11 +11,11 @@ services:
     arguments: ['@plugin.manager.markdown.parser']
 
   plugin.manager.markdown.parser:
-    class: Drupal\markdown\MarkdownParsers
+    class: Drupal\markdown\MarkdownParserManager
     arguments: ['@container.namespaces', '@cache.discovery', '@module_handler', '@config.factory']
 
   plugin.manager.markdown.extension:
-    class: Drupal\markdown\MarkdownExtensions
+    class: Drupal\markdown\MarkdownExtensionManager
     arguments: ['@container.namespaces', '@cache.discovery', '@module_handler']
 
   twig.extension.markdown:

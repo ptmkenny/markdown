@@ -8,7 +8,6 @@ use Drupal\markdown\Plugin\Markdown\Extension\CommonMarkRendererInterface;
 use Drupal\markdown\Traits\MarkdownParserBenchmarkTrait;
 use League\CommonMark\Block\Parser\BlockParserInterface;
 use League\CommonMark\Block\Renderer\BlockRendererInterface;
-use League\CommonMark\CommonMarkConverter;
 use League\CommonMark\Environment;
 use League\CommonMark\EnvironmentAwareInterface;
 use League\CommonMark\Extension\ExtensionInterface;
@@ -16,17 +15,22 @@ use League\CommonMark\Inline\Parser\InlineParserInterface;
 use League\CommonMark\Inline\Renderer\InlineRendererInterface;
 
 /**
- * Class LeagueCommonMark.
- *
  * @MarkdownParser(
  *   id = "thephpleague/commonmark",
- *   label = @Translation("thephpleague/commonmark"),
- *   checkClass = "League\CommonMark\CommonMarkConverter",
+ *   label = @Translation("CommonMark"),
+ *   url = "https://commonmark.thephpleague.com",
  * )
  */
-class LeagueCommonMark extends ExtensibleMarkdownParser implements MarkdownParserBenchmarkInterface {
+class LeagueCommonMark extends ExtensibleParser implements MarkdownParserBenchmarkInterface {
 
   use MarkdownParserBenchmarkTrait;
+
+  /**
+   * The converter class.
+   *
+   * @var string
+   */
+  protected static $converterClass = '\\League\\CommonMark\\CommonMarkConverter';
 
   /**
    * CommonMark converters, keyed by format filter identifiers.
@@ -45,6 +49,23 @@ class LeagueCommonMark extends ExtensibleMarkdownParser implements MarkdownParse
   /**
    * {@inheritdoc}
    */
+  public static function installed(): bool {
+    return class_exists(static::$converterClass);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function version(): string {
+    if (static::installed()) {
+      $class = static::$converterClass;
+      return $class::VERSION;
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function convertToHtml($markdown, LanguageInterface $language = NULL) {
     return $this->getConverter()->convertToHtml($markdown);
   }
@@ -58,9 +79,18 @@ class LeagueCommonMark extends ExtensibleMarkdownParser implements MarkdownParse
   protected function getConverter() {
     if (!isset(static::$converters[$this->filterId])) {
       $environment = $this->getEnvironment();
-      static::$converters[$this->filterId] = new CommonMarkConverter($this->settings, $environment);
+      static::$converters[$this->filterId] = new static::$converterClass($this->settings, $environment);
     }
     return static::$converters[$this->filterId];
+  }
+
+  /**
+   * Creates an environment.
+   *
+   * @return \League\CommonMark\ConfigurableEnvironmentInterface
+   */
+  protected function createEnvironment() {
+    return Environment::createCommonMarkEnvironment();
   }
 
   /**
@@ -71,7 +101,7 @@ class LeagueCommonMark extends ExtensibleMarkdownParser implements MarkdownParse
    */
   protected function getEnvironment() {
     if (!isset(static::$environments[$this->filterId])) {
-      $environment = Environment::createCommonMarkEnvironment();
+      $environment = $this->createEnvironment();
       $extensions = $this->getExtensions(TRUE);
       foreach ($extensions as $extension) {
         if ($settings = $extension->getSettings()) {
@@ -114,13 +144,6 @@ class LeagueCommonMark extends ExtensibleMarkdownParser implements MarkdownParse
       static::$environments[$this->filterId] = $environment;
     }
     return static::$environments[$this->filterId];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getVersion() {
-    return CommonMarkConverter::VERSION;
   }
 
 }

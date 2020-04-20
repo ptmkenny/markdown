@@ -3,36 +3,48 @@
 namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Core\Language\LanguageInterface;
-use Drupal\markdown\ParsedMarkdown;
 use Drupal\markdown\Traits\MarkdownParserBenchmarkTrait;
-use Michelf\MarkdownExtra;
 
 /**
- * Class PhpMarkdown.
- *
  * @MarkdownParser(
  *   id = "michelf/php-markdown",
- *   label = @Translation("michelf/php-markdown"),
- *   checkClass = "Michelf\MarkdownExtra",
+ *   label = @Translation("PHP Markdown"),
+ *   url = "https://michelf.ca/projects/php-markdown",
  * )
  */
-class PhpMarkdown extends BaseMarkdownParser implements MarkdownParserBenchmarkInterface {
+class PhpMarkdown extends BaseParser implements MarkdownParserBenchmarkInterface {
 
   use MarkdownParserBenchmarkTrait;
 
   /**
-   * MarkdownExtra parsers, keyed by filter identifier.
+   * The parser class.
    *
-   * @var \Michelf\MarkdownExtra[]
+   * @var string
+   */
+  protected static $parserClass = '\\Michelf\\Markdown';
+
+  /**
+   * Markdown parsers, keyed by filter identifier.
+   *
+   * @var \Michelf\Markdown[]
    */
   protected static $parsers = [];
 
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->getParser();
+  public static function installed(): bool {
+    return class_exists(static::$parserClass);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function version(): string {
+    if (static::installed()) {
+      $class = static::$parserClass;
+      return $class::MARKDOWNLIB_VERSION;
+    }
   }
 
   /**
@@ -45,12 +57,12 @@ class PhpMarkdown extends BaseMarkdownParser implements MarkdownParserBenchmarkI
   /**
    * Retrieves the PHP Markdown parser.
    *
-   * @return \Michelf\MarkdownExtra
+   * @return \Michelf\Markdown
    *   A PHP Markdown parser.
    */
   public function getParser() {
     if (!isset(static::$parsers[$this->filterId])) {
-      $parser = new MarkdownExtra();
+      $parser = new static::$parserClass();
       if ($this->filter) {
         foreach ($this->settings as $name => $value) {
           $parser->$name = $value;
@@ -59,13 +71,6 @@ class PhpMarkdown extends BaseMarkdownParser implements MarkdownParserBenchmarkI
       static::$parsers[$this->filterId] = $parser;
     }
     return static::$parsers[$this->filterId];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getVersion() {
-    return MarkdownExtra::MARKDOWNLIB_VERSION;
   }
 
 }

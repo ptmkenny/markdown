@@ -2,10 +2,19 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
+use Drupal\markdown\MarkdownExtensionManagerInterface;
+
 /**
  * Class ExtensibleMarkdownParser.
  */
-abstract class ExtensibleMarkdownParser extends BaseMarkdownParser implements ExtensibleMarkdownParserInterface {
+abstract class ExtensibleParser extends BaseParser implements ExtensibleMarkdownParserInterface {
+
+  /**
+   * The Markdown Extension Manager service.
+   *
+   * @var \Drupal\markdown\MarkdownExtensionManagerInterface
+   */
+  protected static $extensionManager;
 
   /**
    * MarkdownExtension plugins specific to a parser.
@@ -47,9 +56,7 @@ abstract class ExtensibleMarkdownParser extends BaseMarkdownParser implements Ex
    */
   public function getExtensions($enabled = NULL) {
     if (!isset(static::$extensions["$enabled:$this->pluginId"])) {
-      /** @var \Drupal\markdown\MarkdownExtensions $markdown_extensions */
-      $markdown_extensions = \Drupal::service('plugin.manager.markdown.extension');
-      static::$extensions["$enabled:$this->pluginId"] = $this->filter && $this->filter->isEnabled() ? $markdown_extensions->getExtensions($this->pluginId, $enabled) : [];
+      static::$extensions["$enabled:$this->pluginId"] = ($filter = $this->getFilter()) && $filter->isEnabled() ? $this->extensionManager()->getExtensions($this->pluginId, $enabled) : [];
     }
 
     /* @type \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface $extension */
@@ -62,6 +69,18 @@ abstract class ExtensibleMarkdownParser extends BaseMarkdownParser implements Ex
     /** @var \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface[] $extensions */
     $extensions = static::$extensions["$enabled:$this->pluginId"];
     return $extensions;
+  }
+
+  /**
+   * Retrieves the Markdown Extension Manager service.
+   *
+   * @return \Drupal\markdown\MarkdownExtensionManagerInterface
+   */
+  protected function extensionManager(): MarkdownExtensionManagerInterface {
+    if (!static::$extensionManager) {
+      static::$extensionManager = \Drupal::service('plugin.manager.markdown.extension');
+    }
+    return static::$extensionManager;
   }
 
 }

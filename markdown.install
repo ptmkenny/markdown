@@ -5,58 +5,64 @@
  * Install, update and uninstall functions for the markdown module.
  */
 
+use Drupal\Core\Link;
+use Drupal\Core\Url;
+
 /**
  * Implements hook_requirements().
- *
- * @todo Refactor before release.
  */
 function markdown_requirements($phase) {
+  /** @var \Drupal\Core\Render\RendererInterface $renderer */
+  $renderer = \Drupal::service('renderer');
+  $translation = \Drupal::translation();
   $requirements = [];
 
-  if ($phase == 'runtime') {
-    $composer_loaded = class_exists('Michelf\MarkdownExtra') || class_exists('League\CommonMark\CommonMarkConverter');
-    if (!$composer_loaded && \Drupal::moduleHandler()->moduleExists('libraries')) {
-      $library = libraries_detect('php-markdown');
-      $error_message = isset($library['error message']) ? $library['error message'] : '';
-
-      if (empty($library['installed'])) {
-        $requirements['php_markdown_lib'] = [
-          'title' => t('Markdown library'),
-          'severity' => REQUIREMENT_ERROR,
-          'value' => t('Not found'),
-          'description' => t('@error You need to download the <a href=":markdown_link">PHP Markdown Lib</a>, extract the archive and place the directory in the %path directory on your server.', [
-            '@error' => $error_message,
-            ':markdown_link' => $library['download url'],
-            '%path' => 'libraries',
-          ]),
-        ];
+  if ($phase === 'runtime') {
+    $installed = [];
+    $build = [
+      '#theme' => 'table__markdown_parser_requirements',
+      '#header' => [
+        $translation->translate('Supported Parsers'),
+        $translation->translate('Installed Version'),
+      ],
+      '#rows' => [],
+    ];
+    /** @var \Drupal\markdown\MarkdownParserManagerInterface $parserManager */
+    $parserManager = \Drupal::service('plugin.manager.markdown.parser');
+    foreach ($parserManager->all() as $name => $parser) {
+      $row = [];
+      if ($url = $parser->getUrl()) {
+        $url = Url::fromUri($url, ['attributes' => ['target' => '_blank']]);
+        $row[] = Link::fromTextAndUrl($parser->getLabel(FALSE), $url);
       }
       else {
-        $requirements['php_markdown_lib'] = [
-          'title' => t('Markdown library'),
-          'severity' => REQUIREMENT_OK,
-          'value' => $library['name'] . ' ' . $library['version'],
-        ];
+        $row[] = $parser->getLabel(FALSE);
       }
-    }
-    elseif (!$composer_loaded) {
-      $requirements['php_markdown_lib'] = [
-        'title' => t('Markdown library'),
-        'severity' => REQUIREMENT_ERROR,
-        'value' => t('Not found'),
-        'description' => t('You need to use composer to install the <a href=":markdown_link">PHP Markdown Lib</a> and/or the <a href=":commonmark_link">CommonMark Lib</a>.', [
-          ':markdown_link' => 'https://packagist.org/packages/michelf/php-markdown',
-          ':commonmark_link' => 'https://packagist.org/packages/league/commonmark',
-        ]),
+      if ($parser->isInstalled()) {
+        $installed[] = $parser;
+        $row[] = $parser->getVersion();
+      }
+      else {
+        $row[] = $translation->translate('Not Installed');
+      }
+      $build['#rows'][] = [
+        'class' => $parser->isInstalled() ? 'color-success' : 'color-warning',
+        'data' => $row,
       ];
     }
-    else {
-      $requirements['php_markdown_lib'] = [
-        'title' => t('Markdown library'),
-        'severity' => REQUIREMENT_OK,
-        'value' => t('Library found'),
-      ];
+
+    $requirements['markdown'] = [
+      'title' => 'Markdown',
+      'severity' => REQUIREMENT_OK,
+      'value' => $translation->formatPlural(count($installed), '1 parser installed', '@count parsers installed'),
+    ];
+
+    if (!$installed) {
+      $requirements['markdown']['severity'] = REQUIREMENT_ERROR;
+      $requirements['markdown']['value'] .= '. ' . $translation->translate('You must install at least one parser via Composer for the Markdown module to function properly.');
     }
+
+    $requirements['markdown']['description'] = $renderer->renderPlain($build);
   }
 
   return $requirements;

@@ -8,7 +8,7 @@ use Drupal\Core\Language\LanguageInterface;
 /**
  * Interface MarkdownInterface.
  */
-interface MarkdownParserInterface extends PluginInspectionInterface {
+interface MarkdownParserInterface extends MarkdownInstallablePluginInterface {
 
   /**
    * Converts Markdown into HTML.
@@ -33,6 +33,20 @@ interface MarkdownParserInterface extends PluginInspectionInterface {
   public function convertToHtml($markdown, LanguageInterface $language = NULL);
 
   /**
+   * Retrieves allowed HTML tags, if set.
+   *
+   * @return array|null
+   */
+  public function getAllowedTags();
+
+  /**
+   * Retrieves the markdown filter plugin, if set.
+   *
+   * @return \Drupal\markdown\Plugin\Filter\MarkdownFilterInterface
+   */
+  public function getFilter();
+
+  /**
    * Retrieves a filter format entity.
    *
    * @param string $format
@@ -46,29 +60,17 @@ interface MarkdownParserInterface extends PluginInspectionInterface {
   /**
    * Retrieves a short summary of what the MarkdownParser does.
    *
-   * @return string|array|null
+   * @return array
    *   A render array.
    */
   public function getSummary();
 
   /**
-   * The current version of the parser.
+   * Retrieves the URL for the parser, if any.
    *
-   * @return string
-   *   The version.
+   * @return string|null
    */
-  public function getVersion();
-
-  /**
-   * Displays the human-readable label of the MarkdownParser plugin.
-   *
-   * @param bool $show_version
-   *   Flag indicating whether to show the version with the label.
-   *
-   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
-   *   The label.
-   */
-  public function label($show_version = TRUE);
+  public function getUrl();
 
   /**
    * Loads a cached ParsedMarkdown object.
@@ -175,6 +177,16 @@ interface MarkdownParserInterface extends PluginInspectionInterface {
    *   When the provided $url does not exist or is not reachable.
    */
   public function parseUrl($url, LanguageInterface $language = NULL);
+
+  /**
+   * Sets the allowed HTML tags.
+   *
+   * @param array $tags
+   *   The allowed HTML tags.
+   *
+   * @return static
+   */
+  public function setAllowedTags(array $tags = []);
 
   /**
    * Generates a filter's tip.

@@ -3,20 +3,39 @@
 namespace Drupal\markdown\Plugin\Markdown\Extension;
 
 use Drupal\Component\Utility\NestedArray;
+use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\PluginBase;
+use Drupal\Core\Url;
 use Drupal\markdown\Annotation\MarkdownExtension;
 use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
+use Drupal\markdown\Traits\MarkdownStatesTrait;
 
 /**
  * Base class for markdown extensions.
  *
  * @MarkdownExtension(
  *   id = "_broken",
- *   parser = "_broken",
+ *   label = @Translation("Missing Extension"),
  * )
  */
 class BaseExtension extends PluginBase implements MarkdownExtensionInterface {
+
+  use MarkdownStatesTrait;
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function installed(): bool {
+    return FALSE;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function version() {
+    return NULL;
+  }
 
   /**
    * {@inheritdoc}
@@ -72,6 +91,24 @@ class BaseExtension extends PluginBase implements MarkdownExtensionInterface {
   /**
    * {@inheritdoc}
    */
+  public function getDescription() {
+    return $this->pluginDefinition['description'] ?? NULL;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getLabel($version = TRUE) {
+    $label = $this->pluginDefinition['label'] ?? $this->pluginId;
+    if ($version && ($version = $this->getVersion())) {
+      $label .= " ($version)";
+    }
+    return $label;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getSetting($name) {
     $settings = $this->getSettings();
     return isset($settings[$name]) ? $settings[$name] : NULL;
@@ -80,8 +117,33 @@ class BaseExtension extends PluginBase implements MarkdownExtensionInterface {
   /**
    * {@inheritdoc}
    */
+  public function getUrl() {
+    $url = $this->pluginDefinition['url'] ?? NULL;
+    if ($url && UrlHelper::isExternal($url)) {
+      return Url::fromUri($url);
+    }
+    return $url ? Url::fromUserInput($url) : NULL;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getVersion() {
+    return $this->pluginDefinition['version'] ?? NULL;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function isEnabled() {
     return !!$this->getSetting('enabled');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function isInstalled(): bool {
+    return $this->pluginDefinition['installed'] ?? FALSE;
   }
 
   /**
@@ -140,19 +202,13 @@ class BaseExtension extends PluginBase implements MarkdownExtensionInterface {
   /**
    * {@inheritdoc}
    */
-  public function settingsForm(array $form, FormStateInterface $form_state, MarkdownFilterInterface $filter) {
+  public function settingsForm(array $element, FormStateInterface $formState, MarkdownFilterInterface $filter) {
     $definition = $this->getPluginDefinition();
-    $form['provider'] = [
+    $element['provider'] = [
       '#type' => 'value',
       '#value' => $definition['provider'],
     ];
-
-    $form['label'] = [
-      '#type' => 'item',
-      '#title' => $this->label(),
-    ];
-
-    return $form;
+    return $element;
   }
 
 }
