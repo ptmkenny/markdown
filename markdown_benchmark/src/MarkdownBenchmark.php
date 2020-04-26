@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\markdown;
+namespace Drupal\markdown_benchmark;
 
 use Drupal\Component\Utility\ToStringTrait;
 
@@ -161,7 +161,7 @@ class MarkdownBenchmark implements \Serializable {
    * This is primarily only useful when there are a bunch of benchmarks being
    * grouped together and only the last one needs to retrain the result.
    *
-   * @see \Drupal\markdown\MarkdownBenchmarkAverages::iterate()
+   * @see \Drupal\markdown_benchmark\MarkdownBenchmarkAverages::iterate()
    *
    * @return static
    */

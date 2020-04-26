@@ -17,7 +17,7 @@ trait MarkdownStatesTrait {
    * @return array
    *   The element's parents array.
    */
-  protected static function getElementParents(array $element, array $parents = [], string $property = '#array_parents') {
+  protected static function getElementParents(array $element, array $parents = [], string $property = '#parents') {
     return array_merge($element[$property] ?? [], $parents);
   }
 

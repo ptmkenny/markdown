@@ -3,30 +3,28 @@
 namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Core\Language\LanguageInterface;
-use Drupal\markdown\Traits\MarkdownParserBenchmarkTrait;
 
 /**
  * @MarkdownParser(
  *   id = "pecl/cmark",
  *   label = @Translation("PECL cmark/libcmark"),
  *   url = "https://pecl.php.net/package/cmark",
+ *   weight = 10,
  * )
  */
-class PeclCmark extends BaseParser implements MarkdownParserBenchmarkInterface {
-
-  use MarkdownParserBenchmarkTrait;
+class PeclCmark extends BaseParser {
 
   /**
    * {@inheritdoc}
    */
-  public static function installed(): bool {
+  public static function installed() {
     return class_exists('\\CommonMark\\Parser');
   }
 
   /**
    * {@inheritdoc}
    */
-  public static function version(): string {
+  public static function version() {
     if (static::installed()) {
       // Retrieve the PECL extension version.
       $version = [phpversion('cmark')];

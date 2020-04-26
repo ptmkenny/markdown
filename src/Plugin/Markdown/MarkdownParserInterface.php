@@ -2,13 +2,12 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
-use Drupal\Component\Plugin\PluginInspectionInterface;
 use Drupal\Core\Language\LanguageInterface;
 
 /**
  * Interface MarkdownInterface.
  */
-interface MarkdownParserInterface extends MarkdownInstallablePluginInterface {
+interface MarkdownParserInterface extends MarkdownInstallablePluginInterface, MarkdownPluginSettingsInterface {
 
   /**
    * Converts Markdown into HTML.
@@ -42,7 +41,7 @@ interface MarkdownParserInterface extends MarkdownInstallablePluginInterface {
   /**
    * Retrieves the markdown filter plugin, if set.
    *
-   * @return \Drupal\markdown\Plugin\Filter\MarkdownFilterInterface
+   * @return \Drupal\markdown_filter\Plugin\Filter\MarkdownFilterInterface
    */
   public function getFilter();
 
@@ -66,71 +65,6 @@ interface MarkdownParserInterface extends MarkdownInstallablePluginInterface {
   public function getSummary();
 
   /**
-   * Retrieves the URL for the parser, if any.
-   *
-   * @return string|null
-   */
-  public function getUrl();
-
-  /**
-   * Loads a cached ParsedMarkdown object.
-   *
-   * @param string $id
-   *   A unique identifier that will be used to cache the parsed markdown.
-   * @param string $markdown
-   *   Optional. The fallback markdown to parse if the cached ParsedMarkdown
-   *   object doesn't yet exist. If provided, it will be parsed
-   *   and its identifier set to the provided $id and then cached.
-   * @param \Drupal\Core\Language\LanguageInterface $language
-   *   Optional. The language of the markdown that is being parsed.
-   *
-   * @return \Drupal\markdown\ParsedMarkdownInterface|null
-   *   A ParsedMarkdown object or NULL if it doesn't exist and $markdown was
-   *   not provided as a fallback.
-   */
-  public function load($id, $markdown = NULL, LanguageInterface $language = NULL);
-
-  /**
-   * Loads a cached ParsedMarkdown object for a local file system path.
-   *
-   * @param string $id
-   *   A unique identifier that will be used to cache the parsed markdown.
-   * @param string $path
-   *   The local file system path of a markdown file to parse if the cached
-   *   ParsedMarkdown object doesn't yet exist. Once parsed, its identifier
-   *   will be set to the provided $id and then cached.
-   * @param \Drupal\Core\Language\LanguageInterface $language
-   *   Optional. The language of the markdown that is being parsed.
-   *
-   * @return \Drupal\markdown\ParsedMarkdownInterface
-   *   A ParsedMarkdown object.
-   *
-   * @throws \Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException
-   *   When the provided $path does not exist in the local file system.
-   */
-  public function loadPath($id, $path, LanguageInterface $language = NULL);
-
-  /**
-   * Loads a cached ParsedMarkdown object for a URL.
-   *
-   * @param string $id
-   *   A unique identifier that will be used to cache the parsed markdown.
-   * @param string $url
-   *   The external URL of a markdown file to parse if the cached
-   *   ParsedMarkdown object doesn't yet exist. Once parsed, its identifier
-   *   will be set to the provided $id and then cached.
-   * @param \Drupal\Core\Language\LanguageInterface $language
-   *   Optional. The language of the markdown that is being parsed.
-   *
-   * @return \Drupal\markdown\ParsedMarkdownInterface
-   *   A ParsedMarkdown object.
-   *
-   * @throws \Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException
-   *   When the provided $url does not exist or is not reachable.
-   */
-  public function loadUrl($id, $url, LanguageInterface $language = NULL);
-
-  /**
    * Parses markdown into HTML.
    *
    * @param string $markdown
@@ -147,38 +81,6 @@ interface MarkdownParserInterface extends MarkdownInstallablePluginInterface {
   public function parse($markdown, LanguageInterface $language = NULL);
 
   /**
-   * Parses markdown from a local file into HTML.
-   *
-   * @param string $path
-   *   A filesystem path of a markdown file to parse.
-   * @param \Drupal\Core\Language\LanguageInterface $language
-   *   Optional. The language of the markdown that is being parsed.
-   *
-   * @return \Drupal\markdown\ParsedMarkdownInterface
-   *   A ParsedMarkdownInterface object.
-   *
-   * @throws \Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException
-   *   When the provided $path does not exist in the local file system.
-   */
-  public function parsePath($path, LanguageInterface $language = NULL);
-
-  /**
-   * Parses markdown from an external URL into HTML.
-   *
-   * @param string|\Drupal\Core\Url|\Psr\Http\Message\UriInterface $url
-   *   An external URL of a markdown file to parse.
-   * @param \Drupal\Core\Language\LanguageInterface $language
-   *   Optional. The language of the markdown that is being parsed.
-   *
-   * @return \Drupal\markdown\ParsedMarkdownInterface
-   *   A ParsedMarkdownInterface object.
-   *
-   * @throws \Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException
-   *   When the provided $url does not exist or is not reachable.
-   */
-  public function parseUrl($url, LanguageInterface $language = NULL);
-
-  /**
    * Sets the allowed HTML tags.
    *
    * @param array $tags
@@ -187,21 +89,5 @@ interface MarkdownParserInterface extends MarkdownInstallablePluginInterface {
    * @return static
    */
   public function setAllowedTags(array $tags = []);
-
-  /**
-   * Generates a filter's tip.
-   *
-   * A filter's tips should be informative and to the point. Short tips are
-   * preferably one-liners.
-   *
-   * @param bool $long
-   *   Whether this callback should return a short tip to display in a form
-   *   (FALSE), or whether a more elaborate filter tips should be returned for
-   *   template_preprocess_filter_tips() (TRUE).
-   *
-   * @return string|null
-   *   Translated text to display as a tip, or NULL if this filter has no tip.
-   */
-  public function tips($long = FALSE);
 
 }

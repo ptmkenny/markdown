@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\markdown\Plugin\Filter;
+namespace Drupal\markdown_filter\Plugin\Filter;
 
 use Drupal\filter\Plugin\FilterInterface;
 

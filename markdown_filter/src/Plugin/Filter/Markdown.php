@@ -1,16 +1,15 @@
 <?php
 
-namespace Drupal\markdown\Plugin\Filter;
+namespace Drupal\markdown_filter\Plugin\Filter;
 
 use Drupal\Component\Render\FormattableMarkup;
-use Drupal\Component\Utility\Html;
-use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Link;
+use Drupal\Core\Form\SubformState;
 use Drupal\Core\Url;
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
-use Drupal\markdown\Plugin\Markdown\ExtensibleMarkdownParserInterface;
+use Drupal\markdown\Form\MarkdownSettingsForm;
 use Drupal\markdown\Traits\MarkdownStatesTrait;
 
 /**
@@ -42,7 +41,7 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
   /**
    * The Markdown Parser Manager service.
    *
-   * @var \Drupal\markdown\MarkdownParserManager
+   * @var \Drupal\markdown\MarkdownParserPluginManager
    */
   protected $parserManager;
 
@@ -107,91 +106,15 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
    * @todo Refactor before release.
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
-    $parents = $form['#parents'];
-    $defaultParser = $form_state->getValue(array_merge($parents, ['parser']), $this->getParser()->getPluginId());
-    if ($labels = $this->parserManager->getLabels()) {
-      $id = Html::getUniqueId('markdown-parser-ajax');
-
-      // Build a wrapper for the ajax response.
-      $form['ajax'] = [
-        '#type' => 'container',
-        '#attributes' => ['id' => $id],
-        '#parents' => $parents,
-      ];
-
-      $form['ajax']['parser'] = [
-        '#type' => 'select',
-        '#title' => $this->t('Parser'),
-        '#options' => $labels,
-        '#default_value' => $defaultParser,
-        '#ajax' => [
-          'callback' => [$this, 'ajaxChangeParser'],
-          'event' => 'change',
-          'wrapper' => $id,
-        ],
-      ];
-    }
-    else {
-      $form['ajax']['parser'] = [
-        '#type' => 'item',
-        '#title' => $this->t('No Markdown Parsers Found'),
-        '#description' => $this->t('Visit the <a href=":system.status">@system.status</a> page for more details.', [
-          '@system.status' => $this->t('Status report'),
-          ':system.status' => \Drupal::urlGenerator()->generate('system.status'),
-        ]),
-      ];
-    }
-
-    if ($defaultParser && ($parser = $this->parserManager->createInstance($defaultParser, ['filter' => $this])) && $parser instanceof ExtensibleMarkdownParserInterface && ($extensions = $parser->getExtensions())) {
-      // @todo Add parser specific settings.
-      $form['ajax']['parser_settings'] = [
-        '#type' => 'fieldset',
-        '#title' => $this->t('Extensions'),
-      ];
-
-      // Add any specific extension settings.
-      $form['ajax']['parser_settings']['extensions'] = ['#type' => 'container'];
-      foreach ($extensions as $pluginId => $extension) {
-        // Extension Details.
-        $form['ajax']['parser_settings']['extensions'][$pluginId] = [
-          '#type' => 'details',
-          '#title' => ($url = $extension->getUrl()) ? Link::fromTextAndUrl($extension->getLabel(), $url) : $extension->getLabel(),
-          '#description' => $extension->getDescription(),
-          '#open' => $extension->isEnabled(),
-          '#array_parents' => array_merge($parents, ['parser_settings', 'extensions']),
-        ];
-
-        // Extension enabled checkbox.
-        $form['ajax']['parser_settings']['extensions'][$pluginId]['enabled'] = [
-          '#type' => 'checkbox',
-          '#title' => $this->t('Enabled'),
-          '#default_value' => $extension->isEnabled(),
-        ];
-
-        // Extension settings.
-        $selector = $this->getSatesSelector(array_merge($parents, ['parser_settings', 'extensions', $pluginId]), 'enabled');
-        $form['ajax']['parser_settings']['extensions'][$pluginId]['settings'] = [
-          '#type' => 'container',
-          '#states' => [
-            'visible' => [
-              $selector => ['checked' => TRUE],
-            ],
-          ],
-        ];
-        $form['ajax']['parser_settings']['extensions'][$pluginId]['settings'] = $extension->settingsForm($form['ajax']['parser_settings']['extensions'][$pluginId]['settings'], $form_state, $this);
-      }
-    }
-
-    return $form;
-  }
-
-  /**
-   * The AJAX callback used to return the parser ajax wrapper.
-   */
-  public function ajaxChangeParser(array $form, FormStateInterface $form_state) {
-    $parents = $form_state->getTriggeringElement()['#array_parents'];
-    array_pop($parents);
-    return NestedArray::getValue($form, $parents);
+    $subform = ['#parents' => $form['#parents']];
+    $subform_state = SubformState::createForSubform($subform, $form, $form_state);
+    $settingsForm = MarkdownSettingsForm::create();
+    $defaultParserConfiguration = $settingsForm->getDefaultParserConfiguration();
+    $defaultParserConfiguration['filter'] = $this;
+    return $settingsForm
+      ->setDefaultParser($this->getParser()->getPluginId())
+      ->setDefaultParserConfiguration($defaultParserConfiguration)
+      ->buildSettings($subform, $subform_state);
   }
 
   public static function processTextFormat(&$element, FormStateInterface $form_state, &$complete_form) {
@@ -236,7 +159,34 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
    * {@inheritdoc}
    */
   public function tips($long = FALSE) {
-    return $this->getParser()->tips($long);
+    $parser = $this->getParser();
+
+    // On the "short" tips, just show and render the summary, if any.
+    if (!$long) {
+      $summary = $parser->getSummary();
+      if (!$summary) {
+        return NULL;
+      }
+      return (string) \Drupal::service('renderer')->render($summary);
+    }
+
+
+    // On the long tips, the render array must be retrieved as a "form" due to
+    // the fact that vertical tabs require form processing to work properly.
+    $formBuilder = \Drupal::formBuilder();
+    $formState = (new FormState())->addBuildInfo('args', [$long, $parser]);
+    $form = $formBuilder->buildForm('\Drupal\markdown_filter\Form\MarkdownFilterTipsForm', $formState);
+
+    // Since this is essentially "hacking" the FAPI and not an actual "form",
+    // just extract the relevant child elements from the "form" and render it.
+    $tips = [];
+    foreach (['help', 'tips', 'guides', 'allowed_tags'] as $child) {
+      if (isset($form[$child])) {
+        $tips[] = $form[$child];
+      }
+    }
+
+    return \Drupal::service('renderer')->render($tips[1]);
   }
 
 }

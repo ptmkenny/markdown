@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\markdown;
+namespace Drupal\markdown_benchmark;
 
 use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Component\Utility\ToStringTrait;
@@ -26,7 +26,7 @@ class MarkdownBenchmarkAverages {
   /**
    * A fallback benchmark.
    *
-   * @var \Drupal\markdown\MarkdownBenchmark
+   * @var \Drupal\markdown_benchmark\MarkdownBenchmark
    */
   protected $fallbackBenchmark;
 
@@ -40,7 +40,7 @@ class MarkdownBenchmarkAverages {
   /**
    * An array of benchmarks.
    *
-   * @var \Drupal\markdown\MarkdownBenchmark[]
+   * @var \Drupal\markdown_benchmark\MarkdownBenchmark[]
    */
   protected $benchmarks = [];
 
@@ -50,7 +50,7 @@ class MarkdownBenchmarkAverages {
    * @param int $iteration_count
    *   The amount of of loop iterations used to average the results of each
    *   MarkdownParser benchmark.
-   * @param \Drupal\markdown\MarkdownBenchmark $fallback_benchmark
+   * @param \Drupal\markdown_benchmark\MarkdownBenchmark $fallback_benchmark
    *   A fallback benchmark to use if/when there are no benchmarks available.
    */
   public function __construct($iteration_count = 10, MarkdownBenchmark $fallback_benchmark = NULL) {
@@ -64,7 +64,7 @@ class MarkdownBenchmarkAverages {
    * @param int $iteration_count
    *   The amount of of loop iterations used to average the results of each
    *   MarkdownParser benchmark.
-   * @param \Drupal\markdown\MarkdownBenchmark $fallback
+   * @param \Drupal\markdown_benchmark\MarkdownBenchmark $fallback
    *   A fallback benchmark to use if/when there are no benchmarks available.
    *
    * @return static
@@ -208,7 +208,7 @@ class MarkdownBenchmarkAverages {
     }
     else {
       $ms = array_map(function ($benchmark) {
-        /** @var \Drupal\markdown\MarkdownBenchmark $benchmark */
+        /** @var \Drupal\markdown_benchmark\MarkdownBenchmark $benchmark */
         return $benchmark->getMilliseconds(FALSE);
       }, $benchmarks);
       $averaged_ms = array_sum($ms) / count($ms);
@@ -236,7 +236,7 @@ class MarkdownBenchmarkAverages {
    *   - rendered
    *   - total (default)
    *
-   * @return \Drupal\markdown\MarkdownBenchmark[]
+   * @return \Drupal\markdown_benchmark\MarkdownBenchmark[]
    */
   public function getBenchmarks($type = NULL) {
     if ($type === NULL) {
@@ -244,7 +244,7 @@ class MarkdownBenchmarkAverages {
     }
 
     return array_values(array_filter($this->benchmarks, function ($benchmark) use ($type) {
-      /** @type \Drupal\markdown\MarkdownBenchmark $benchmark */
+      /** @type \Drupal\markdown_benchmark\MarkdownBenchmark $benchmark */
       return $benchmark->getType() === $type;
     }));
   }
@@ -252,7 +252,7 @@ class MarkdownBenchmarkAverages {
   /**
    * Retrieves a fallback benchmark, creating one if necessary.
    *
-   * @return \Drupal\markdown\MarkdownBenchmark
+   * @return \Drupal\markdown_benchmark\MarkdownBenchmark
    *   A fallback benchmark.
    */
   public function getFallbackBenchmark() {
@@ -271,7 +271,7 @@ class MarkdownBenchmarkAverages {
    *   - rendered
    *   - total (default)
    *
-   * @return \Drupal\markdown\MarkdownBenchmark
+   * @return \Drupal\markdown_benchmark\MarkdownBenchmark
    *   The last benchmark of $type.
    */
   public function getLastBenchmark($type = 'total') {

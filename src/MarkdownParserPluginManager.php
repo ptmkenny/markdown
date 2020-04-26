@@ -9,11 +9,15 @@ use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\filter\FilterFormatInterface;
 use Drupal\markdown\Annotation\MarkdownParser;
-use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
+use Drupal\markdown_filter\Plugin\Filter\MarkdownFilterInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class MarkdownParserManager extends BaseMarkdownPluginManager implements MarkdownParserManagerInterface {
+/**
+ * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface[] all(array $configuration = [], $includeBroken = FALSE) : array
+ * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface[] installed(array $configuration = []) : array
+ */
+class MarkdownParserPluginManager extends BaseMarkdownPluginManager implements MarkdownParserPluginManagerInterface {
 
   /**
    * The configuration settings for the Markdown module.
@@ -35,7 +39,10 @@ class MarkdownParserManager extends BaseMarkdownPluginManager implements Markdow
   /**
    * {@inheritdoc}
    */
-  public static function create(ContainerInterface $container) {
+  public static function create(ContainerInterface $container = NULL) {
+    if (!$container) {
+      $container = \Drupal::getContainer();
+    }
     $instance = new static(
       $container->get('container.namespaces'),
       $container->get('cache.discovery'),
@@ -51,6 +58,9 @@ class MarkdownParserManager extends BaseMarkdownPluginManager implements Markdow
    *
    * @return \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
    *   A MarkdownParser plugin.
+   *
+   * @todo remove this special functionality, implementations should explicitly
+   *   pass their configuration rather than guessing here.
    */
   public function createInstance($plugin_id = NULL, array $configuration = []) {
     $plugin_id = $this->getFallbackPluginId($plugin_id, $configuration);
@@ -59,7 +69,9 @@ class MarkdownParserManager extends BaseMarkdownPluginManager implements Markdow
     $filter = $this->getFilter($plugin_id, $configuration);
 
     // Set the settings.
-    $configuration['settings'] = NestedArray::mergeDeep($this->settings->get($plugin_id) ?: [], $filter ? $filter->getParserSettings() : []);
+    if (empty($configuration['settings'])) {
+      $configuration['settings'] = NestedArray::mergeDeep($this->settings->get($plugin_id) ?: [], $filter ? $filter->getParserSettings() : []);
+    }
 
     /** @var \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface $parser */
     $parser = parent::createInstance($plugin_id, $configuration);
@@ -119,7 +131,8 @@ class MarkdownParserManager extends BaseMarkdownPluginManager implements Markdow
         }
         // Drupal 8.
         else {
-          $format_filter = $format->filters()->get('markdown');
+          $filters = $format->filters();
+          $format_filter = $filters->has('markdown') ? $filters->get('markdown') : NULL;
         }
 
         // Skip formats that don't match the desired parser.
@@ -148,7 +161,7 @@ class MarkdownParserManager extends BaseMarkdownPluginManager implements Markdow
     }
 
     if ($filter && !($filter instanceof MarkdownFilterInterface)) {
-      throw new \InvalidArgumentException($this->t('Filter provided in configuration must be an instance of \\Drupal\\markdown\\Plugin\\Filter\\MarkdownFilterInterface a string representing a filter format or instance of \\Drupal\\filter\\FilterFormatInterface that contains a markdown filter.'));
+      throw new \InvalidArgumentException(sprintf('Filter provided in configuration must be an instance of %s.', MarkdownFilterInterface::class));
     }
 
     // Now reset the filter.
@@ -160,7 +173,7 @@ class MarkdownParserManager extends BaseMarkdownPluginManager implements Markdow
   /**
    * {@inheritdoc}
    */
-  public function getParser($filter = NULL, AccountInterface $account = NULL): MarkdownParserInterface {
+  public function getParser($filter = NULL, AccountInterface $account = NULL) {
     return $this->createInstance(NULL, [
       'filter' => $filter,
       'account' => $account,

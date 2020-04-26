@@ -5,10 +5,10 @@ namespace Drupal\markdown\Plugin\Markdown\Extension;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Plugin\PluginBase;
 use Drupal\Core\Url;
 use Drupal\markdown\Annotation\MarkdownExtension;
-use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
 use Drupal\markdown\Traits\MarkdownStatesTrait;
 
 /**
@@ -26,7 +26,14 @@ class BaseExtension extends PluginBase implements MarkdownExtensionInterface {
   /**
    * {@inheritdoc}
    */
-  public static function installed(): bool {
+  public static function defaultSettings() {
+    return [];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function installed() {
     return FALSE;
   }
 
@@ -58,13 +65,6 @@ class BaseExtension extends PluginBase implements MarkdownExtensionInterface {
       'provider' => $this->pluginDefinition['provider'],
       'settings' => $this->defaultSettings() + ['enabled' => FALSE],
     ];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function defaultSettings() {
-    return [];
   }
 
   /**
@@ -142,7 +142,7 @@ class BaseExtension extends PluginBase implements MarkdownExtensionInterface {
   /**
    * {@inheritdoc}
    */
-  public function isInstalled(): bool {
+  public function isInstalled() {
     return $this->pluginDefinition['installed'] ?? FALSE;
   }
 
@@ -202,12 +202,7 @@ class BaseExtension extends PluginBase implements MarkdownExtensionInterface {
   /**
    * {@inheritdoc}
    */
-  public function settingsForm(array $element, FormStateInterface $formState, MarkdownFilterInterface $filter) {
-    $definition = $this->getPluginDefinition();
-    $element['provider'] = [
-      '#type' => 'value',
-      '#value' => $definition['provider'],
-    ];
+  public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
     return $element;
   }
 

@@ -2,19 +2,18 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Language\LanguageInterface;
-use Drupal\markdown\Traits\MarkdownParserBenchmarkTrait;
 
 /**
  * @MarkdownParser(
  *   id = "erusev/parsedown",
  *   label = @Translation("Parsedown"),
  *   url = "https://parsedown.org",
+ *   weight = 21,
  * )
  */
-class Parsedown extends BaseParser implements MarkdownParserBenchmarkInterface {
-
-  use MarkdownParserBenchmarkTrait;
+class Parsedown extends BaseParser {
 
   /**
    * The parser class.
@@ -33,14 +32,29 @@ class Parsedown extends BaseParser implements MarkdownParserBenchmarkInterface {
   /**
    * {@inheritdoc}
    */
-  public static function installed(): bool {
+  public static function defaultSettings() {
+    return NestedArray::mergeDeep(
+      parent::defaultSettings(),
+      [
+        'breaks_enabled' => FALSE,
+        'markup_escaped' => FALSE,
+        'safe_mode' => FALSE,
+        'urls_linked' => TRUE,
+      ]
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function installed() {
     return class_exists(static::$parserClass);
   }
 
   /**
    * {@inheritdoc}
    */
-  public static function version(): string {
+  public static function version() {
     if (static::installed()) {
       $class = static::$parserClass;
       return $class::version;

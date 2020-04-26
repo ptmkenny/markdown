@@ -3,9 +3,9 @@
 namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\markdown\Plugin\Markdown\Extension\CommonMarkRendererInterface;
-use Drupal\markdown\Traits\MarkdownParserBenchmarkTrait;
 use League\CommonMark\Block\Parser\BlockParserInterface;
 use League\CommonMark\Block\Renderer\BlockRendererInterface;
 use League\CommonMark\Environment;
@@ -17,13 +17,12 @@ use League\CommonMark\Inline\Renderer\InlineRendererInterface;
 /**
  * @MarkdownParser(
  *   id = "thephpleague/commonmark",
- *   label = @Translation("CommonMark"),
+ *   label = @Translation("PHP CommonMark"),
+ *   description = @Translation("A robust, highly-extensible Markdown parser for PHP based on the CommonMark specification."),
  *   url = "https://commonmark.thephpleague.com",
  * )
  */
-class LeagueCommonMark extends ExtensibleParser implements MarkdownParserBenchmarkInterface {
-
-  use MarkdownParserBenchmarkTrait;
+class LeagueCommonMark extends ExtensibleParser {
 
   /**
    * The converter class.
@@ -49,14 +48,35 @@ class LeagueCommonMark extends ExtensibleParser implements MarkdownParserBenchma
   /**
    * {@inheritdoc}
    */
-  public static function installed(): bool {
+  public static function defaultSettings() {
+    return NestedArray::mergeDeep(
+      parent::defaultSettings(),
+      [
+        // @todo finish adding the rest of the config settings
+        // @see https://commonmark.thephpleague.com/1.4/configuration/
+        'renderer' => [
+          'block_separator' => "\n",
+          'inner_separator' => "\n",
+          'soft_break' => "\n",
+        ],
+        'html_input' => 'allow',
+        'allow_unsafe_links' => TRUE,
+        'max_nesting_level' => 100,
+      ]
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function installed() {
     return class_exists(static::$converterClass);
   }
 
   /**
    * {@inheritdoc}
    */
-  public static function version(): string {
+  public static function version() {
     if (static::installed()) {
       $class = static::$converterClass;
       return $class::VERSION;
@@ -68,6 +88,23 @@ class LeagueCommonMark extends ExtensibleParser implements MarkdownParserBenchma
    */
   public function convertToHtml($markdown, LanguageInterface $language = NULL) {
     return $this->getConverter()->convertToHtml($markdown);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
+    $element = parent::buildSettingsForm($element, $form_state);
+
+    // @todo finish adding the rest of the config settings
+    // @see https://commonmark.thephpleague.com/1.4/configuration/
+    $element['allow_unsafe_links'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Allow unsafe links'),
+      '#default_value' => $form_state->getValue('allow_unsafe_links', $this->getSetting('allow_unsafe_links')),
+    ];
+
+    return $element;
   }
 
   /**

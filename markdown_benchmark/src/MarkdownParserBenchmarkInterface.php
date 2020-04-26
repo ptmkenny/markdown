@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\markdown\Plugin\Markdown;
+namespace Drupal\markdown_benchmark;
 
 /**
  * Interface MarkdownInterface.
@@ -17,7 +17,7 @@ interface MarkdownParserBenchmarkInterface {
    *   benchmark will be that of check_markup(). If not, it will be that of
    *   the MarkdownParser's render() method.
    *
-   * @return \Drupal\markdown\MarkdownBenchmark[]
+   * @return \Drupal\markdown_benchmark\MarkdownBenchmark[]
    *   An array containing three benchmarks to be used with list():
    *   - parsing
    *   - rendering
@@ -38,7 +38,7 @@ interface MarkdownParserBenchmarkInterface {
    *   The amount of of loop iterations used to average the results of each
    *   MarkdownParser benchmark.
    *
-   * @return \Drupal\markdown\MarkdownBenchmarkAverages
+   * @return \Drupal\markdown_benchmark\MarkdownBenchmarkAverages
    *   A MarkdownBenchmarkAverages object.
    */
   public function benchmarkAverages($markdown, $format = NULL, $iterations = 10);
@@ -49,7 +49,7 @@ interface MarkdownParserBenchmarkInterface {
    * @param string $markdown
    *   The markdown string to benchmark.
    *
-   * @return \Drupal\markdown\MarkdownBenchmark
+   * @return \Drupal\markdown_benchmark\MarkdownBenchmark
    *   A MarkdownBenchmark object.
    */
   public function benchmarkParse($markdown);
@@ -64,7 +64,7 @@ interface MarkdownParserBenchmarkInterface {
    *   benchmark will be that of check_markup(). If not, it will be that of
    *   the MarkdownParser's render() method.
    *
-   * @return \Drupal\markdown\MarkdownBenchmark
+   * @return \Drupal\markdown_benchmark\MarkdownBenchmark
    *   A MarkdownBenchmark object.
    */
   public function benchmarkRender($markdown, $format = NULL);

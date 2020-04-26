@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\markdown\Twig\Markdown;
+namespace Drupal\markdown_twig;
 
 use Drupal\markdown\MarkdownInterface;
 
@@ -41,7 +41,7 @@ class Extension extends \Twig_Extension implements \Twig_Extension_GlobalsInterf
    */
   public function getFilters() {
     return [
-      'markdown' => new \Twig_SimpleFilter('markdown', [$this, 'parse'], ['is_safe' => ['html']]),
+      'markdown' => new \Twig_SimpleFilter('markdown', [$this->markdown, 'parse'], ['is_safe' => ['html']]),
     ];
   }
 
@@ -50,7 +50,7 @@ class Extension extends \Twig_Extension implements \Twig_Extension_GlobalsInterf
    */
   public function getFunctions() {
     return [
-      'markdown' => new \Twig_SimpleFunction('markdown', [$this, 'parse'], ['is_safe' => ['html']]),
+      'markdown' => new \Twig_SimpleFunction('markdown', [$this->markdown, 'parse'], ['is_safe' => ['html']]),
     ];
   }
 
@@ -59,19 +59,6 @@ class Extension extends \Twig_Extension implements \Twig_Extension_GlobalsInterf
    */
   public function getTokenParsers() {
     return [new TokenParser($this->markdown)];
-  }
-
-  /**
-   * Helper method for parsing markdown.
-   *
-   * @param string $markdown
-   *   The markdown to render.
-   *
-   * @return string
-   *   The rendered markdown into HTML.
-   */
-  public function parse($markdown) {
-    return $this->markdown->getParser()->parse($markdown);
   }
 
 }

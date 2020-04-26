@@ -11,7 +11,7 @@ interface MarkdownInstallablePluginInterface extends PluginInspectionInterface {
    *
    * @return bool
    */
-  public static function installed(): bool;
+  public static function installed();
 
   /**
    * Retrieves the version of the installed parser.
@@ -59,7 +59,7 @@ interface MarkdownInstallablePluginInterface extends PluginInspectionInterface {
    *
    * @return bool
    */
-  public function isInstalled(): bool;
+  public function isInstalled();
 
 
 }

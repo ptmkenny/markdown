@@ -3,9 +3,10 @@
 namespace Drupal\markdown\Plugin\Markdown\Extension;
 
 use Drupal\Component\Utility\Html;
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Url;
-use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
 use League\CommonMark\ElementRendererInterface;
 use League\CommonMark\HtmlElement;
@@ -23,6 +24,20 @@ use League\CommonMark\Inline\Renderer\InlineRendererInterface;
  * )
  */
 class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInterface, InlineRendererInterface, MarkdownGuidelinesAlterInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defaultSettings() {
+    return NestedArray::mergeDeep(
+      parent::defaultSettings(),
+      [
+        'external_new_window' => TRUE,
+        'internal_host_whitelist' => \Drupal::request()->getHost(),
+        'no_follow' => 'external',
+      ]
+    );
+  }
 
   /**
    * {@inheritdoc}
@@ -85,17 +100,6 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
           "<a href=\"http://example.com\" target=\"_blank\" rel=\"nofollow\">External link</a>",
         ],
       ],
-    ];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function defaultSettings() {
-    return [
-      'external_new_window' => TRUE,
-      'internal_host_whitelist' => \Drupal::request()->getHost(),
-      'no_follow' => 'external',
     ];
   }
 
@@ -187,8 +191,8 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
   /**
    * {@inheritdoc}
    */
-  public function settingsForm(array $element, FormStateInterface $formState, MarkdownFilterInterface $filter) {
-    $element = parent::settingsForm($element, $formState, $filter);
+  public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
+    $element = parent::buildSettingsForm($element, $form_state);
 
     if (!empty($element['#description'])) {
       $element['#description'] = '<p>' . $element['#description'] . '</p>';

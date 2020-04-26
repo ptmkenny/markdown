@@ -5,8 +5,6 @@
  * Markdown module.
  */
 
-use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\markdown\Markdown;
 
@@ -18,71 +16,25 @@ use Drupal\markdown\Markdown;
 function markdown_help($route_name, RouteMatchInterface $route_match) {
   switch ($route_name) {
     case 'help.page.markdown':
-      return Markdown::loadPath($route_name, __DIR__ . '/README.md');
+      return Markdown::create()->loadPath(__DIR__ . '/README.md');
   }
 }
 
 /**
- * Implements hook_element_info_alter().
+ * Implements hook_modules_installed().
  *
  * {@inheritdoc}
  */
-function markdown_element_info_alter(array &$info) {
-  $info['text_format']['#process'][] = ['\Drupal\markdown\Plugin\Filter\Markdown', 'processTextFormat'];
-}
-
-/**
- * Implements hook_form_FORM_ID_alter().
- *
- * {@inheritdoc}
- */
-function markdown_form_filter_format_edit_form_alter(&$form, FormStateInterface $form_state) {
-  static $compatibleFilters;
-  if (!isset($compatibleFilters)) {
-    /** @var \Drupal\filter\FilterPluginManager $filterManager */
-    $filterManager = \Drupal::service('plugin.manager.filter');
-    $compatibleFilters = array_fill_keys(array_keys($filterManager->getDefinitions()), TRUE);
-    $compatibleFilters['filter_autop'] = FALSE;
-    $compatibleFilters['filter_html'] = FALSE;
-    $compatibleFilters['filter_htmlcorrector'] = FALSE;
-    $compatibleFilters['filter_html_escape'] = FALSE;
-    $compatibleFilters['filter_url'] = FALSE;
-    \Drupal::moduleHandler()->alter('markdown_compatible_filters', $compatibleFilters);
-    $compatibleFilters = array_keys(array_filter($compatibleFilters));
+function markdown_modules_installed($modules) {
+  // Immediately return if not installing the markdown module.
+  if (!in_array('markdown', $modules, TRUE)) {
+    return;
   }
-  foreach (Element::children($form['filters']['status']) as $name) {
-    if (!in_array($name, $compatibleFilters, TRUE)) {
-      $form['filters']['status']['markdown']['#states']['enabled']['[name="filters[' . $name . '][status]"]'] = ['checked' => FALSE];
-      $form['filters']['status'][$name]['#states']['enabled']['[name="filters[markdown][status]"]'] = ['checked' => FALSE];
-      if (!isset($form['filters']['status'][$name]['#description'])) {
-        $form['filters']['status'][$name]['#description'] = '';
-      }
-      $form['filters']['status'][$name]['#description'] .= t('Note: not compatible with the Markdown module.');
-    }
+
+  // Save the first found parser as the default global parser.
+  /** @var \Drupal\markdown\MarkdownParserPluginManagerInterface $parserManager */
+  $parserManager = \Drupal::service('plugin.manager.markdown.parser');
+  if ($parser = current(array_keys($parserManager->installedDefinitions()))) {
+    \Drupal::configFactory()->getEditable('markdown.settings')->set('parser', $parser)->save();
   }
-}
-
-/**
- * Implements hook_migration_plugins_alter().
- *
- * {@inheritdoc}
- */
-function markdown_migration_plugins_alter(array &$migrations) {
-  if (isset($migrations['d7_filter_format'])) {
-    $migration = &$migrations['d7_filter_format'];
-
-    // Add mapping from filter_markdown to markdown for D7 migrations.
-    $migration['process']['filters']['process']['id']['map']['filter_markdown'] = 'markdown';
-  }
-}
-
-/**
- * Implements hook_theme().
- */
-function markdown_theme() {
-  $hooks['markdown_benchmark'] = [
-    'variables' => ['time' => NULL, 'unit' => NULL],
-  ];
-
-  return $hooks;
 }

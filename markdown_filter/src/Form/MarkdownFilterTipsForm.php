@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\markdown\Form;
+namespace Drupal\markdown_filter\Form;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Form\FormBase;
@@ -13,7 +13,7 @@ use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
 class MarkdownFilterTipsForm extends FormBase {
 
   /**
-   * @var \Drupal\markdown\Plugin\Filter\MarkdownFilterInterface
+   * @var \Drupal\markdown_filter\Plugin\Filter\MarkdownFilterInterface
    */
   protected $filter;
 

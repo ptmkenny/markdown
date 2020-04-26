@@ -3,9 +3,9 @@
 namespace Drupal\markdown\Plugin\Markdown\Extension;
 
 use Drupal\Component\Utility\Html;
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Form\FormStateInterface;
-use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
+use Drupal\Core\Form\SubformStateInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
 use League\CommonMark\Inline\Element\Link;
 use League\CommonMark\Inline\Parser\InlineParserInterface;
@@ -21,6 +21,21 @@ use League\CommonMark\InlineParserContext;
  * )
  */
 class HashAutolinker extends CommonMarkExtension implements InlineParserInterface, MarkdownGuidelinesAlterInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defaultSettings() {
+    return NestedArray::mergeDeep(
+      parent::defaultSettings(),
+      [
+        'type' => 'node',
+        'node_title' => TRUE,
+        'url' => 'https://www.drupal.org/node/[text]',
+        'url_title' => TRUE,
+      ]
+    );
+  }
 
   /**
    * {@inheritdoc}
@@ -58,18 +73,6 @@ class HashAutolinker extends CommonMarkExtension implements InlineParserInterfac
         ],
       ];
     }
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function defaultSettings() {
-    return [
-      'type' => 'node',
-      'node_title' => TRUE,
-      'url' => 'https://www.drupal.org/node/[text]',
-      'url_title' => TRUE,
-    ];
   }
 
   /**
@@ -177,10 +180,10 @@ class HashAutolinker extends CommonMarkExtension implements InlineParserInterfac
   /**
    * {@inheritdoc}
    */
-  public function settingsForm(array $element, FormStateInterface $formState, MarkdownFilterInterface $filter) {
-    $element = parent::settingsForm($element, $formState, $filter);
+  public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
+    $element = parent::buildSettingsForm($element, $form_state);
 
-    $selector = $this->getSatesSelector($this->getElementParents($element, [$this->getPluginId()]), 'type');
+    $selector = $this->getSatesSelector($this->getElementParents($element), 'type');
 
     $element['type'] = [
       '#type' => 'select',

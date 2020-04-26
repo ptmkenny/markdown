@@ -48,17 +48,6 @@ interface ParsedMarkdownInterface extends MarkupInterface, \Countable, \Serializ
   public static function create($markdown = '', $html = '', LanguageInterface $language = NULL);
 
   /**
-   * Loads a cached ParsedMarkdown object.
-   *
-   * @param string $id
-   *   A unique identifier.
-   *
-   * @return static|null
-   *   A cached ParsedMarkdown object or NULL if it doesn't exist.
-   */
-  public static function load($id);
-
-  /**
    * Normalizes markdown.
    *
    * @param string $markdown
@@ -147,13 +136,6 @@ interface ParsedMarkdownInterface extends MarkupInterface, \Countable, \Serializ
    *   TRUE or FALSE
    */
   public function matches($markdown);
-
-  /**
-   * Caches a ParsedMarkdown object.
-   *
-   * @return static
-   */
-  public function save();
 
   /**
    * Sets the allowed tags.

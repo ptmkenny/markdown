@@ -1,10 +1,8 @@
 <?php
 
-namespace Drupal\markdown\Traits;
+namespace Drupal\markdown_benchmark;
 
 use Drupal\Core\Language\LanguageInterface;
-use Drupal\markdown\MarkdownBenchmark;
-use Drupal\markdown\MarkdownBenchmarkAverages;
 use Drupal\markdown\ParsedMarkdown;
 
 trait MarkdownParserBenchmarkTrait {
@@ -19,9 +17,9 @@ trait MarkdownParserBenchmarkTrait {
   /**
    * {@inheritdoc}
    *
-   * @see \Drupal\markdown\Plugin\Markdown\MarkdownParserBenchmarkInterface::benchmark()
+   * @return \Drupal\markdown_benchmark\MarkdownBenchmark[]
+   *@see \Drupal\markdown_benchmark\MarkdownParserBenchmarkInterface::benchmark()
    *
-   * @return \Drupal\markdown\MarkdownBenchmark[]
    */
   public function benchmark($markdown, $format = NULL) {
     // Start.
@@ -39,9 +37,9 @@ trait MarkdownParserBenchmarkTrait {
   /**
    * {@inheritdoc}
    *
-   * @see \Drupal\markdown\Plugin\Markdown\MarkdownParserBenchmarkInterface::benchmarkAverages()
+   * @return \Drupal\markdown_benchmark\MarkdownBenchmarkAverages
+   *@see \Drupal\markdown_benchmark\MarkdownParserBenchmarkInterface::benchmarkAverages()
    *
-   * @return \Drupal\markdown\MarkdownBenchmarkAverages
    */
   public function benchmarkAverages($markdown, $format = NULL, $iterations = 10) {
     return MarkdownBenchmarkAverages::create($iterations)->iterate([$this, 'benchmark'], [$markdown, $format]);
@@ -50,9 +48,9 @@ trait MarkdownParserBenchmarkTrait {
   /**
    * {@inheritdoc}
    *
-   * @see \Drupal\markdown\Plugin\Markdown\MarkdownParserBenchmarkInterface::benchmarkParse()
+   * @return \Drupal\markdown_benchmark\MarkdownBenchmark
+   *@see \Drupal\markdown_benchmark\MarkdownParserBenchmarkInterface::benchmarkParse()
    *
-   * @return \Drupal\markdown\MarkdownBenchmark
    */
   public function benchmarkParse($markdown) {
     $start = microtime(TRUE);
@@ -64,9 +62,9 @@ trait MarkdownParserBenchmarkTrait {
   /**
    * {@inheritdoc}
    *
-   * @see \Drupal\markdown\Plugin\Markdown\MarkdownParserBenchmarkInterface::benchmarkRender()
+   * @return \Drupal\markdown_benchmark\MarkdownBenchmark
+   *@see \Drupal\markdown_benchmark\MarkdownParserBenchmarkInterface::benchmarkRender()
    *
-   * @return \Drupal\markdown\MarkdownBenchmark
    */
   public function benchmarkRender($markdown, $format = NULL) {
     if ($format === NULL) {

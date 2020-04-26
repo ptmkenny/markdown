@@ -2,7 +2,7 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
-use Drupal\markdown\MarkdownExtensionManagerInterface;
+use Drupal\Component\Utility\NestedArray;
 
 /**
  * Class ExtensibleMarkdownParser.
@@ -12,7 +12,7 @@ abstract class ExtensibleParser extends BaseParser implements ExtensibleMarkdown
   /**
    * The Markdown Extension Manager service.
    *
-   * @var \Drupal\markdown\MarkdownExtensionManagerInterface
+   * @var \Drupal\markdown\MarkdownExtensionPluginManagerInterface
    */
   protected static $extensionManager;
 
@@ -22,6 +22,16 @@ abstract class ExtensibleParser extends BaseParser implements ExtensibleMarkdown
    * @var array
    */
   protected static $extensions;
+
+  /**
+   * {@inheritdoc}
+   */
+  public function __construct(array $configuration, $plugin_id, $plugin_definition) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition);
+    if (!empty($configuration['extensions']) && is_array($configuration['extensions'])) {
+      $this->settings = NestedArray::mergeDeep($this->settings, $configuration['extensions']);
+    }
+  }
 
   /**
    * {@inheritdoc}
@@ -56,7 +66,7 @@ abstract class ExtensibleParser extends BaseParser implements ExtensibleMarkdown
    */
   public function getExtensions($enabled = NULL) {
     if (!isset(static::$extensions["$enabled:$this->pluginId"])) {
-      static::$extensions["$enabled:$this->pluginId"] = ($filter = $this->getFilter()) && $filter->isEnabled() ? $this->extensionManager()->getExtensions($this->pluginId, $enabled) : [];
+      static::$extensions["$enabled:$this->pluginId"] = $this->extensionManager()->getExtensions($this->pluginId, $enabled);
     }
 
     /* @type \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface $extension */
@@ -74,9 +84,9 @@ abstract class ExtensibleParser extends BaseParser implements ExtensibleMarkdown
   /**
    * Retrieves the Markdown Extension Manager service.
    *
-   * @return \Drupal\markdown\MarkdownExtensionManagerInterface
+   * @return \Drupal\markdown\MarkdownExtensionPluginManagerInterface
    */
-  protected function extensionManager(): MarkdownExtensionManagerInterface {
+  protected function extensionManager() {
     if (!static::$extensionManager) {
       static::$extensionManager = \Drupal::service('plugin.manager.markdown.extension');
     }

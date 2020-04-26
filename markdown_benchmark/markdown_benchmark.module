@@ -1,0 +1,16 @@
+<?php
+
+/**
+ * @file
+ * Markdown Benchmark module file.
+ */
+
+/**
+ * Implements hook_theme().
+ */
+function markdown_benchmark_theme() {
+  $hooks['markdown_benchmark'] = [
+    'variables' => ['time' => NULL, 'unit' => NULL],
+  ];
+  return $hooks;
+}

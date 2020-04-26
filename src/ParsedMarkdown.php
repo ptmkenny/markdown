@@ -101,17 +101,6 @@ class ParsedMarkdown implements ParsedMarkdownInterface {
   /**
    * {@inheritdoc}
    */
-  public static function load($id = NULL) {
-    if ($id && ($cache = \Drupal::cache('markdown')
-        ->get($id)) && $cache->data instanceof static) {
-      return $cache->data;
-    }
-    return NULL;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function count() {
     return $this->getSize();
   }
@@ -197,14 +186,6 @@ class ParsedMarkdown implements ParsedMarkdownInterface {
    */
   public static function normalizeMarkdown($markdown) {
     return $markdown === '' ? '' : preg_replace('/\\r\\n|\\n/', "\n", (string) $markdown);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function save() {
-    \Drupal::cache('markdown')->set($this->getId(), $this, $this->getExpire());
-    return $this;
   }
 
   /**

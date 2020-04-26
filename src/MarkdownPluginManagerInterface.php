@@ -12,13 +12,15 @@ interface MarkdownPluginManagerInterface extends ContainerAwareInterface, Contai
   /**
    * Retrieves all registered plugins.
    *
+   * @param array $configuration
+   *   The configuration used to create plugin instances.
    * @param bool $includeBroken
    *   Flag indicating whether to include the "_broken" fallback parser.
    *
    * @return array
    *   An array of plugins instances, keyed by plugin identifier.
    */
-  public function all($includeBroken = FALSE): array;
+  public function all(array $configuration = [], $includeBroken = FALSE);
 
   /**
    * Retrieves all installed MarkdownParser plugins.
@@ -29,7 +31,14 @@ interface MarkdownPluginManagerInterface extends ContainerAwareInterface, Contai
    * @return array
    *   An array of installed plugins instances, keyed by plugin identifier.
    */
-  public function getInstalled(array $configuration = []): array;
+  public function installed(array $configuration = []);
+
+  /**
+   * Retrieves installed plugin definitions.
+   *
+   * @return array
+   */
+  public function installedDefinitions();
 
   /**
    * Retrieves the labels for parsers.
@@ -42,6 +51,6 @@ interface MarkdownPluginManagerInterface extends ContainerAwareInterface, Contai
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup[]
    *   An array of labels, keyed by parser identifier.
    */
-  public function getLabels($installed = TRUE, $version = TRUE): array;
+  public function getLabels($installed = TRUE, $version = TRUE);
 
 }

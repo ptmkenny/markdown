@@ -6,11 +6,9 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
 
 /**
- * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface[] all($includeBroken = FALSE) : array
- * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface[] getInstalled(array $configuration = []) : array
- * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface createInstance($plugin_id, array $configuration = [])
+ * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface createInstance($plugin_id = NULL, array $configuration = []) : MarkdownParserInterface
  */
-interface MarkdownParserManagerInterface extends MarkdownPluginManagerInterface {
+interface MarkdownParserPluginManagerInterface extends MarkdownPluginManagerInterface {
 
   /**
    * Retrieves the a filter plugin instance based on passed configuration.
@@ -21,7 +19,7 @@ interface MarkdownParserManagerInterface extends MarkdownPluginManagerInterface 
    *   An array of configuration relevant to the plugin instance, passed by
    *   reference.
    *
-   * @return \Drupal\markdown\Plugin\Filter\MarkdownFilterInterface|null
+   * @return \Drupal\markdown_filter\Plugin\Filter\MarkdownFilterInterface|null
    *   A MarkdownFilter instance or NULL if it could not be determined.
    */
   public function getFilter($parser = 'commonmark', array &$configuration = []);
@@ -39,6 +37,6 @@ interface MarkdownParserManagerInterface extends MarkdownPluginManagerInterface 
    * @return \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
    *   A MarkdownParser plugin.
    */
-  public function getParser($filter = NULL, AccountInterface $account = NULL): MarkdownParserInterface;
+  public function getParser($filter = NULL, AccountInterface $account = NULL);
 
 }

@@ -2,15 +2,15 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Annotation\Translation;
-use Drupal\Core\Form\FormState;
+use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Plugin\PluginBase;
 use Drupal\Core\Url;
 use Drupal\filter\FilterFormatInterface;
 use Drupal\markdown\ParsedMarkdown;
-use Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException;
 
 /**
  * @MarkdownParser(
@@ -37,7 +37,7 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
   /**
    * The current filter being used.
    *
-   * @var \Drupal\markdown\Plugin\Filter\MarkdownFilterInterface
+   * @var \Drupal\markdown_filter\Plugin\Filter\MarkdownFilterInterface
    */
   protected $filter;
 
@@ -53,26 +53,35 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
    *
    * @var array
    */
-  protected $settings = [];
+  protected $settings;
 
   /**
    * {@inheritdoc}
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
+    $this->settings = isset($this->pluginDefinition['settings']) ? $this->pluginDefinition['settings'] : static::defaultSettings();
+    if (isset($configuration['settings']) && is_array($configuration['settings'])) {
+      $this->settings = NestedArray::mergeDeep($this->settings, $configuration['settings']);
+    }
     if (isset($configuration['filter'])) {
       $this->filter = $configuration['filter'];
       $this->filterId = $this->filter->getPluginId();
-    }
-    if (isset($configuration['settings'])) {
-      $this->settings = $configuration['settings'];
+      $this->settings = NestedArray::mergeDeep($this->settings, $this->filter->getSettings());
     }
   }
 
   /**
    * {@inheritdoc}
    */
-  public static function installed(): bool {
+  public static function defaultSettings() {
+    return [];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function installed() {
     return FALSE;
   }
 
@@ -80,7 +89,14 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
    * {@inheritdoc}
    */
   public static function version() {
-    return NULL;
+    return t('Not Installed');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
+    return $element;
   }
 
   /**
@@ -348,6 +364,20 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
   /**
    * {@inheritdoc}
    */
+  public function getSetting($name) {
+    return isset($this->settings[$name]) ? $this->settings[$name] : NULL;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getSettings() {
+    return $this->settings;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getSummary() {
     return [];
   }
@@ -358,7 +388,7 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
   public function getUrl() {
     $url = $this->pluginDefinition['url'] ?? NULL;
     if ($url && UrlHelper::isExternal($url)) {
-      return Url::fromUri($url);
+      return Url::fromUri($url)->setOption('attributes', ['target' => '_blank']);
     }
     return $url ? Url::fromUserInput($url) : NULL;
   }
@@ -373,34 +403,8 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
   /**
    * {@inheritdoc}
    */
-  public function isInstalled(): bool {
+  public function isInstalled() {
     return $this->pluginDefinition['installed'];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function load($id, $markdown = NULL, LanguageInterface $language = NULL) {
-    if ($parsed = ParsedMarkdown::load($id)) {
-      return $parsed;
-    }
-    return $markdown !== NULL ? $this->parse($markdown, $language)->setId($id)->save() : NULL;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function loadPath($id, $path, LanguageInterface $language = NULL) {
-    // Append the file modification time as a cache buster in case it changed.
-    $id = "$id:" . filemtime($path);
-    return ParsedMarkdown::load($id) ?: $this->parsePath($path, $language)->setId($id)->save();
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function loadUrl($id, $url, LanguageInterface $language = NULL) {
-    return ParsedMarkdown::load($id) ?: $this->parseUrl($url, $language)->setId($id)->save();
   }
 
   /**
@@ -408,33 +412,6 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
    */
   public function parse($markdown, LanguageInterface $language = NULL) {
     return ParsedMarkdown::create($markdown, $this->convertToHtml($markdown, $language), $language);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function parsePath($path, LanguageInterface $language = NULL) {
-    if (!file_exists($path)) {
-      throw new FileNotFoundException((string) $path);
-    }
-    return $this->parse(file_get_contents($path) ?: '', $language);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function parseUrl($url, LanguageInterface $language = NULL) {
-    if ($url instanceof Url) {
-      $url = $url->setAbsolute()->toString();
-    }
-    $response = \Drupal::httpClient()->get($url);
-    if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 400) {
-      $contents = $response->getBody()->getContents();
-    }
-    else {
-      throw new FileNotFoundException((string) $url);
-    }
-    return $this->parse($contents, $language);
   }
 
   /**
@@ -448,33 +425,16 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
   /**
    * {@inheritdoc}
    */
-  public function tips($long = FALSE) {
-    // On the "short" tips, just show and render the summary, if any.
-    if (!$long) {
-      $summary = $this->getSummary();
-      if (!$summary) {
-        return NULL;
-      }
-      return (string) \Drupal::service('renderer')->render($summary);
-    }
+  public function setSetting($name, $value = NULL) {
+    $this->settings[$name] = $value;
+    return $this;
+  }
 
-
-    // On the long tips, the render array must be retrieved as a "form" due to
-    // the fact that vertical tabs require form processing to work properly.
-    $formBuilder = \Drupal::formBuilder();
-    $formState = (new FormState())->addBuildInfo('args', [$long, $this]);
-    $form = $formBuilder->buildForm('\Drupal\markdown\Form\MarkdownFilterTipsForm', $formState);
-
-    // Since this is essentially "hacking" the FAPI and not an actual "form",
-    // just extract the relevant child elements from the "form" and render it.
-    $tips = [];
-    foreach (['help', 'tips', 'guides', 'allowed_tags'] as $child) {
-      if (isset($form[$child])) {
-        $tips[] = $form[$child];
-      }
-    }
-
-    return \Drupal::service('renderer')->render($tips[1]);
+  /**
+   * {@inheritdoc}
+   */
+  public function setSettings(array $settings = []) {
+    $this->settings = $settings;
   }
 
 }

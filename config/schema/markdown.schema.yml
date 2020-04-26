@@ -1,11 +1,66 @@
+markdown_extension_settings.*:
+  type: sequence
+  label: 'Markdown extension settings'
+  sequence:
+    type: string
+    label: 'Value'
+
+markdown_extension:
+  type: mapping
+  label: 'Markdown extension settings'
+  mapping:
+    enabled:
+      type: boolean
+      label: 'Flag indicating whether extension is enabled.'
+    settings:
+      type: markdown_extension_settings.[%parent.id]
+
+markdown_parser_settings.*:
+  type: sequence
+  label: 'Markdown parser settings'
+  sequence:
+    type: string
+    label: 'Value'
+
+markdown_parser:
+  type: mapping
+  mapping:
+    id:
+      type: string
+      label: 'ID'
+    settings:
+      type: markdown_parser_settings.[%parent.id]
+    extensions.*:
+      type: markdown_extension
+
 markdown.settings:
   type: config_object
   label: 'Markdown Settings'
   mapping:
     parser:
-      type: string
-      label: 'Default markdown parser'
+      type: markdown_parser
+      label: 'Markdown parser'
 
-    parsers:
+markdown_parser_settings.thephpleague/commonmark:
+  type: markdown_parser
+  label: 'PHP CommonMark Settings'
+  mapping:
+    # @todo finish adding the rest of the config settings
+    # @see https://commonmark.thephpleague.com/1.4/configuration/
+    html_input:
+      type: string
+    allow_unsafe_links:
+      type: boolean
+    max_nesting_level:
+      type: integer
+    renderer:
       type: mapping
-      label: 'Default markdown parser settings'
+      mapping:
+        block_separator:
+          type: string
+        inner_separator:
+          type: string
+        soft_break:
+          type: string
+
+# @todo finish adding the rest of the settings for the other parsers

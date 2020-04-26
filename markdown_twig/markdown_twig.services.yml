@@ -1,0 +1,6 @@
+services:
+  twig.extension.markdown:
+    class: Drupal\markdown_twig\Extension
+    arguments: ['@markdown']
+    tags:
+      - { name: twig.extension }

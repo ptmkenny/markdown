@@ -1,25 +1,19 @@
 services:
   cache.markdown:
     class: Drupal\Core\Cache\CacheBackendInterface
-    tags:
-      - { name: cache.bin, default_backend: cache.backend.chainedfast }
     factory: cache_factory:get
     arguments: [markdown]
+    tags:
+      - { name: cache.bin, default_backend: cache.backend.chainedfast }
 
   markdown:
     class: Drupal\markdown\Markdown
-    arguments: ['@plugin.manager.markdown.parser']
-
-  plugin.manager.markdown.parser:
-    class: Drupal\markdown\MarkdownParserManager
-    arguments: ['@container.namespaces', '@cache.discovery', '@module_handler', '@config.factory']
+    arguments: ['@cache.markdown', '@file_system', '@http_client', '@plugin.manager.markdown.parser']
 
   plugin.manager.markdown.extension:
-    class: Drupal\markdown\MarkdownExtensionManager
+    class: Drupal\markdown\MarkdownExtensionPluginManager
     arguments: ['@container.namespaces', '@cache.discovery', '@module_handler']
 
-  twig.extension.markdown:
-    class: Drupal\markdown\Twig\Markdown\Extension
-    arguments: ['@markdown']
-    tags:
-      - { name: twig.extension }
+  plugin.manager.markdown.parser:
+    class: Drupal\markdown\MarkdownParserPluginManager
+    arguments: ['@container.namespaces', '@cache.discovery', '@module_handler', '@config.factory']

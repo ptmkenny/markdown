@@ -1,5 +1,3 @@
-# Markdown
-
 This module provides Markdown integration for Drupal.
 
 The Markdown syntax is designed to co-exist with HTML, so you can set
@@ -31,7 +29,9 @@ To see a full list of "long tips" provided by this filter, visit:
 
 ## Requirements
 
-- **PHP >= 7.2.0** - Hard requirement due to [league/commonmark].
+- **PHP >= 5.5.9** - This is the minimum PHP version for Drupal 8.0.0. Actual
+  minimum PHP version depends on which parser you use.
+  @todo this needs verification.
 
 ## [CommonMark] Extensions
 
@@ -72,7 +72,7 @@ use Drupal\markdown\Markdown;
 function markdown_help($route_name, RouteMatchInterface $route_match) {
   switch ($route_name) {
     case 'help.page.markdown':
-      return Markdown::loadPath($route_name, __DIR__ . '/README.md');
+      return Markdown::create()->loadPath(__DIR__ . '/README.md');
   }
 }
 ```
@@ -92,13 +92,16 @@ class MyService {
    *
    * @var \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
    */
-  protected $markdownParser;
+  protected $markdown;
 
   /**
    * MyService constructor.
+   *
+   * @param \Drupal\markdown\MarkdownInterface $markdown
+   *   The Markdown service.
    */
   public function __construct(MarkdownInterface $markdown) {
-    $this->markdownParser = $markdown->getParser();
+    $this->markdown = $markdown;
   }
 
   /**
@@ -107,7 +110,7 @@ class MyService {
   public function render(array $items) {
     $build = ['#theme' => 'item_list', '#items' => []];
     foreach ($items as $markdown) {
-      $build['#items'][] = $this->markdownParser->parse($markdown);
+      $build['#items'][] = $this->markdown->parse($markdown);
     }
     return $build;
   }
@@ -132,63 +135,12 @@ class MyController {
   public function render(array $items) {
     $build = ['#theme' => 'item_list', '#items' => []];
     foreach ($items as $markdown) {
-      $build['#items'][] = $this->parseMarkdown($markdown);
+      $build['#items'][] = $this->markdown()->parse($markdown);
     }
     return $build;
   }
 
 }
-```
-
-## Twig Extensions
-
-This module also provides the following Twig extensions for use in
-templates:
-
-### Filter/Function
-
-For simple strings or variables, you can use the `markdown` filter or
-function:
-
-Filter:
-```twig
-{{ "# Some Markdown"|markdown }}
-{{ variableContainingMarkdown|markdown }}
-```
-
-Function:
-```twig
-{{ markdown("# Some Markdown") }}
-{{ markdown(variableContainingMarkdown) }}
-```
-
-### Tag
-
-If you have more than a single line of Markdown, use the `markdown` tag:
-
-```twig
-{% markdown %}
-  # Some Markdown
-
-  > This is some _simple_ **markdown** content.
-{% endmarkdown %}
-```
-
-### Global
-
-For more advanced use cases, you can use the `markdown` global for
-direct access to the `MarkdownInterface` instance.
-
-Generally speaking, it is not recommended that you use this. Doing so
-will bypass any existing permissions the current user may have in
-regards to filters.
-
-However, this is particularly useful if you want to specify a specific
-parser to use (if you have multiple installed):
-
-```twig
-{{ markdown.getParser('parsedown').parse("# Some Markdown") }}
-{{ markdown.getParser('parsedown').parse(variableContainingMarkdown) }}
 ```
 
 ## Editor.md

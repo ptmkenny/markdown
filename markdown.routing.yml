@@ -1,0 +1,6 @@
+markdown.settings:
+  path: '/admin/config/content/markdown'
+  defaults:
+    _form: '\Drupal\markdown\Form\MarkdownSettingsForm'
+  requirements:
+    _permission: 'administer markdown'

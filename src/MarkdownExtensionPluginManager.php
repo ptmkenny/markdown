@@ -8,12 +8,14 @@ use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\markdown\Annotation\MarkdownExtension;
 use Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class MarkdownExtensionManager extends BaseMarkdownPluginManager implements MarkdownExtensionManagerInterface {
-
-  use ContainerAwareTrait;
+/**
+ * @method \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface[] all(array $configuration = [], $includeBroken = FALSE) : array
+ * @method \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface[] installed(array $configuration = []) : array
+ * @method \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface createInstance($plugin_id, array $configuration = [])
+ */
+class MarkdownExtensionPluginManager extends BaseMarkdownPluginManager implements MarkdownExtensionPluginManagerInterface {
 
   /**
    * {@inheritdoc}
@@ -101,7 +103,7 @@ class MarkdownExtensionManager extends BaseMarkdownPluginManager implements Mark
     if (!is_array($definition)) {
       return;
     }
-    $definition['parsers'] = (array) $definition['parsers'];
+    $definition['parsers'] = isset($definition['parsers']) ? (array) $definition['parsers'] : [];
   }
 
 }

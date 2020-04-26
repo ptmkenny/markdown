@@ -2,8 +2,8 @@
 
 namespace Drupal\markdown\Plugin\Markdown\Extension;
 
-use Drupal\Core\Form\FormStateInterface;
-use Drupal\markdown\Plugin\Filter\MarkdownFilterInterface;
+use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\Form\SubformStateInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
 use Drupal\user\Entity\User;
 use League\CommonMark\Inline\Element\Link;
@@ -20,6 +20,20 @@ use League\CommonMark\InlineParserContext;
  * )
  */
 class AtAutolinker extends CommonMarkExtension implements InlineParserInterface, MarkdownGuidelinesAlterInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defaultSettings() {
+    return NestedArray::mergeDeep(
+      parent::defaultSettings(),
+      [
+        'type' => 'user',
+        'format_username' => TRUE,
+        'url' => 'https://www.drupal.org/u/[text]',
+      ]
+    );
+  }
 
   /**
    * {@inheritdoc}
@@ -57,17 +71,6 @@ class AtAutolinker extends CommonMarkExtension implements InlineParserInterface,
         ],
       ];
     }
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function defaultSettings() {
-    return [
-      'type' => 'user',
-      'format_username' => TRUE,
-      'url' => 'https://www.drupal.org/u/[text]',
-    ];
   }
 
   /**
@@ -137,10 +140,10 @@ class AtAutolinker extends CommonMarkExtension implements InlineParserInterface,
   /**
    * {@inheritdoc}
    */
-  public function settingsForm(array $element, FormStateInterface $formState, MarkdownFilterInterface $filter) {
-    $element = parent::settingsForm($element, $formState, $filter);
+  public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
+    $element = parent::buildSettingsForm($element, $form_state);
 
-    $selector = $this->getSatesSelector($this->getElementParents($element, [$this->getPluginId()]), 'type');
+    $selector = $this->getSatesSelector($this->getElementParents($element), 'type');
 
     $element['type'] = [
       '#type' => 'select',

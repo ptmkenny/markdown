@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\markdown\Twig\Markdown;
+namespace Drupal\markdown_twig;
 
 use Drupal\markdown\MarkdownInterface;
 use Twig\Token;

@@ -22,10 +22,10 @@
   },
   "minimum-stability": "dev",
   "require": {
-    "php": ">=7.1.0",
-    "league/commonmark": "^1.3.0"
+    "php": ">=5.5.9"
   },
   "suggest": {
-    "webuni/commonmark-attributes-extension": "Adds Attribute support for the CommonMark parser."
+    "league/commonmark": "The PHP CommonMark parser is a robust, highly-extensible Markdown parser for PHP based on the CommonMark and Github-Flavored Markdown specifications (version 1.3.0 and higher is supported).",
+    "webuni/commonmark-attributes-extension": "The Attributes extension adds a syntax to define attributes on the various HTML elements in markdown's output."
   }
 }

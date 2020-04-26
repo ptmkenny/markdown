@@ -6,9 +6,10 @@ use Drupal\Component\Discovery\DiscoveryException;
 use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\markdown\Plugin\Markdown\MarkdownInstallablePluginInterface;
+use Drupal\markdown\Plugin\Markdown\MarkdownPluginSettingsInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 
-abstract class BaseMarkdownPluginManager extends DefaultPluginManager {
+abstract class BaseMarkdownPluginManager extends DefaultPluginManager implements MarkdownPluginManagerInterface {
 
   use ContainerAwareTrait;
   use StringTranslationTrait;
@@ -25,16 +26,22 @@ abstract class BaseMarkdownPluginManager extends DefaultPluginManager {
   /**
    * {@inheritdoc}
    */
-  public function all($includeBroken = FALSE): array {
-    /** @var \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface[] $parsers */
-    $parsers = [];
-    foreach (array_keys($this->getDefinitions()) as $plugin_id) {
-      if (!$includeBroken && $plugin_id === '_broken') {
-        continue;
-      }
-      $parsers[$plugin_id] = $this->createInstance($plugin_id);
+  public function all(array $configuration = [], $includeBroken = FALSE) {
+    return array_map(function (array $definition) use ($configuration) {
+      return $this->createInstance($definition['id'], $configuration);
+    }, $this->getDefinitions($includeBroken));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getDefinitions($includeBroken = TRUE) {
+    $definitions = parent::getDefinitions();
+    if ($includeBroken) {
+      return $definitions;
     }
-    return $parsers;
+    unset($definitions['_broken']);
+    return $definitions;
   }
 
   /**
@@ -47,24 +54,18 @@ abstract class BaseMarkdownPluginManager extends DefaultPluginManager {
   /**
    * {@inheritdoc}
    */
-  public function getInstalled(array $configuration = []): array {
-    /** @var \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface[] $parsers */
-    $parsers = [];
-    foreach ($this->getDefinitions() as $plugin_id => $definition) {
-      if ($plugin_id === '_broken' || empty($definition['installed'])) {
-        continue;
-      }
-      $parsers[$plugin_id] = $this->createInstance($plugin_id, $configuration);
-    }
-    return $parsers;
+  public function installed(array $configuration = []) {
+    return array_map(function (array $definition) use ($configuration) {
+      return $this->createInstance($definition['id'], $configuration);
+    }, $this->installedDefinitions());
   }
 
   /**
    * {@inheritdoc}
    */
-  public function getLabels($installed = TRUE, $version = TRUE): array {
+  public function getLabels($installed = TRUE, $version = TRUE) {
     $labels = [];
-    $parsers = $installed ? $this->getInstalled() : $this->all();
+    $parsers = $installed ? $this->installed() : $this->all();
     foreach ($parsers as $id => $parser) {
       // Cast to string for Drupal 7.
       $labels[$id] = (string) $parser->getLabel($version);
@@ -75,42 +76,74 @@ abstract class BaseMarkdownPluginManager extends DefaultPluginManager {
   /**
    * {@inheritdoc}
    */
+  public function installedDefinitions() {
+    return array_filter($this->getDefinitions(FALSE), function (array $definition) {
+      return $definition['id'] !== '_broken' && !empty($definition['installed']);
+    });
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function processDefinition(&$definition, $plugin_id) {
     // Immediately return if plugin is not installable.
-    if (!is_array($definition) || !($class = $definition['class'] ?? NULL) || !is_subclass_of($class, MarkdownInstallablePluginInterface::class)) {
+    if (!is_array($definition) || !($class = $definition['class'] ?? NULL)) {
       return;
     }
 
-    // Determine if plugin is installed, if not explicitly specified.
-    if (!isset($definition['installed'])) {
-      $definition['installed'] = $class::installed();
-    }
-    elseif (is_string($definition['installed'])) {
-      $definition['installed'] = class_exists($definition['installed']);
-    }
-    elseif (!is_bool($definition['installed'])) {
-      throw new DiscoveryException('The "installed" property must either be a class name that is checked for existence or a boolean. If complex requirements are needed, use \Drupal\markdown\Plugin\Markdown\MarkdownInstallablePluginInterface::installed() instead of setting the value in the plugin annotation.');
+    // Determine if plugin has settings.
+    if (is_subclass_of($class, MarkdownPluginSettingsInterface::class)) {
+      if (!isset($definition['settings'])) {
+        $definition['settings'] = $class::defaultSettings();
+      }
     }
 
-    // Determine if plugin version, if not explicitly specified.
-    if (!isset($definition['version'])) {
-      $definition['version'] = $class::version();
+    if (is_subclass_of($class, MarkdownInstallablePluginInterface::class)) {
+      // Determine if plugin is installed, if not explicitly specified.
+      if (!isset($definition['installed'])) {
+        $definition['installed'] = $class::installed();
+      }
+      elseif (is_string($definition['installed'])) {
+        $definition['installed'] = class_exists($definition['installed']);
+      }
+      elseif (!is_bool($definition['installed'])) {
+        throw new DiscoveryException('The "installed" property must either be a class name that is checked for existence or a boolean. If complex requirements are needed, use \Drupal\markdown\Plugin\Markdown\MarkdownInstallablePluginInterface::installed() instead of setting the value in the plugin annotation.');
+      }
+
+      // Determine if plugin version, if not explicitly specified.
+      if (!isset($definition['version'])) {
+        $definition['version'] = $class::version();
+      }
+      elseif (is_string($definition['version'])) {
+        if (defined($definition['version'])) {
+          $definition['version'] = constant($definition['version']);
+        }
+        elseif (strpos($definition['version'], '::')) {
+          [$class, $const] = explode('::', $definition['version']);
+          $definition['version'] = $class::$const;
+        }
+        elseif (is_callable($definition['version'])) {
+          $definition['version'] = $definition['version']();
+        }
+        else {
+          throw new DiscoveryException('The "version" property must either be a constant or public class constant or property that exists in code somewhere. If complex requirements are needed, use \Drupal\markdown\Plugin\Markdown\MarkdownInstallablePluginInterface::version() instead of setting the value in the plugin annotation.');
+        }
+      }
     }
-    elseif (is_string($definition['version'])) {
-      if (defined($definition['version'])) {
-        $definition['version'] = constant($definition['version']);
-      }
-      elseif (strpos($definition['version'], '::')) {
-        [$class, $const] = explode('::', $definition['version']);
-        $definition['version'] = $class::$const;
-      }
-      elseif (is_callable($definition['version'])) {
-        $definition['version'] = $definition['version']();
-      }
-      else {
-        throw new DiscoveryException('The "version" property must either be a constant or public class constant or property that exists in code somewhere. If complex requirements are needed, use \Drupal\markdown\Plugin\Markdown\MarkdownInstallablePluginInterface::version() instead of setting the value in the plugin annotation.');
-      }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function providerExists($provider) {
+    // It's known that plugins provided by this module exist. Explicitly and
+    // always return TRUE for this case. This is needed during install when
+    // the module is not yet (officially) installed.
+    // @see markdown_requirements()
+    if ($provider === 'markdown') {
+      return TRUE;
     }
+    return parent::providerExists($provider);
   }
 
   /**
