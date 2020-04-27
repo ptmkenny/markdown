@@ -27,14 +27,7 @@ class MarkdownSettingsForm extends ConfigFormBase {
    *
    * @var string
    */
-  protected $defaultParser;
-
-  /**
-   * The default parser configuration.
-   *
-   * @var array
-   */
-  protected $defaultParserConfiguration;
+  protected $parserId;
 
   /**
    * The Markdown Parser Plugin Manager service.
@@ -42,6 +35,13 @@ class MarkdownSettingsForm extends ConfigFormBase {
    * @var \Drupal\markdown\MarkdownParserPluginManagerInterface
    */
   protected $parserManager;
+
+  /**
+   * The default parser configuration.
+   *
+   * @var array
+   */
+  protected $parserConfiguration;
 
   /**
    * {@inheritdoc}
@@ -72,27 +72,30 @@ class MarkdownSettingsForm extends ConfigFormBase {
   }
 
   /**
-   * Retrieves the default parser.
+   * Retrieves the parser plugin identifier.
    *
    * @return string
    */
-  public function getDefaultParser() {
-    if (!$this->defaultParser) {
-      $this->defaultParser = $this->config('markdown.settings')->get('parser.id') ?: current(array_keys($this->parserManager->installedDefinitions()));
+  public function getParserId() {
+    if (!isset($this->parserId)) {
+      $this->parserId = $this->config('markdown.settings')->get('parser.id');
+      if (!isset($this->parserId)) {
+        $this->parserId = $this->parserManager->firstInstalledPluginId();
+      }
     }
-    return $this->defaultParser;
+    return $this->parserId;
   }
 
   /**
-   * Retrieves the default parser configuration.
+   * Retrieves the parser configuration.
    *
    * @return array
    */
-  public function getDefaultParserConfiguration() {
-    if (!$this->defaultParserConfiguration) {
-      $this->defaultParserConfiguration = $this->config('markdown.settings')->get('parser') ?: [];
+  public function getParserConfiguration() {
+    if (!isset($this->parserConfiguration)) {
+      $this->parserConfiguration = $this->config('markdown.settings')->get('parser') ?: [];
     }
-    return $this->defaultParserConfiguration;
+    return $this->parserConfiguration;
   }
 
   /**
@@ -120,7 +123,7 @@ class MarkdownSettingsForm extends ConfigFormBase {
 
   public function buildSettings(array $element, SubformStateInterface $form_state) {
     // Immediately return if there are no installed parsers.
-    if (!($labels = $this->parserManager->getLabels())) {
+    if (!($labels = $this->parserManager->labels())) {
       $element['parser'] = [
         '#type' => 'item',
         '#title' => $this->t('No markdown parsers installed.'),
@@ -133,9 +136,21 @@ class MarkdownSettingsForm extends ConfigFormBase {
       return $element;
     }
 
+    // Include a "Site-wide parser" option if not on the global settings page.
+    if ($includeSiteWideOption = \Drupal::routeMatch()->getRouteName() !== 'markdown.settings') {
+      /** @var \Drupal\markdown\MarkdownInterface $markdown */
+      $markdown = \Drupal::service('markdown');
+      $labels = array_merge(
+        ['' => $this->t('Site-wide parser (@parser)', [
+          '@parser' => $markdown->getParser()->getLabel(),
+        ])],
+        $labels
+      );
+    }
+
     $parents = isset($element['#parents']) ? $element['#parents'] : [];
-    $defaultParser = $form_state->getValue(array_merge($parents, ['parser', 'id']), $this->getDefaultParser());
-    $defaultParserConfiguration = NestedArray::mergeDeep($this->getDefaultParserConfiguration(), $form_state->getValue('parser', []));
+    $defaultParser = $form_state->getValue(array_merge($parents, ['parser', 'id']), $this->getParserId());
+    $defaultParserConfiguration = NestedArray::mergeDeep($this->getParserConfiguration(), $form_state->getValue('parser', []));
     $id = Html::getUniqueId('markdown-parser-ajax');
 
     // Build a wrapper for the ajax response.
@@ -157,18 +172,32 @@ class MarkdownSettingsForm extends ConfigFormBase {
       '#options' => $labels,
       '#default_value' => $defaultParser,
       '#ajax' => [
-        'callback' => [$this, 'ajaxChangeParser'],
+        'callback' => '\Drupal\markdown\Form\MarkdownSettingsForm::ajaxChangeParser',
         'event' => 'change',
         'wrapper' => $id,
       ],
     ];
 
+    if ($includeSiteWideOption) {
+      if (\Drupal::currentUser()->hasPermission('administer markdown')) {
+        $element['ajax']['parser']['id']['#description'] = $this->t('Site-wide parser settings can be adjusted by visiting the <a href=":markdown.settings" target="_blank">@markdown.settings</a> page.', [
+          '@markdown.settings' => $this->t('Markdown Settings'),
+          ':markdown.settings' => Url::fromRoute('markdown.settings')->toString(),
+        ]);
+      }
+      else {
+        $element['ajax']['parser']['id']['#description'] = $this->t('Site-wide parser settings can only be adjusted by administrators.');
+      }
+    }
+
     if (!$defaultParser) {
       return $element;
     }
 
+    // Retrieve the parser.
     $parser = $this->parserManager->createInstance($defaultParser, $defaultParserConfiguration);
 
+    // Add the parser description.
     $descriptions = [];
     if ($description = $parser->getDescription()) {
       $descriptions[] = $description;
@@ -176,10 +205,9 @@ class MarkdownSettingsForm extends ConfigFormBase {
     if ($url = $parser->getUrl()) {
       $descriptions[] = Link::fromTextAndUrl($this->t('[More Info]'), $url)->toString();
     }
-
     $element['ajax']['parser']['id']['#description'] = Markup::create(implode(' ', $descriptions));
 
-    // @todo Add parser specific settings.
+    // Add parser specific settings.
     $element['ajax']['parser']['settings'] = [
       '#type' => 'fieldset',
       '#title' => $this->t('Settings'),
@@ -246,59 +274,88 @@ class MarkdownSettingsForm extends ConfigFormBase {
   /**
    * The AJAX callback used to return the parser ajax wrapper.
    */
-  public function ajaxChangeParser(array $form, FormStateInterface $form_state) {
-    $parents = $form_state->getTriggeringElement()['#array_parents'];
-    array_pop($parents);
+  public static function ajaxChangeParser(array $form, FormStateInterface $form_state) {
+    $parents = array_slice($form_state->getTriggeringElement()['#array_parents'], 0, -2);
     return NestedArray::getValue($form, $parents);
   }
 
   /**
-   * Sets the default parser.
+   * Sets the parser identifier.
    *
-   * @param string $defaultParser
+   * @param string $parserId
    *   The default parser.
    *
    * @return static
    */
-  public function setDefaultParser($defaultParser) {
-    $this->defaultParser = (string) $defaultParser;
+  public function setParserId($parserId) {
+    $this->parserId = (string) $parserId;
     return $this;
   }
 
   /**
-   * Sets the default parser configuration.
+   * Sets the parser configuration.
    *
    * @param array $configuration
    *   The configuration to set.
    *
    * @return static
    */
-  public function setDefaultParserConfiguration(array $configuration) {
-    $this->defaultParserConfiguration = $configuration;
+  public function setParserConfiguration(array $configuration) {
+    $this->parserConfiguration = $configuration;
     return $this;
+  }
+
+  /**
+   * Normalizes config parser values.
+   *
+   * @param array $parser
+   *   An array of parser values, passed by reference.
+   *
+   * @return array
+   *   The normalized config values.
+   */
+  public static function normalizeConfigParserValues(array $parser) {
+    $config = ['id' => $parser['id'], 'settings' => $parser['settings']];
+
+    // Normalize extensions and their settings.
+    $extensions = [];
+    if (!empty($parser['extensions'])) {
+      foreach ($parser['extensions'] as $id => $extension) {
+        // Skip disabled extensions.
+        if (isset($extension['enabled']) && empty($extension['enabled'])) {
+          continue;
+        }
+
+        $extension += ['settings' => []];
+
+        // Remove enabled property, all extensions stored in config are enabled.
+        unset($extension['enabled']);
+
+        // Prepend the extension identifier. This is necessary so
+        // markdown_extension_settings.* schema can work.
+        $extensions[] = array_merge(['id' => $id], $extension);
+      }
+    }
+
+    // Only add extensions if there some enabled.
+    if (!empty($extensions)) {
+      $config['extensions'] = $extensions;
+    }
+
+    return $config;
   }
 
   /**
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $values = $form_state->cleanValues()->getValues();
+    $values = $form_state->cleanValues()->getValues() + ['parser' => []];
 
-    // Filter disabled extension settings.
-    if (!empty($values['parser']['extensions'])) {
-      foreach ($values['parser']['extensions'] as $id => $settings) {
-        if (empty($settings['enabled'])) {
-          unset($values['parser']['extensions'][$id]);
-        }
-      }
-    }
-
-    if (empty($values['parser']['extensions'])) {
-      unset($values['parser']['extensions']);
-    }
+    // Normalize parser values into config data.
+    $parser = static::normalizeConfigParserValues($values['parser']);
 
     $this->config('markdown.settings')
-      ->setData($values)
+      ->setData(['parser' => $parser])
       ->save();
 
     parent::submitForm($form, $form_state);

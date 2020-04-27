@@ -1,37 +1,35 @@
 markdown_extension_settings.*:
   type: sequence
-  label: 'Markdown extension settings'
-  sequence:
-    type: string
-    label: 'Value'
-
-markdown_extension:
-  type: mapping
-  label: 'Markdown extension settings'
-  mapping:
-    enabled:
-      type: boolean
-      label: 'Flag indicating whether extension is enabled.'
-    settings:
-      type: markdown_extension_settings.[%parent.id]
+  label: 'Markdown Extension Settings'
 
 markdown_parser_settings.*:
   type: sequence
-  label: 'Markdown parser settings'
-  sequence:
-    type: string
-    label: 'Value'
+  label: 'Markdown Parser Settings'
 
 markdown_parser:
   type: mapping
+  label: 'Markdown Parser'
   mapping:
     id:
       type: string
-      label: 'ID'
+      label: 'Markdown Parser ID'
     settings:
       type: markdown_parser_settings.[%parent.id]
-    extensions.*:
-      type: markdown_extension
+    extensions:
+      type: sequence
+      label: 'Markdown Extensions'
+      sequence:
+        type: mapping
+        label: 'Markdown Extension'
+        mapping:
+          id:
+            type: string
+            label: 'Markdown Extension ID'
+          enabled:
+            type: boolean
+            label: 'Markdown Extension Enabled'
+          settings:
+            type: markdown_extension_settings.[%parent.id]
 
 markdown.settings:
   type: config_object
@@ -39,10 +37,9 @@ markdown.settings:
   mapping:
     parser:
       type: markdown_parser
-      label: 'Markdown parser'
 
 markdown_parser_settings.thephpleague/commonmark:
-  type: markdown_parser
+  type: mapping
   label: 'PHP CommonMark Settings'
   mapping:
     # @todo finish adding the rest of the config settings
@@ -62,5 +59,29 @@ markdown_parser_settings.thephpleague/commonmark:
           type: string
         soft_break:
           type: string
+
+markdown_extension_settings.hash_autolinker:
+  type: mapping
+  label: 'Hash Autolinker'
+  mapping:
+    type:
+      type: string
+    node_title:
+      type: boolean
+    url:
+      type: string
+    url_title:
+      type: boolean
+
+markdown_extension_settings.enhanced_links:
+  type: mapping
+  label: 'Enhanced Links'
+  mapping:
+    internal_host_whitelist:
+      type: string
+    external_new_window:
+      type: boolean
+    no_follow:
+      type: string
 
 # @todo finish adding the rest of the settings for the other parsers

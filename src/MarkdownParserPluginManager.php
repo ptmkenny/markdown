@@ -2,7 +2,6 @@
 
 namespace Drupal\markdown;
 
-use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
@@ -51,55 +50,6 @@ class MarkdownParserPluginManager extends BaseMarkdownPluginManager implements M
     );
     $instance->setContainer($container);
     return $instance;
-  }
-
-  /**
-   * {@inheritdoc}
-   *
-   * @return \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
-   *   A MarkdownParser plugin.
-   *
-   * @todo remove this special functionality, implementations should explicitly
-   *   pass their configuration rather than guessing here.
-   */
-  public function createInstance($plugin_id = NULL, array $configuration = []) {
-    $plugin_id = $this->getFallbackPluginId($plugin_id, $configuration);
-
-    // Retrieve the filter from the configuration.
-    $filter = $this->getFilter($plugin_id, $configuration);
-
-    // Set the settings.
-    if (empty($configuration['settings'])) {
-      $configuration['settings'] = NestedArray::mergeDeep($this->settings->get($plugin_id) ?: [], $filter ? $filter->getParserSettings() : []);
-    }
-
-    /** @var \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface $parser */
-    $parser = parent::createInstance($plugin_id, $configuration);
-
-    return $parser;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getFallbackPluginId($plugin_id = NULL, array $configuration = []) {
-    // Default to thephpleague/commonmark parser.
-    if ($plugin_id === NULL) {
-      $plugin_id = 'thephpleague/commonmark';
-    }
-
-    // Check if the provided parser is valid.
-    $plugin_ids = array_keys($this->getDefinitions());
-    if (!in_array($plugin_id, $plugin_ids)) {
-      $plugin_id = array_shift($plugin_ids);
-    }
-
-    if (!$plugin_id) {
-      \Drupal::logger('markdown')->warning($this->t('Unknown MarkdownParser: "@parser".', ['@parser' => $plugin_id]));
-      $plugin_id = '_broken';
-    }
-
-    return $plugin_id;
   }
 
   /**

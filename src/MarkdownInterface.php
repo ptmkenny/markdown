@@ -4,13 +4,11 @@ namespace Drupal\markdown;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Language\LanguageInterface;
-use Drupal\Core\Session\AccountInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 
 /**
  * Interface MarkdownInterface.
  */
-interface MarkdownInterface extends ContainerAwareInterface, ContainerInjectionInterface {
+interface MarkdownInterface extends ContainerInjectionInterface {
 
   /**
    * Loads a cached ParsedMarkdown object.
@@ -21,106 +19,71 @@ interface MarkdownInterface extends ContainerAwareInterface, ContainerInjectionI
   public function load($id);
 
   /**
-   * Loads a cached ParsedMarkdown object.
+   * Loads a cached ParsedMarkdown object based on a file system path.
    *
-   * @param string $id
-   *   A unique identifier that will be used to cache the parsed markdown.
    * @param string $path
    *   The local file system path of a markdown file to parse if the cached
    *   ParsedMarkdown object doesn't yet exist. Once parsed, its identifier
    *   will be set to the provided $id and then cached.
-   * @param string $parser
-   *   Optional. The plugin identifier of the MarkdownParser to retrieve. If
-   *   not provided, the first enabled Markdown filter in a text formatter
-   *   available to the current user is used.
-   * @param string|\Drupal\filter\Plugin\FilterInterface|\Drupal\filter\FilterFormatInterface $filter
-   *   Optional A specific filter plugin to use, a string representing a filter
-   *   format or a FilterFormatInterface object containing a "markdown" filter.
-   * @param \Drupal\Core\Session\AccountInterface $account
-   *   Optional. An account used to retrieve filters available filters if one
-   *   wasn't already specified.
+   * @param string $id
+   *   Optional. A unique identifier for caching the parsed markdown. If not
+   *   set, one will be generated automatically based on the provided $path.
    * @param \Drupal\Core\Language\LanguageInterface $language
-   *   Optional. The language of the text that is being converted.
+   *   Optional. The language of the markdown that is being parsed.
    *
    * @return \Drupal\markdown\ParsedMarkdownInterface
    *   A ParsedMarkdown object.
    *
-   * @throws \Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException
-   *   When the provided $path does not exist in the local file system.
+   * @throws \Drupal\markdown\Exception\MarkdownFileNotExistsException
    */
-  public function loadPath($id, $path, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL);
+  public function loadPath($path, $id = NULL, LanguageInterface $language = NULL);
 
   /**
-   * Loads a cached ParsedMarkdown object.
+   * Loads a cached ParsedMarkdown object based on a URL.
    *
-   * @param string $id
-   *   A unique identifier that will be used to cache the parsed markdown.
    * @param string $url
    *   The external URL of a markdown file to parse if the cached
    *   ParsedMarkdown object doesn't yet exist. Once parsed, its identifier
    *   will be set to the provided $id and then cached.
-   * @param string $parser
-   *   Optional. The plugin identifier of the MarkdownParser to retrieve. If
-   *   not provided, the first enabled Markdown filter in a text formatter
-   *   available to the current user is used.
-   * @param string|\Drupal\filter\Plugin\FilterInterface|\Drupal\filter\FilterFormatInterface $filter
-   *   Optional A specific filter plugin to use, a string representing a filter
-   *   format or a FilterFormatInterface object containing a "markdown" filter.
-   * @param \Drupal\Core\Session\AccountInterface $account
-   *   Optional. An account used to retrieve filters available filters if one
-   *   wasn't already specified.
+   * @param string $id
+   *   Optional. A unique identifier for caching the parsed markdown. If not
+   *   set, one will be generated automatically based on the provided $url.
    * @param \Drupal\Core\Language\LanguageInterface $language
-   *   Optional. The language of the text that is being converted.
+   *   Optional. The language of the markdown that is being parsed.
    *
    * @return \Drupal\markdown\ParsedMarkdownInterface
    *   A ParsedMarkdown object.
    *
-   * @throws \Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException
-   *   When the provided $url does not exist or is not reachable.
+   * @throws \Drupal\markdown\Exception\MarkdownUrlNotExistsException
    */
-  public function loadUrl($id, $url, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL);
+  public function loadUrl($url, $id = NULL, LanguageInterface $language = NULL);
 
   /**
    * Parses markdown into HTML.
    *
    * @param string $markdown
    *   The markdown string to parse.
-   * @param string $parser
-   *   The plugin identifier of the MarkdownParser to retrieve. If not provided,
-   *   the first enabled Markdown filter in a text formatter available to the
-   *   current user is used.
-   * @param string|\Drupal\filter\Plugin\FilterInterface|\Drupal\filter\FilterFormatInterface $filter
-   *   Optional A specific filter plugin to use, a string representing a filter
-   *   format or a FilterFormatInterface object containing a "markdown" filter.
-   * @param \Drupal\Core\Session\AccountInterface $account
-   *   Optional. An account used to retrieve filters available filters if one
-   *   wasn't already specified.
    * @param \Drupal\Core\Language\LanguageInterface $language
-   *   Optional. The language of the text that is being converted.
+   *   Optional. The language of the markdown that is being parsed.
    *
    * @return \Drupal\markdown\ParsedMarkdownInterface
    *   A ParsedMarkdown object.
    */
-  public function parse($markdown, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL);
+  public function parse($markdown, LanguageInterface $language = NULL);
 
   /**
-   * Retrieves a specific MarkdownParser.
+   * Retrieves a MarkdownParser plugin.
    *
    * @param string $parser
-   *   The plugin identifier of the MarkdownParser to retrieve. If not provided,
-   *   the first enabled Markdown filter in a text formatter available to the
-   *   current user is used.
-   * @param string|\Drupal\filter\Plugin\FilterInterface|\Drupal\filter\FilterFormatInterface $filter
-   *   Optional A specific filter plugin to use, a string representing a filter
-   *   format or a FilterFormatInterface object containing a "markdown" filter.
-   * @param \Drupal\Core\Session\AccountInterface $account
-   *   Optional. An account used to retrieve filters available filters if one
-   *   wasn't already specified.
+   *   Optional. The plugin identifier of a specific MarkdownParser to retrieve.
+   *   If not provided, the global parser will be used.
+   * @param array $configuration
+   *   An array of configuration relevant to the plugin instance.
    *
    * @return \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
    *   A MarkdownParser plugin.
    */
-  public function getParser($parser = NULL, $filter = NULL, AccountInterface $account = NULL);
+  public function getParser($parser = NULL, array $configuration = []);
 
   /**
    * Saves a parsed markdown object.

@@ -7,11 +7,9 @@ use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\markdown\Plugin\Markdown\MarkdownInstallablePluginInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownPluginSettingsInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 
 abstract class BaseMarkdownPluginManager extends DefaultPluginManager implements MarkdownPluginManagerInterface {
 
-  use ContainerAwareTrait;
   use StringTranslationTrait;
 
   /**
@@ -30,6 +28,13 @@ abstract class BaseMarkdownPluginManager extends DefaultPluginManager implements
     return array_map(function (array $definition) use ($configuration) {
       return $this->createInstance($definition['id'], $configuration);
     }, $this->getDefinitions($includeBroken));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function firstInstalledPluginId() {
+    return current(array_keys($this->installedDefinitions())) ?: $this->getFallbackPluginId();
   }
 
   /**
@@ -63,7 +68,7 @@ abstract class BaseMarkdownPluginManager extends DefaultPluginManager implements
   /**
    * {@inheritdoc}
    */
-  public function getLabels($installed = TRUE, $version = TRUE) {
+  public function labels($installed = TRUE, $version = TRUE) {
     $labels = [];
     $parsers = $installed ? $this->installed() : $this->all();
     foreach ($parsers as $id => $parser) {

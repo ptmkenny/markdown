@@ -7,7 +7,7 @@ use Drupal\Component\Plugin\PluginManagerInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 
-interface MarkdownPluginManagerInterface extends ContainerAwareInterface, ContainerInjectionInterface, PluginManagerInterface, FallbackPluginManagerInterface {
+interface MarkdownPluginManagerInterface extends ContainerInjectionInterface, PluginManagerInterface, FallbackPluginManagerInterface {
 
   /**
    * Retrieves all registered plugins.
@@ -15,7 +15,7 @@ interface MarkdownPluginManagerInterface extends ContainerAwareInterface, Contai
    * @param array $configuration
    *   The configuration used to create plugin instances.
    * @param bool $includeBroken
-   *   Flag indicating whether to include the "_broken" fallback parser.
+   *   Flag indicating whether to include the "_broken" fallback plugin.
    *
    * @return array
    *   An array of plugins instances, keyed by plugin identifier.
@@ -23,7 +23,15 @@ interface MarkdownPluginManagerInterface extends ContainerAwareInterface, Contai
   public function all(array $configuration = [], $includeBroken = FALSE);
 
   /**
-   * Retrieves all installed MarkdownParser plugins.
+   * Retrieves the first installed plugin identifier.
+   *
+   * @return string
+   *   The first installed plugin identifier.
+   */
+  public function firstInstalledPluginId();
+
+  /**
+   * Retrieves all installed plugins.
    *
    * @param array $configuration
    *   The configuration used to create plugin instances.
@@ -41,16 +49,16 @@ interface MarkdownPluginManagerInterface extends ContainerAwareInterface, Contai
   public function installedDefinitions();
 
   /**
-   * Retrieves the labels for parsers.
+   * Retrieves the labels for plugins.
    *
    * @param bool $installed
-   *   Flag indicating whether to return just the installed parsers.
+   *   Flag indicating whether to return just the installed plugins.
    * @param bool $version
    *   Flag indicating whether to include the version with the label.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup[]
-   *   An array of labels, keyed by parser identifier.
+   *   An array of labels, keyed by plugin identifier.
    */
-  public function getLabels($installed = TRUE, $version = TRUE);
+  public function labels($installed = TRUE, $version = TRUE);
 
 }

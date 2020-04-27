@@ -3,23 +3,20 @@
 namespace Drupal\markdown;
 
 use Drupal\Component\Utility\Crypt;
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheBackendInterface;
-use Drupal\Core\DependencyInjection\DependencySerializationTrait;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Language\LanguageInterface;
-use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
 use Drupal\markdown\Exception\MarkdownFileNotExistsException;
 use Drupal\markdown\Exception\MarkdownUrlNotExistsException;
 use GuzzleHttp\ClientInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class Markdown implements MarkdownInterface {
 
-  use ContainerAwareTrait;
-  use DependencySerializationTrait;
   use StringTranslationTrait;
 
   /**
@@ -44,13 +41,6 @@ class Markdown implements MarkdownInterface {
   protected $httpClient;
 
   /**
-   * A Markdown parser instance.
-   *
-   * @var \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
-   */
-  protected $parser;
-
-  /**
    * The MarkdownParser Plugin Manager.
    *
    * @var \Drupal\markdown\MarkdownParserPluginManagerInterface
@@ -58,10 +48,19 @@ class Markdown implements MarkdownInterface {
   protected $parserManager;
 
   /**
+   * The global Markdown config settings.
+   *
+   * @var \Drupal\Core\Config\ImmutableConfig
+   */
+  protected $settings;
+
+  /**
    * Markdown constructor.
    *
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    *   The cache backend.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config
+   *   The Config Factory service.
    * @param \Drupal\Core\File\FileSystemInterface $fileSystem
    *   The File System service.
    * @param \GuzzleHttp\ClientInterface $httpClient
@@ -69,11 +68,12 @@ class Markdown implements MarkdownInterface {
    * @param \Drupal\markdown\MarkdownParserPluginManagerInterface $parserManager
    *   The Markdown Parser Plugin Manager service.
    */
-  public function __construct(CacheBackendInterface $cache, FileSystemInterface $fileSystem, ClientInterface $httpClient, MarkdownParserPluginManagerInterface $parserManager) {
+  public function __construct(CacheBackendInterface $cache, ConfigFactoryInterface $config, FileSystemInterface $fileSystem, ClientInterface $httpClient, MarkdownParserPluginManagerInterface $parserManager) {
     $this->cache = $cache;
     $this->fileSystem = $fileSystem;
     $this->httpClient = $httpClient;
     $this->parserManager = $parserManager;
+    $this->settings = $config->get('markdown.settings');
   }
 
   /**
@@ -85,6 +85,7 @@ class Markdown implements MarkdownInterface {
     }
     return new static(
       $container->get('cache.markdown'),
+      $container->get('config.factory'),
       $container->get('file_system'),
       $container->get('http_client'),
       $container->get('plugin.manager.markdown.parser')
@@ -103,7 +104,7 @@ class Markdown implements MarkdownInterface {
   /**
    * {@inheritdoc}
    */
-  public function loadPath($path, $id = NULL, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL) {
+  public function loadPath($path, $id = NULL, LanguageInterface $language = NULL) {
     $realpath = $this->fileSystem->realpath($path) ?: $path;
     if (!file_exists($realpath)) {
       throw new MarkdownFileNotExistsException($realpath);
@@ -115,13 +116,13 @@ class Markdown implements MarkdownInterface {
 
     // Append the file modification time as a cache buster in case it changed.
     $id = "$id:" . filemtime($realpath);
-    return $this->load($id) ?: $this->save($id, $this->parse(file_get_contents($realpath) ?: '', $parser, $filter, $account, $language));
+    return $this->load($id) ?: $this->save($id, $this->parse(file_get_contents($realpath) ?: '', $language));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function loadUrl($url, $id = NULL, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL) {
+  public function loadUrl($url, $id = NULL, LanguageInterface $language = NULL) {
     if ($url instanceof Url) {
       $url = $url->setAbsolute()->toString();
     }
@@ -133,36 +134,33 @@ class Markdown implements MarkdownInterface {
       $id = $url;
     }
 
-    if ($parsed = $this->load($id)) {
-      return $parsed;
+    if (!($parsed = $this->load($id))) {
+      $response = $this->httpClient->get($url);
+      if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 400) {
+        throw new MarkdownUrlNotExistsException($url);
+      }
+      $parsed = $this->save($id, $this->parse($response->getBody()->getContents(), $language));
     }
 
-    $response = \Drupal::httpClient()->get($url);
-    if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 400) {
-      throw new MarkdownUrlNotExistsException($url);
-    }
-
-    return $this->save($id, $this->parse($response->getBody()->getContents(), $parser, $filter, $account, $language));
+    return $parsed;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function parse($markdown, $parser = NULL, $filter = NULL, AccountInterface $account = NULL, LanguageInterface $language = NULL) {
-    return $this->getParser($parser, $filter, $account)->parse($markdown, $language);
+  public function parse($markdown, LanguageInterface $language = NULL) {
+    return $this->getParser()->parse($markdown, $language);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function getParser($parser = NULL, $filter = NULL, AccountInterface $account = NULL) {
-    if (!$this->parser) {
-      $this->parser = $this->parserManager->createInstance($parser, [
-        'filter' => $filter,
-        'account' => $account,
-      ]);
+  public function getParser($parser = NULL, array $configuration = []) {
+    if ($parser !== NULL) {
+      return $this->parserManager->createInstance($parser, $configuration);
     }
-    return $this->parser;
+    $parser = $this->settings->get('parser.id') ?: $this->parserManager->firstInstalledPluginId();
+    return $this->parserManager->createInstance($parser, NestedArray::mergeDeep($this->settings->get('parser'), $configuration));
   }
 
   /**

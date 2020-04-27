@@ -28,8 +28,14 @@ abstract class ExtensibleParser extends BaseParser implements ExtensibleMarkdown
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
+    // Merge in extensions from config.
     if (!empty($configuration['extensions']) && is_array($configuration['extensions'])) {
-      $this->settings = NestedArray::mergeDeep($this->settings, $configuration['extensions']);
+      $extensions = [];
+      foreach ($configuration['extensions'] as $extension) {
+        $extension['enabled'] = TRUE;
+        $extensions[$extension['id']] = $extension;
+      }
+      $this->settings = NestedArray::mergeDeep($this->settings, $extensions);
     }
   }
 

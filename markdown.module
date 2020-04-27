@@ -35,6 +35,6 @@ function markdown_modules_installed($modules) {
   /** @var \Drupal\markdown\MarkdownParserPluginManagerInterface $parserManager */
   $parserManager = \Drupal::service('plugin.manager.markdown.parser');
   if ($parser = current(array_keys($parserManager->installedDefinitions()))) {
-    \Drupal::configFactory()->getEditable('markdown.settings')->set('parser', $parser)->save();
+    \Drupal::configFactory()->getEditable('markdown.settings')->set('parser.id', $parser)->save();
   }
 }

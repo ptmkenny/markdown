@@ -5,9 +5,6 @@ namespace Drupal\markdown;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
 
-/**
- * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface createInstance($plugin_id = NULL, array $configuration = []) : MarkdownParserInterface
- */
 interface MarkdownParserPluginManagerInterface extends MarkdownPluginManagerInterface {
 
   /**

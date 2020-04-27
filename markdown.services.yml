@@ -8,7 +8,7 @@ services:
 
   markdown:
     class: Drupal\markdown\Markdown
-    arguments: ['@cache.markdown', '@file_system', '@http_client', '@plugin.manager.markdown.parser']
+    arguments: ['@cache.markdown', '@config.factory', '@file_system', '@http_client', '@plugin.manager.markdown.parser']
 
   plugin.manager.markdown.extension:
     class: Drupal\markdown\MarkdownExtensionPluginManager
