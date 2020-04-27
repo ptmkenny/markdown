@@ -16,8 +16,8 @@ use League\CommonMark\Inline\Renderer\InlineRendererInterface;
 
 /**
  * @MarkdownParser(
- *   id = "thephpleague/commonmark",
- *   label = @Translation("PHP CommonMark"),
+ *   id = "league/commonmark",
+ *   label = @Translation("CommonMark"),
  *   description = @Translation("A robust, highly-extensible Markdown parser for PHP based on the CommonMark specification."),
  *   url = "https://commonmark.thephpleague.com",
  * )

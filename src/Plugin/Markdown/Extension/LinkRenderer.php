@@ -4,7 +4,6 @@ namespace Drupal\markdown\Plugin\Markdown\Extension;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\NestedArray;
-use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Url;
 use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
@@ -20,7 +19,7 @@ use League\CommonMark\Inline\Renderer\InlineRendererInterface;
  *   label = @Translation("Enhanced Links"),
  *   installed = TRUE,
  *   description = @Translation("Extends CommonMark to provide additional enhancements when rendering links."),
- *   parsers = {"thephpleague/commonmark", "thephpleague/commonmark-gfm"},
+ *   parsers = {"league/commonmark", "league/commonmark-gfm"},
  * )
  */
 class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInterface, InlineRendererInterface, MarkdownGuidelinesAlterInterface {

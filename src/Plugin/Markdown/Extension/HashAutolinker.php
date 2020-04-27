@@ -17,7 +17,7 @@ use League\CommonMark\InlineParserContext;
  *   label = @Translation("# Autolinker"),
  *   installed = TRUE,
  *   description = @Translation("Automatically link commonly used references that come after a hash character (#) without having to use the link syntax."),
- *   parsers = {"thephpleague/commonmark", "thephpleague/commonmark-gfm"},
+ *   parsers = {"league/commonmark", "league/commonmark-gfm"},
  * )
  */
 class HashAutolinker extends CommonMarkExtension implements InlineParserInterface, MarkdownGuidelinesAlterInterface {

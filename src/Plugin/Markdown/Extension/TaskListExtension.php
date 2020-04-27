@@ -7,15 +7,13 @@ use League\CommonMark\EnvironmentInterface;
 use League\CommonMark\Extension\TaskList\TaskListExtension as LeagueTaskListExtension;
 
 /**
- * Class TableExtension.
- *
  * @MarkdownExtension(
- *   id = "thephpleague/commonmark-ext-task-list",
+ *   id = "league/commonmark-ext-task-list",
  *   label = @Translation("Task List"),
  *   installed = "\League\CommonMark\Extension\TaskList\TaskListExtension",
- *   description = @Translation("Adds GFM-style task list items to the league/commonmark Markdown parser for PHP."),
+ *   description = @Translation("Adds support for GFM-style task list items."),
  *   url = "https://github.com/thephpleague/commonmark",
- *   parsers = {"thephpleague/commonmark", "thephpleague/commonmark-gfm"},
+ *   parsers = {"league/commonmark", "league/commonmark-gfm"},
  * )
  */
 class TaskListExtension extends CommonMarkExtension implements EnvironmentAwareInterface {

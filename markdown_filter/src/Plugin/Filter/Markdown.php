@@ -81,7 +81,7 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
       if ($parserId = $this->config->get('parser.id')) {
         $configuration = $this->getSettings();
         $configuration['filter'] = $this;
-        $this->parser = $this->parserManager->createInstance($this->getSetting('parser', 'thephpleague/commonmark'), $configuration);
+        $this->parser = $this->parserManager->createInstance($parserId, $configuration);
       }
       // Filter is using global parser/configuration.
       else {

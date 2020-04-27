@@ -6,8 +6,8 @@ use League\CommonMark\Environment;
 
 /**
  * @MarkdownParser(
- *   id = "thephpleague/commonmark-gfm",
- *   label = @Translation("PHP CommonMark (GFM)"),
+ *   id = "league/commonmark-gfm",
+ *   label = @Translation("CommonMark GFM"),
  *   description = @Translation("A robust, highly-extensible Markdown parser for PHP based on the Github-Flavored Markdown specification."),
  *   url = "https://commonmark.thephpleague.com",
  * )

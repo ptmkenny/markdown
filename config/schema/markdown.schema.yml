@@ -1,11 +1,12 @@
-markdown_extension_settings.*:
-  type: sequence
-  label: 'Markdown Extension Settings'
+# Site-wide markdown settings.
+markdown.settings:
+  type: config_object
+  label: 'Markdown Settings'
+  mapping:
+    parser:
+      type: markdown_parser
 
-markdown_parser_settings.*:
-  type: sequence
-  label: 'Markdown Parser Settings'
-
+# Markdown Parser type.
 markdown_parser:
   type: mapping
   label: 'Markdown Parser'
@@ -31,16 +32,13 @@ markdown_parser:
           settings:
             type: markdown_extension_settings.[%parent.id]
 
-markdown.settings:
-  type: config_object
-  label: 'Markdown Settings'
-  mapping:
-    parser:
-      type: markdown_parser
-
-markdown_parser_settings.thephpleague/commonmark:
+# Parser settings.
+markdown_parser_settings.*:
   type: mapping
-  label: 'PHP CommonMark Settings'
+  label: 'Markdown Parser Settings'
+markdown_parser_settings.league/commonmark:
+  type: mapping
+  label: 'CommonMark Parser Settings'
   mapping:
     # @todo finish adding the rest of the config settings
     # @see https://commonmark.thephpleague.com/1.4/configuration/
@@ -60,6 +58,14 @@ markdown_parser_settings.thephpleague/commonmark:
         soft_break:
           type: string
 
+markdown_parser_settings.league/commonmark-gfm:
+  type: markdown_parser_settings.league/commonmark
+  label: 'CommonMark GFM Parser Settings'
+
+# Extension settings.
+markdown_extension_settings.*:
+  type: mapping
+  label: 'Markdown Extension Settings'
 markdown_extension_settings.hash_autolinker:
   type: mapping
   label: 'Hash Autolinker'
