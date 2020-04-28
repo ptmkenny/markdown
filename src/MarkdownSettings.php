@@ -3,13 +3,13 @@
 namespace Drupal\markdown;
 
 use Drupal\Component\Utility\NestedArray;
-use Drupal\Core\Config\ImmutableConfig;
+use Drupal\Core\Config\Config;
 use Drupal\Core\Config\StorageInterface;
 use Drupal\Core\Config\TypedConfigManagerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
-class MarkdownSettings extends ImmutableConfig implements MarkdownSettingsInterface {
+class MarkdownSettings extends Config implements MarkdownSettingsInterface {
 
   /**
    * The Markdown Parser Plugin Manager service.
@@ -21,15 +21,19 @@ class MarkdownSettings extends ImmutableConfig implements MarkdownSettingsInterf
   /**
    * {@inheritdoc}
    */
-  public function __construct($name, StorageInterface $storage, EventDispatcherInterface $event_dispatcher, TypedConfigManagerInterface $typed_config, MarkdownParserPluginManagerInterface $parserManager) {
+  public function __construct($name, StorageInterface $storage, EventDispatcherInterface $event_dispatcher, TypedConfigManagerInterface $typed_config, MarkdownParserPluginManagerInterface $parserManager, array $data = NULL) {
     parent::__construct($name, $storage, $event_dispatcher, $typed_config);
     $this->parserManager = $parserManager;
+    if (!isset($data)) {
+      $data = \Drupal::config($name)->getRawData();
+    }
+    $this->initWithData($data);
   }
 
   /**
    * {@inheritdoc}
    */
-  public static function create(ContainerInterface $container = NULL, $name = 'markdown.settings') {
+  public static function create(ContainerInterface $container = NULL, $name = 'markdown.settings', array $data = NULL) {
     if (!$container) {
       $container = \Drupal::getContainer();
     }
@@ -38,7 +42,8 @@ class MarkdownSettings extends ImmutableConfig implements MarkdownSettingsInterf
       $container->get('config.storage'),
       $container->get('event_dispatcher'),
       $container->get('config.typed'),
-      $container->get('plugin.manager.markdown.parser')
+      $container->get('plugin.manager.markdown.parser'),
+      $data
     );
   }
 
@@ -46,12 +51,10 @@ class MarkdownSettings extends ImmutableConfig implements MarkdownSettingsInterf
    * {@inheritdoc}
    */
   public static function load($name, array $data = NULL) {
-    $instance = static::create(NULL, $name);
     if (!isset($data)) {
       $data = \Drupal::config($name)->getRawData();
     }
-    $instance->initWithData($data);
-    return $instance;
+    return static::create(NULL, $name, $data);
   }
 
   /**

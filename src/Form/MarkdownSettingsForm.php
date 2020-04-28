@@ -4,7 +4,6 @@ namespace Drupal\markdown\Form;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\NestedArray;
-use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformState;
@@ -26,7 +25,7 @@ class MarkdownSettingsForm extends FormBase {
   /**
    * The Markdown Settings.
    *
-   * @var \Drupal\markdown\MarkdownSettingsInterface
+   * @var \Drupal\markdown\MarkdownSettings
    */
   protected $settings;
 
@@ -54,9 +53,9 @@ class MarkdownSettingsForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function __construct(MarkdownSettingsInterface $settings, MarkdownParserPluginManagerInterface $parserManager) {
-    $this->settings = $settings;
+  public function __construct(MarkdownParserPluginManagerInterface $parserManager, MarkdownSettingsInterface $settings) {
     $this->parserManager = $parserManager;
+    $this->settings = $settings;
   }
 
   /**
@@ -67,8 +66,8 @@ class MarkdownSettingsForm extends FormBase {
       $container = \Drupal::getContainer();
     }
     return new static(
-      $container->get('markdown.settings'),
-      $container->get('plugin.manager.markdown.parser')
+      $container->get('plugin.manager.markdown.parser'),
+      $container->get('markdown.settings')
     );
   }
 
@@ -165,8 +164,8 @@ class MarkdownSettingsForm extends FormBase {
     }
 
     $parents = isset($element['#parents']) ? $element['#parents'] : [];
-    $defaultParser = $form_state->getValue(array_merge($parents, ['parser', 'id']), $this->getParserId());
-    $defaultParserConfiguration = NestedArray::mergeDeep($this->getParserConfiguration(), $form_state->getValue('parser', []));
+    $parserId = $form_state->getValue(array_merge($parents, ['parser', 'id']), $this->getParserId());
+    $configuration = NestedArray::mergeDeep($this->getParserConfiguration(), $form_state->getValue('parser', []));
     $id = Html::getUniqueId('markdown-parser-ajax');
 
     // Build a wrapper for the ajax response.
@@ -186,7 +185,7 @@ class MarkdownSettingsForm extends FormBase {
       '#type' => 'select',
       '#title' => $this->t('Parser'),
       '#options' => $labels,
-      '#default_value' => $defaultParser,
+      '#default_value' => $parserId,
       '#ajax' => [
         'callback' => '\Drupal\markdown\Form\MarkdownSettingsForm::ajaxChangeParser',
         'event' => 'change',
@@ -206,12 +205,12 @@ class MarkdownSettingsForm extends FormBase {
       }
     }
 
-    if (!$defaultParser) {
+    if (!$parserId) {
       return $element;
     }
 
     // Retrieve the parser.
-    $parser = $this->parserManager->createInstance($defaultParser, $defaultParserConfiguration);
+    $parser = $this->parserManager->createInstance($parserId, $configuration);
 
     // Add the parser description.
     $descriptions = [];
@@ -322,21 +321,26 @@ class MarkdownSettingsForm extends FormBase {
   }
 
   /**
-   * Normalizes config parser values.
+   * Normalizes config values.
    *
-   * @param array $parser
-   *   An array of parser values, passed by reference.
+   * @param array $values
+   *   An array of values.
    *
    * @return array
    *   The normalized config values.
    */
-  public static function normalizeConfigParserValues(array $parser) {
-    $config = ['id' => $parser['id'], 'settings' => $parser['settings']];
+  public static function normalizeConfigValues(array $values) {
+    $parser = [];
+    $original = isset($values['parser']) ? $values['parser'] : $values;
+    $original += ['id' => '', 'extensions' => [], 'settings' => []];
+
+    // Save the parser identifier.
+    $parser['id'] = $original['id'];
 
     // Normalize extensions and their settings.
     $extensions = [];
-    if (!empty($parser['extensions'])) {
-      foreach ($parser['extensions'] as $id => $extension) {
+    if (!empty($original['extensions'])) {
+      foreach ($original['extensions'] as $id => $extension) {
         // Skip disabled extensions.
         if (isset($extension['enabled']) && empty($extension['enabled'])) {
           continue;
@@ -353,12 +357,17 @@ class MarkdownSettingsForm extends FormBase {
       }
     }
 
-    // Only add extensions if there some enabled.
+    // Only add parser extensions if some are enabled.
     if (!empty($extensions)) {
-      $config['extensions'] = $extensions;
+      $parser['extensions'] = $extensions;
     }
 
-    return $config;
+    // Only add parser settings if it exists.
+    if (!empty($original['settings'])) {
+      $parser['settings'] = $original['settings'];
+    }
+
+    return ['parser' => $parser];
   }
 
   /**
@@ -368,10 +377,10 @@ class MarkdownSettingsForm extends FormBase {
     $values = $form_state->cleanValues()->getValues() + ['parser' => []];
 
     // Normalize parser values into config data.
-    $parser = static::normalizeConfigParserValues($values['parser']);
+    $data = static::normalizeConfigValues($values);
 
-    $this->config('markdown.settings')
-      ->setData(['parser' => $parser])
+    $this->settings
+      ->setData($data)
       ->save();
 
     $this->messenger()->addStatus($this->t('The configuration options have been saved.'));
