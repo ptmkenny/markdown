@@ -3,7 +3,6 @@
 namespace Drupal\markdown;
 
 use Drupal\Core\Cache\CacheBackendInterface;
-use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\filter\FilterFormatInterface;
@@ -19,20 +18,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class MarkdownParserPluginManager extends BaseMarkdownPluginManager implements MarkdownParserPluginManagerInterface {
 
   /**
-   * The configuration settings for the Markdown module.
-   *
-   * @var \Drupal\Core\Config\ImmutableConfig
-   */
-  protected $settings;
-
-  /**
    * {@inheritdoc}
    */
-  public function __construct(\Traversable $namespaces, CacheBackendInterface $cache_backend, ModuleHandlerInterface $module_handler, ConfigFactoryInterface $config) {
+  public function __construct(\Traversable $namespaces, CacheBackendInterface $cache_backend, ModuleHandlerInterface $module_handler) {
     parent::__construct('Plugin/Markdown', $namespaces, $module_handler, MarkdownParserInterface::class, MarkdownParser::class);
     $this->setCacheBackend($cache_backend, 'markdown_parsers');
     $this->alterInfo('markdown_parsers');
-    $this->settings = $config->get('markdown.settings');
   }
 
   /**
@@ -45,8 +36,7 @@ class MarkdownParserPluginManager extends BaseMarkdownPluginManager implements M
     $instance = new static(
       $container->get('container.namespaces'),
       $container->get('cache.discovery'),
-      $container->get('module_handler'),
-      $container->get('config.factory')
+      $container->get('module_handler')
     );
     $instance->setContainer($container);
     return $instance;
@@ -86,7 +76,7 @@ class MarkdownParserPluginManager extends BaseMarkdownPluginManager implements M
         }
 
         // Skip formats that don't match the desired parser.
-        if (!$format_filter || $format_filter->status || !($format_filter instanceof MarkdownFilterInterface) || !$format_filter->isEnabled() || ($parser && ($format_filter->getSetting('parser') !== $parser))) {
+        if (!$format_filter || $format_filter->status || !($format_filter instanceof MarkdownFilterInterface) || !$format_filter->isEnabled() || ($parser && ($format_filter->getSettings()->getParserId(FALSE) !== $parser))) {
           continue;
         }
 

@@ -15,6 +15,6 @@ class ParsedownExtra extends Parsedown {
   /**
    * {@inheritdoc}
    */
-  protected static $parserClass = '\\ParsedownExtra';
+  protected static $parsedownClass = '\\ParsedownExtra';
 
 }

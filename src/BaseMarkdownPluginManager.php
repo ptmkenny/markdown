@@ -7,9 +7,11 @@ use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\markdown\Plugin\Markdown\MarkdownInstallablePluginInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownPluginSettingsInterface;
+use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 
 abstract class BaseMarkdownPluginManager extends DefaultPluginManager implements MarkdownPluginManagerInterface {
 
+  use ContainerAwareTrait;
   use StringTranslationTrait;
 
   /**

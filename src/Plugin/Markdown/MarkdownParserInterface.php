@@ -39,24 +39,6 @@ interface MarkdownParserInterface extends MarkdownInstallablePluginInterface, Ma
   public function getAllowedTags();
 
   /**
-   * Retrieves the markdown filter plugin, if set.
-   *
-   * @return \Drupal\markdown_filter\Plugin\Filter\MarkdownFilterInterface
-   */
-  public function getFilter();
-
-  /**
-   * Retrieves a filter format entity.
-   *
-   * @param string $format
-   *   A filter format identifier or entity instance.
-   *
-   * @return \Drupal\filter\FilterFormatInterface|object
-   *   A filter format entity.
-   */
-  public function getFilterFormat($format = NULL);
-
-  /**
    * Retrieves a short summary of what the MarkdownParser does.
    *
    * @return array

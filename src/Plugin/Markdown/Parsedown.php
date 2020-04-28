@@ -16,18 +16,18 @@ use Drupal\Core\Language\LanguageInterface;
 class Parsedown extends BaseParser {
 
   /**
-   * The parser class.
+   * The Parsedown class to use.
    *
    * @var string
    */
-  protected static $parserClass = '\\Parsedown';
+  protected static $parsedownClass = '\\Parsedown';
 
   /**
-   * MarkdownExtra parsers, keyed by filter identifier.
+   * The Parsedown instance.
    *
-   * @var \Parsedown[]
+   * @var \Parsedown
    */
-  protected static $parsers = [];
+  protected $parsedown;
 
   /**
    * {@inheritdoc}
@@ -48,7 +48,7 @@ class Parsedown extends BaseParser {
    * {@inheritdoc}
    */
   public static function installed() {
-    return class_exists(static::$parserClass);
+    return class_exists(static::$parsedownClass);
   }
 
   /**
@@ -56,7 +56,7 @@ class Parsedown extends BaseParser {
    */
   public static function version() {
     if (static::installed()) {
-      $class = static::$parserClass;
+      $class = static::$parsedownClass;
       return $class::version;
     }
   }
@@ -65,28 +65,25 @@ class Parsedown extends BaseParser {
    * {@inheritdoc}
    */
   public function convertToHtml($markdown, LanguageInterface $language = NULL) {
-    return $this->getParser()->text($markdown);
+    return $this->parsedown()->text($markdown);
   }
 
   /**
-   * Retrieves the PHP Markdown parser.
+   * Retrieves the Parsedown instance.
    *
    * @return \Parsedown
    *   A PHP Markdown parser.
    */
-  public function getParser() {
-    if (!isset(static::$parsers[$this->filterId])) {
-      $parser = new static::$parserClass();
-      if ($this->filter) {
-        foreach ($this->settings as $name => $value) {
-          if ($method = $this->getSettingMethod($name)) {
-            $parser->$method($value);
-          }
+  protected function parsedown() {
+    if (!$this->parsedown) {
+      $this->parsedown = new static::$parsedownClass();
+      foreach ($this->settings as $name => $value) {
+        if ($method = $this->getSettingMethod($name)) {
+          $this->parsedown->$method($value);
         }
       }
-      static::$parsers[$this->filterId] = $parser;
     }
-    return static::$parsers[$this->filterId];
+    return $this->parsedown;
   }
 
   /**

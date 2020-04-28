@@ -10,6 +10,10 @@ use League\CommonMark\Environment;
  *   label = @Translation("CommonMark GFM"),
  *   description = @Translation("A robust, highly-extensible Markdown parser for PHP based on the Github-Flavored Markdown specification."),
  *   url = "https://commonmark.thephpleague.com",
+ *   bundledExtensions = {
+ *     "league/commonmark-ext-table",
+ *     "league/commonmark-ext-task-list",
+ *   },
  * )
  */
 class LeagueCommonMarkGfm extends LeagueCommonMark {

@@ -3,7 +3,6 @@
 namespace Drupal\markdown_filter\Plugin\Filter;
 
 use Drupal\Component\Render\FormattableMarkup;
-use Drupal\Core\Config\Config;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformState;
@@ -11,6 +10,7 @@ use Drupal\Core\Url;
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
 use Drupal\markdown\Form\MarkdownSettingsForm;
+use Drupal\markdown\MarkdownSettings;
 
 /**
  * Provides a filter for Markdown.
@@ -26,6 +26,13 @@ use Drupal\markdown\Form\MarkdownSettingsForm;
 class Markdown extends FilterBase implements MarkdownFilterInterface {
 
   /**
+   * The Markdown Settings for this filter.
+   *
+   * @var \Drupal\markdown\MarkdownSettingsInterface
+   */
+  protected $markdownSettings;
+
+  /**
    * The Markdown parser as set by the filter.
    *
    * @var \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
@@ -33,43 +40,25 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
   protected $parser;
 
   /**
-   * The Markdown Parser Manager service.
-   *
-   * @var \Drupal\markdown\MarkdownParserPluginManager
-   */
-  protected $parserManager;
-
-  /**
-   * Type based config.
-   *
-   * @var \Drupal\Core\Config\Config
-   */
-  public $config;
-
-  /**
    * {@inheritdoc}
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $config = new Config("filter_settings.{$this->pluginId}", \Drupal::service('config.storage'), \Drupal::service('event_dispatcher'), \Drupal::service('config.typed'));
-    $config->initWithData($this->settings);
-    $this->config = $config;
-    $this->parserManager = \Drupal::service('plugin.manager.markdown.parser');
+    $this->markdownSettings = MarkdownSettings::load("filter_settings.{$this->pluginId}", $this->settings);
   }
 
   /**
    * {@inheritdoc}
    */
   public function getSetting($name, $default = NULL) {
-    $value = $this->config->get("parser.settings.$name");
-    return isset($value) ? $value : $default;
+    return $this->markdownSettings->getParserSetting($name, $default);
   }
 
   /**
    * {@inheritdoc}
    */
   public function getSettings() {
-    return $this->config->get('parser.settings') ?: [];
+    return $this->markdownSettings->getParserSettings();
   }
 
   /**
@@ -78,34 +67,15 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
   public function getParser() {
     if (!isset($this->parser)) {
       // Filter is using a specific parser/configuration.
-      if ($parserId = $this->config->get('parser.id')) {
-        $configuration = $this->getSettings();
-        $configuration['filter'] = $this;
-        $this->parser = $this->parserManager->createInstance($parserId, $configuration);
+      if ($parserId = $this->markdownSettings->getParserId(FALSE)) {
+        $this->parser = $this->markdownSettings->getParser();
       }
-      // Filter is using global parser/configuration.
+      // Filter is using global parser.
       else {
-        /** @var \Drupal\markdown\MarkdownInterface $markdown */
-        $markdown = \Drupal::service('markdown');
-        $this->parser = $markdown->getParser(NULL, ['filter' => $this]);
+        $this->parser = \Drupal\markdown\Markdown::create()->getParser();
       }
     }
     return $this->parser;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getParserSetting($name, $default = NULL) {
-    $settings = $this->getParserSettings();
-    return isset($settings[$name]) ? $settings[$name] : $default;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getParserSettings() {
-    return $this->getSetting('parser_settings', []);
   }
 
   /**
@@ -164,7 +134,7 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
     $settingsForm = MarkdownSettingsForm::create();
 
     // Determine the parser identifier.
-    $parserId = $subform_state->getValue(['parser', 'id'], $this->config->get('parser.id'));
+    $parserId = $subform_state->getValue(['parser', 'id'], $this->markdownSettings->getParserId());
     $settingsForm->setParserId($parserId);
 
     // If there's no default parser, then it's using the site-wide parser.
@@ -174,7 +144,7 @@ class Markdown extends FilterBase implements MarkdownFilterInterface {
     }
     // Otherwise, use the settings for selected parser in this filter.
     else {
-      $configuration = $this->config->get('parser') ?: [];
+      $configuration = $this->markdownSettings->getParserConfiguration();
     }
 
     // Set the parser configuration.

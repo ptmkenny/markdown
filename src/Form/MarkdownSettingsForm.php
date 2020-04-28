@@ -5,7 +5,7 @@ namespace Drupal\markdown\Form;
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Form\ConfigFormBase;
+use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformState;
 use Drupal\Core\Form\SubformStateInterface;
@@ -14,13 +14,21 @@ use Drupal\Core\Render\Element;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
 use Drupal\markdown\MarkdownParserPluginManagerInterface;
+use Drupal\markdown\MarkdownSettingsInterface;
 use Drupal\markdown\Plugin\Markdown\ExtensibleMarkdownParserInterface;
 use Drupal\markdown\Traits\MarkdownStatesTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class MarkdownSettingsForm extends ConfigFormBase {
+class MarkdownSettingsForm extends FormBase {
 
   use MarkdownStatesTrait;
+
+  /**
+   * The Markdown Settings.
+   *
+   * @var \Drupal\markdown\MarkdownSettingsInterface
+   */
+  protected $settings;
 
   /**
    * The default parser.
@@ -46,8 +54,8 @@ class MarkdownSettingsForm extends ConfigFormBase {
   /**
    * {@inheritdoc}
    */
-  public function __construct(ConfigFactoryInterface $config_factory, MarkdownParserPluginManagerInterface $parserManager) {
-    parent::__construct($config_factory);
+  public function __construct(MarkdownSettingsInterface $settings, MarkdownParserPluginManagerInterface $parserManager) {
+    $this->settings = $settings;
     $this->parserManager = $parserManager;
   }
 
@@ -59,7 +67,7 @@ class MarkdownSettingsForm extends ConfigFormBase {
       $container = \Drupal::getContainer();
     }
     return new static(
-      $container->get('config.factory'),
+      $container->get('markdown.settings'),
       $container->get('plugin.manager.markdown.parser')
     );
   }
@@ -78,10 +86,7 @@ class MarkdownSettingsForm extends ConfigFormBase {
    */
   public function getParserId() {
     if (!isset($this->parserId)) {
-      $this->parserId = $this->config('markdown.settings')->get('parser.id');
-      if (!isset($this->parserId)) {
-        $this->parserId = $this->parserManager->firstInstalledPluginId();
-      }
+      $this->parserId = $this->settings->getParserId();
     }
     return $this->parserId;
   }
@@ -93,7 +98,7 @@ class MarkdownSettingsForm extends ConfigFormBase {
    */
   public function getParserConfiguration() {
     if (!isset($this->parserConfiguration)) {
-      $this->parserConfiguration = $this->config('markdown.settings')->get('parser') ?: [];
+      $this->parserConfiguration = $this->settings->getParserConfiguration();
     }
     return $this->parserConfiguration;
   }
@@ -109,7 +114,6 @@ class MarkdownSettingsForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $form = parent::buildForm($form, $form_state);
     $form += [
       '#parents' => [],
       '#title' => $this->t('Markdown'),
@@ -117,7 +121,19 @@ class MarkdownSettingsForm extends ConfigFormBase {
     $subform = ['#parents' => []];
 
     $subform_state = SubformState::createForSubform($subform, $form, $form_state);
+
     $form['markdown'] = $this->buildSettings($subform, $subform_state);
+
+    $form['actions']['#type'] = 'actions';
+    $form['actions']['submit'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Save configuration'),
+      '#button_type' => 'primary',
+    ];
+
+    // By default, render the form using system-config-form.html.twig.
+    $form['#theme'] = 'system_config_form';
+
     return $form;
   }
 
@@ -358,7 +374,7 @@ class MarkdownSettingsForm extends ConfigFormBase {
       ->setData(['parser' => $parser])
       ->save();
 
-    parent::submitForm($form, $form_state);
+    $this->messenger()->addStatus($this->t('The configuration options have been saved.'));
   }
 
 }

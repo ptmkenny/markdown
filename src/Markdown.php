@@ -59,21 +59,21 @@ class Markdown implements MarkdownInterface {
    *
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    *   The cache backend.
-   * @param \Drupal\Core\Config\ConfigFactoryInterface $config
-   *   The Config Factory service.
    * @param \Drupal\Core\File\FileSystemInterface $fileSystem
    *   The File System service.
    * @param \GuzzleHttp\ClientInterface $httpClient
    *   The HTTP Client service.
    * @param \Drupal\markdown\MarkdownParserPluginManagerInterface $parserManager
    *   The Markdown Parser Plugin Manager service.
+   * @param \Drupal\markdown\MarkdownSettingsInterface $settings
+   *   The Markdown Settings.
    */
-  public function __construct(CacheBackendInterface $cache, ConfigFactoryInterface $config, FileSystemInterface $fileSystem, ClientInterface $httpClient, MarkdownParserPluginManagerInterface $parserManager) {
+  public function __construct(CacheBackendInterface $cache, FileSystemInterface $fileSystem, ClientInterface $httpClient, MarkdownParserPluginManagerInterface $parserManager, MarkdownSettingsInterface $settings) {
     $this->cache = $cache;
     $this->fileSystem = $fileSystem;
     $this->httpClient = $httpClient;
     $this->parserManager = $parserManager;
-    $this->settings = $config->get('markdown.settings');
+    $this->settings = $settings;
   }
 
   /**
@@ -85,10 +85,10 @@ class Markdown implements MarkdownInterface {
     }
     return new static(
       $container->get('cache.markdown'),
-      $container->get('config.factory'),
       $container->get('file_system'),
       $container->get('http_client'),
-      $container->get('plugin.manager.markdown.parser')
+      $container->get('plugin.manager.markdown.parser'),
+      $container->get('markdown.settings')
     );
   }
 
@@ -155,12 +155,11 @@ class Markdown implements MarkdownInterface {
   /**
    * {@inheritdoc}
    */
-  public function getParser($parser = NULL, array $configuration = []) {
-    if ($parser !== NULL) {
-      return $this->parserManager->createInstance($parser, $configuration);
+  public function getParser($parserId = NULL, array $configuration = []) {
+    if ($parserId !== NULL) {
+      return $this->parserManager->createInstance($parserId, $configuration);
     }
-    $parser = $this->settings->get('parser.id') ?: $this->parserManager->firstInstalledPluginId();
-    return $this->parserManager->createInstance($parser, NestedArray::mergeDeep($this->settings->get('parser'), $configuration));
+    return $this->settings->getParser($configuration);
   }
 
   /**

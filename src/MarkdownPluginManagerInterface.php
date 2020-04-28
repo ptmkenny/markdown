@@ -7,7 +7,10 @@ use Drupal\Component\Plugin\PluginManagerInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 
-interface MarkdownPluginManagerInterface extends ContainerInjectionInterface, PluginManagerInterface, FallbackPluginManagerInterface {
+/**
+ * @method string getFallbackPluginId($plugin_id = NULL, array $configuration = [])
+ */
+interface MarkdownPluginManagerInterface extends ContainerAwareInterface, ContainerInjectionInterface, PluginManagerInterface, FallbackPluginManagerInterface {
 
   /**
    * Retrieves all registered plugins.

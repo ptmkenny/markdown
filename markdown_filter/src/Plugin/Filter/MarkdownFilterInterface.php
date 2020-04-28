@@ -18,43 +18,9 @@ interface MarkdownFilterInterface extends FilterInterface {
   public function getParser();
 
   /**
-   * Retrieves a specific parser setting.
+   * Retrieves the Markdown Settings for the filter.
    *
-   * @param string $name
-   *   The name of the setting to retrieve.
-   * @param mixed $default
-   *   Optional. The default value to return if not set.
-   *
-   * @return mixed
-   *   The parser setting value.
-   */
-  public function getParserSetting($name, $default = NULL);
-
-  /**
-   * Retrieves all parser specific settings.
-   *
-   * @return array
-   *   The parser settings.
-   */
-  public function getParserSettings();
-
-  /**
-   * Retrieves a specific setting.
-   *
-   * @param string $name
-   *   The name of the setting to retrieve.
-   * @param mixed $default
-   *   Optional. The default value to return if not set.
-   *
-   * @return mixed
-   *   The setting value.
-   */
-  public function getSetting($name, $default = NULL);
-
-  /**
-   * Retrieves all settings.
-   *
-   * @return array
+   * @return \Drupal\markdown\MarkdownSettingsInterface
    *   The settings.
    */
   public function getSettings();

@@ -13,11 +13,6 @@ use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
 class MarkdownFilterTipsForm extends FormBase {
 
   /**
-   * @var \Drupal\markdown_filter\Plugin\Filter\MarkdownFilterInterface
-   */
-  protected $filter;
-
-  /**
    * @var \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
    */
   protected $parser;
@@ -35,7 +30,6 @@ class MarkdownFilterTipsForm extends FormBase {
     }
 
     $this->parser = $parser;
-    $this->filter = $parser->getFilter();
 
     if ($long) {
       $guidelines = $parser->getGuidelines();
@@ -61,7 +55,7 @@ class MarkdownFilterTipsForm extends FormBase {
 
     // Iterate over all the items.
     $header = [
-      Html::escape($this->filter->getLabel()),
+      Html::escape($this->t('Markdown')),
       $this->t('HTML Output') . ' / ' . $this->t('Rendered'),
     ];
     foreach ($guides as $guide_id => $guide) {

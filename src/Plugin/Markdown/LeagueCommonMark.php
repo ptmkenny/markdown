@@ -32,18 +32,18 @@ class LeagueCommonMark extends ExtensibleParser {
   protected static $converterClass = '\\League\\CommonMark\\CommonMarkConverter';
 
   /**
-   * CommonMark converters, keyed by format filter identifiers.
+   * A CommonMark converter instance.
    *
-   * @var \League\CommonMark\Converter[]
+   * @var \League\CommonMark\Converter
    */
-  protected static $converters;
+  protected $converter;
 
   /**
-   * A CommonMark environment, keyed by format filter identifiers.
+   * A CommonMark environment instance.
    *
-   * @var \League\CommonMark\Environment[]
+   * @var \League\CommonMark\Environment
    */
-  protected static $environments;
+  protected $environment;
 
   /**
    * {@inheritdoc}
@@ -87,7 +87,7 @@ class LeagueCommonMark extends ExtensibleParser {
    * {@inheritdoc}
    */
   public function convertToHtml($markdown, LanguageInterface $language = NULL) {
-    return $this->getConverter()->convertToHtml($markdown);
+    return $this->converter()->convertToHtml($markdown);
   }
 
   /**
@@ -108,17 +108,16 @@ class LeagueCommonMark extends ExtensibleParser {
   }
 
   /**
-   * Retrieves a CommonMark converter, creating it if necessary.
+   * Retrieves a CommonMark converter instance.
    *
    * @return \League\CommonMark\Converter
    *   A CommonMark converter.
    */
-  protected function getConverter() {
-    if (!isset(static::$converters[$this->filterId])) {
-      $environment = $this->getEnvironment();
-      static::$converters[$this->filterId] = new static::$converterClass($this->settings, $environment);
+  protected function converter() {
+    if (!$this->converter) {
+      $this->converter = new static::$converterClass($this->settings, $this->getEnvironment());
     }
-    return static::$converters[$this->filterId];
+    return $this->converter;
   }
 
   /**
@@ -137,7 +136,7 @@ class LeagueCommonMark extends ExtensibleParser {
    *   The CommonMark environment.
    */
   protected function getEnvironment() {
-    if (!isset(static::$environments[$this->filterId])) {
+    if (!$this->environment) {
       $environment = $this->createEnvironment();
       $extensions = $this->getExtensions(TRUE);
       foreach ($extensions as $extension) {
@@ -178,9 +177,9 @@ class LeagueCommonMark extends ExtensibleParser {
         }
       }
 
-      static::$environments[$this->filterId] = $environment;
+      $this->environment = $environment;
     }
-    return static::$environments[$this->filterId];
+    return $this->environment;
   }
 
 }

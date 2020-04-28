@@ -9,7 +9,6 @@ use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Plugin\PluginBase;
 use Drupal\Core\Url;
-use Drupal\filter\FilterFormatInterface;
 use Drupal\markdown\ParsedMarkdown;
 
 /**
@@ -35,20 +34,6 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
   protected static $extensions;
 
   /**
-   * The current filter being used.
-   *
-   * @var \Drupal\markdown_filter\Plugin\Filter\MarkdownFilterInterface
-   */
-  protected $filter;
-
-  /**
-   * The filter identifier.
-   *
-   * @var string
-   */
-  protected $filterId = '_default';
-
-  /**
    * The parser settings.
    *
    * @var array
@@ -63,11 +48,6 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
     $this->settings = isset($this->pluginDefinition['settings']) ? $this->pluginDefinition['settings'] : static::defaultSettings();
     if (isset($configuration['settings']) && is_array($configuration['settings'])) {
       $this->settings = NestedArray::mergeDeep($this->settings, $configuration['settings']);
-    }
-    if (isset($configuration['filter'])) {
-      $this->filter = $configuration['filter'];
-      $this->filterId = $this->filter->getPluginId();
-      $this->settings = NestedArray::mergeDeep($this->settings, $this->filter->getSettings());
     }
   }
 
@@ -104,13 +84,6 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
    */
   public function convertToHtml($markdown, LanguageInterface $language = NULL) {
     return $markdown;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getFilter() {
-    return $this->filter;
   }
 
   /**
@@ -328,25 +301,6 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
    */
   public function getDescription() {
     return $this->pluginDefinition['description'] ?? NULL;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getFilterFormat($format = NULL) {
-    $default = filter_default_format();
-    // Immediately return if filter is already an object.
-    if ($format instanceof FilterFormatInterface) {
-      return $format;
-    }
-
-    // Immediately return the default format if none was specified.
-    if (!isset($format)) {
-      return $default;
-    }
-
-    $formats = filter_formats();
-    return isset($formats[$format]) ? $formats[$format] : $default;
   }
 
   /**

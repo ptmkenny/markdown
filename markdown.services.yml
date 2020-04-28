@@ -8,12 +8,20 @@ services:
 
   markdown:
     class: Drupal\markdown\Markdown
-    arguments: ['@cache.markdown', '@config.factory', '@file_system', '@http_client', '@plugin.manager.markdown.parser']
+    arguments: ['@cache.markdown', '@file_system', '@http_client', '@plugin.manager.markdown.parser', '@markdown.settings']
+
+  markdown.settings:
+    class: Drupal\markdown\MarkdownSettings
+    arguments: ['markdown.settings', '@config.storage', '@event_dispatcher', '@config.typed', '@plugin.manager.markdown.parser']
 
   plugin.manager.markdown.extension:
     class: Drupal\markdown\MarkdownExtensionPluginManager
     arguments: ['@container.namespaces', '@cache.discovery', '@module_handler']
+    calls:
+      - [setContainer, ['@service_container']]
 
   plugin.manager.markdown.parser:
     class: Drupal\markdown\MarkdownParserPluginManager
     arguments: ['@container.namespaces', '@cache.discovery', '@module_handler', '@config.factory']
+    calls:
+      - [setContainer, ['@service_container']]

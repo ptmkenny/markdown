@@ -15,6 +15,6 @@ class PhpMarkdownExtra extends PhpMarkdown {
   /**
    * {@inheritdoc}
    */
-  protected static $parserClass = '\\Michelf\\MarkdownExtra';
+  protected static $phpMarkdownClass = '\\Michelf\\MarkdownExtra';
 
 }

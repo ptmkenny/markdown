@@ -74,7 +74,7 @@ interface MarkdownInterface extends ContainerInjectionInterface {
   /**
    * Retrieves a MarkdownParser plugin.
    *
-   * @param string $parser
+   * @param string $parserId
    *   Optional. The plugin identifier of a specific MarkdownParser to retrieve.
    *   If not provided, the global parser will be used.
    * @param array $configuration
@@ -83,7 +83,7 @@ interface MarkdownInterface extends ContainerInjectionInterface {
    * @return \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
    *   A MarkdownParser plugin.
    */
-  public function getParser($parser = NULL, array $configuration = []);
+  public function getParser($parserId = NULL, array $configuration = []);
 
   /**
    * Saves a parsed markdown object.

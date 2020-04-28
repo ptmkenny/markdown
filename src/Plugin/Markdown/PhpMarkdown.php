@@ -16,18 +16,18 @@ use Drupal\Core\Language\LanguageInterface;
 class PhpMarkdown extends BaseParser {
 
   /**
-   * The parser class.
+   * The PHP Markdown class to use.
    *
    * @var string
    */
-  protected static $parserClass = '\\Michelf\\Markdown';
+  protected static $phpMarkdownClass = '\\Michelf\\Markdown';
 
   /**
-   * Markdown parsers, keyed by filter identifier.
+   * The PHP Markdown instance.
    *
-   * @var \Michelf\Markdown[]
+   * @var \Michelf\Markdown
    */
-  protected static $parsers = [];
+  protected $phpMarkdown;
 
   /**
    * {@inheritdoc}
@@ -61,7 +61,7 @@ class PhpMarkdown extends BaseParser {
    * {@inheritdoc}
    */
   public static function installed() {
-    return class_exists(static::$parserClass);
+    return class_exists(static::$phpMarkdownClass);
   }
 
   /**
@@ -69,7 +69,7 @@ class PhpMarkdown extends BaseParser {
    */
   public static function version() {
     if (static::installed()) {
-      $class = static::$parserClass;
+      $class = static::$phpMarkdownClass;
       return $class::MARKDOWNLIB_VERSION;
     }
   }
@@ -78,7 +78,7 @@ class PhpMarkdown extends BaseParser {
    * {@inheritdoc}
    */
   public function convertToHtml($markdown, LanguageInterface $language = NULL) {
-    return $this->getParser()->transform($markdown);
+    return $this->phpMarkdown()->transform($markdown);
   }
 
   /**
@@ -87,17 +87,14 @@ class PhpMarkdown extends BaseParser {
    * @return \Michelf\Markdown
    *   A PHP Markdown parser.
    */
-  public function getParser() {
-    if (!isset(static::$parsers[$this->filterId])) {
-      $parser = new static::$parserClass();
-      if ($this->filter) {
-        foreach ($this->settings as $name => $value) {
-          $parser->$name = $value;
-        }
+  protected function phpMarkdown() {
+    if (!$this->phpMarkdown) {
+      $this->phpMarkdown = new static::$phpMarkdownClass();
+      foreach ($this->settings as $name => $value) {
+        $this->phpMarkdown->$name = $value;
       }
-      static::$parsers[$this->filterId] = $parser;
     }
-    return static::$parsers[$this->filterId];
+    return $this->phpMarkdown;
   }
 
 }
