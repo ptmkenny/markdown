@@ -2,80 +2,46 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
-use Drupal\Component\Utility\NestedArray;
-use Drupal\Component\Utility\UrlHelper;
-use Drupal\Core\Annotation\Translation;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Language\LanguageInterface;
-use Drupal\Core\Plugin\PluginBase;
 use Drupal\Core\Url;
+use Drupal\markdown\Config\ImmutableMarkdownSettings;
 use Drupal\markdown\ParsedMarkdown;
+use Drupal\markdown\ParsedMarkdownInterface;
+use Drupal\markdown\Traits\MarkdownPluginSettingsTrait;
 
 /**
- * @MarkdownParser(
- *   id = "_broken",
- *   label = @Translation("Missing Parser"),
- * )
+ * @property \Drupal\markdown\Config\ImmutableMarkdownSettings $config
  */
-class BaseParser extends PluginBase implements MarkdownParserInterface, MarkdownGuidelinesInterface {
+abstract class MarkdownParserBase extends MarkdownInstallablePluginBase implements MarkdownParserInterface, MarkdownGuidelinesInterface, MarkdownPluginSettingsInterface {
 
-  /**
-   * The allowed HTML tags, if set.
-   *
-   * @var array
-   */
-  protected $allowedTags;
-
-  /**
-   * MarkdownExtension plugins specific to a parser.
-   *
-   * @var array
-   */
-  protected static $extensions;
-
-  /**
-   * The parser settings.
-   *
-   * @var array
-   */
-  protected $settings;
-
-  /**
-   * {@inheritdoc}
-   */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->settings = isset($this->pluginDefinition['settings']) ? $this->pluginDefinition['settings'] : static::defaultSettings();
-    if (isset($configuration['settings']) && is_array($configuration['settings'])) {
-      $this->settings = NestedArray::mergeDeep($this->settings, $configuration['settings']);
-    }
+  use MarkdownPluginSettingsTrait {
+    buildSettingsForm as traitBuildSettingsForm;
+    defaultSettings as traitDefaultSettings;
   }
 
   /**
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return [];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function installed() {
-    return FALSE;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function version() {
-    return t('Not Installed');
+    return [
+      'drupal_allowed_html' => ParsedMarkdownInterface::ALLOWED_HTML,
+    ] + static::traitDefaultSettings();
   }
 
   /**
    * {@inheritdoc}
    */
   public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
+    $element = $this->traitBuildSettingsForm($element, $form_state);
+
+    $element['drupal_allowed_html'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Allowed HTML tags'),
+      '#default_value' => $form_state->getValue('drupal_allowed_html', $this->getSetting('drupal_allowed_html', ParsedMarkdownInterface::ALLOWED_HTML)),
+      '#description' => $this->t('A list of HTML tags that can be used. By default only the <em>lang</em> and <em>dir</em> attributes are allowed for all HTML tags. Each HTML tag may have attributes which are treated as allowed attribute names for that HTML tag. Each attribute may allow all values, or only allow specific values. Attribute names or values may be written as a prefix and wildcard like <em>jump-*</em>. JavaScript event attributes, JavaScript URLs, and CSS are always stripped.'),
+    ];
+
     return $element;
   }
 
@@ -84,6 +50,31 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
    */
   public function convertToHtml($markdown, LanguageInterface $language = NULL) {
     return $markdown;
+  }
+
+  /**
+   * Retrieves the allowed tags.
+   *
+   * @return array
+   *   An array of allowed HTML tags that are permitted in the parsed HTML
+   *   to ensure it is safe from XSS vulnerabilities.
+   */
+  public function getAllowedHtml() {
+    return $this->getSetting('drupal_allowed_html', ParsedMarkdownInterface::ALLOWED_HTML);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function getConfigClass() {
+    return ImmutableMarkdownSettings::class;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function getConfigType() {
+    return 'markdown_parser';
   }
 
   /**
@@ -292,46 +283,6 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
   /**
    * {@inheritdoc}
    */
-  public function getAllowedTags() {
-    return $this->allowedTags;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getDescription() {
-    return $this->pluginDefinition['description'] ?? NULL;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getLabel($version = TRUE) {
-    if (!$version) {
-      return $this->pluginDefinition['label'];
-    }
-    $variables['@label'] = $this->pluginDefinition['label'];
-    $variables['@version'] = $this->getVersion();
-    return $variables['@version'] ? $this->t('@label (@version)', $variables) : $variables['@label'];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getSetting($name) {
-    return isset($this->settings[$name]) ? $this->settings[$name] : NULL;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getSettings() {
-    return $this->settings;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function getSummary() {
     return [];
   }
@@ -339,56 +290,21 @@ class BaseParser extends PluginBase implements MarkdownParserInterface, Markdown
   /**
    * {@inheritdoc}
    */
-  public function getUrl() {
-    $url = $this->pluginDefinition['url'] ?? NULL;
-    if ($url && UrlHelper::isExternal($url)) {
-      return Url::fromUri($url)->setOption('attributes', ['target' => '_blank']);
-    }
-    return $url ? Url::fromUserInput($url) : NULL;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getVersion() {
-    return $this->pluginDefinition['version'];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function isInstalled() {
-    return $this->pluginDefinition['installed'];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function parse($markdown, LanguageInterface $language = NULL) {
-    return ParsedMarkdown::create($markdown, $this->convertToHtml($markdown, $language), $language);
+    $parsed = ParsedMarkdown::create($markdown, $this->convertToHtml($markdown, $language), $language);
+    if ($this->xssFilter()) {
+      $parsed->setAllowedHtml($this->getAllowedHtml());
+    }
+    return $parsed;
   }
 
   /**
-   * {@inheritdoc}
+   * Indicates whether allowed tags should be used to XSS filter.
+   *
+   * @return bool
    */
-  public function setAllowedTags(array $tags = []) {
-    $this->allowedTags = $tags;
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function setSetting($name, $value = NULL) {
-    $this->settings[$name] = $value;
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function setSettings(array $settings = []) {
-    $this->settings = $settings;
+  protected function xssFilter() {
+    return TRUE;
   }
 
 }

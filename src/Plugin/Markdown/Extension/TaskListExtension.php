@@ -11,12 +11,11 @@ use League\CommonMark\Extension\TaskList\TaskListExtension as LeagueTaskListExte
  *   id = "league/commonmark-ext-task-list",
  *   label = @Translation("Task List"),
  *   installed = "\League\CommonMark\Extension\TaskList\TaskListExtension",
- *   description = @Translation("Adds support for GFM-style task list items."),
- *   url = "https://github.com/thephpleague/commonmark",
- *   parsers = {"league/commonmark", "league/commonmark-gfm"},
+ *   description = @Translation("Adds support for GFM-style task lists."),
+ *   url = "https://commonmark.thephpleague.com/extensions/task-lists/",
  * )
  */
-class TaskListExtension extends CommonMarkExtension implements EnvironmentAwareInterface {
+class TaskListExtension extends CommonMarkExtensionBase implements EnvironmentAwareInterface {
 
   /**
    * {@inheritdoc}

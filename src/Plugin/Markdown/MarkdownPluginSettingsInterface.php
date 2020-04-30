@@ -31,12 +31,14 @@ interface MarkdownPluginSettingsInterface {
    * Retrieves a setting for the plugin.
    *
    * @param string $name
-   *   The name of the setting to retrieve.
+   *   The setting name.
+   * @param mixed $default
+   *   Optional. The default value to provide if $name isn't set.
    *
    * @return mixed
    *   The settings value or NULL if not set.
    */
-  public function getSetting($name);
+  public function getSetting($name, $default = NULL);
 
   /**
    * Retrieves the current settings.
@@ -47,21 +49,16 @@ interface MarkdownPluginSettingsInterface {
   public function getSettings();
 
   /**
-   * Sets a specific setting.
+   * The key used to specify the extension's settings inside parser settings.
    *
-   * @param string $name
-   *   The name of the setting to set.
-   * @param mixed $value
-   *   (optional) The value to set. If not provided it will be removed.
-   */
-  public function setSetting($name, $value = NULL);
-
-  /**
-   * Provides settings to an extension.
+   * Note: this requires that the parser supports this for it to be useful.
+   * Because each parser and extension architecture varies, how it is exactly
+   * used may vary.
    *
-   * @param array $settings
-   *   The settings array.
+   * @see \Drupal\markdown\Plugin\Markdown\LeagueCommonMark::getEnvironment()
+   *
+   * @return mixed
    */
-  public function setSettings(array $settings = []);
+  public function extensionSettingsKey();
 
 }

@@ -12,7 +12,7 @@ use Drupal\Core\Language\LanguageInterface;
  *   weight = 10,
  * )
  */
-class PeclCmark extends BaseParser {
+class PeclCmark extends MarkdownParserBase {
 
   /**
    * {@inheritdoc}

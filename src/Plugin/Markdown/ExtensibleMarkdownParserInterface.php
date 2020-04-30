@@ -2,23 +2,43 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
+use Drupal\Core\Plugin\ObjectWithPluginCollectionInterface;
+
 /**
  * Interface MarkdownInterface.
  */
-interface ExtensibleMarkdownParserInterface extends MarkdownGuidelinesAlterInterface {
+interface ExtensibleMarkdownParserInterface extends MarkdownParserInterface, MarkdownGuidelinesAlterInterface, ObjectWithPluginCollectionInterface {
 
   /**
-   * Retrieves MarkdownExtension plugins.
+   * An array of extension interfaces that the parser supports.
    *
-   * @param bool $enabled
-   *   Flag indicating whether to filter results based on enabled status. By
-   *   default, all extensions are returned. If set to TRUE, only enabled
-   *   extensions are returned. If set to FALSE, only disabled extensions are
-   *   returned.
-   *
-   * @return \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface[]
-   *   An array of MarkdownExtension plugins.
+   * @return string[]
    */
-  public function getExtensions($enabled = NULL);
+  public function extensionInterfaces();
+
+  /**
+   * Retrieves plugin identifiers of extensions bundled with the parser.
+   *
+   * @return string[]
+   */
+  public function getBundledExtensionIds();
+
+  /**
+   * Retrieves a specific extension plugin instance.
+   *
+   * @param string $extensionId
+   *   The identifier of the extension plugin instance to return.
+   *
+   * @return \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface|null
+   */
+  public function extension($extensionId);
+
+  /**
+   * Returns the ordered collection of extension plugin instances.
+   *
+   * @return \Drupal\markdown\MarkdownExtensionPluginCollection
+   *   The extension plugin collection.
+   */
+  public function extensions();
 
 }

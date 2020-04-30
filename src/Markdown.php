@@ -3,9 +3,7 @@
 namespace Drupal\markdown;
 
 use Drupal\Component\Utility\Crypt;
-use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheBackendInterface;
-use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -50,7 +48,7 @@ class Markdown implements MarkdownInterface {
   /**
    * The global Markdown config settings.
    *
-   * @var \Drupal\Core\Config\ImmutableConfig
+   * @var \Drupal\markdown\Config\ImmutableMarkdownSettings
    */
   protected $settings;
 

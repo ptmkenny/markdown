@@ -7,7 +7,7 @@ use Drupal\Core\Language\LanguageInterface;
 /**
  * Interface MarkdownInterface.
  */
-interface MarkdownParserInterface extends MarkdownInstallablePluginInterface, MarkdownPluginSettingsInterface {
+interface MarkdownParserInterface extends MarkdownInstallablePluginInterface {
 
   /**
    * Converts Markdown into HTML.
@@ -32,13 +32,6 @@ interface MarkdownParserInterface extends MarkdownInstallablePluginInterface, Ma
   public function convertToHtml($markdown, LanguageInterface $language = NULL);
 
   /**
-   * Retrieves allowed HTML tags, if set.
-   *
-   * @return array|null
-   */
-  public function getAllowedTags();
-
-  /**
    * Retrieves a short summary of what the MarkdownParser does.
    *
    * @return array
@@ -61,15 +54,5 @@ interface MarkdownParserInterface extends MarkdownInstallablePluginInterface, Ma
    * @see \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface::convertToHtml()
    */
   public function parse($markdown, LanguageInterface $language = NULL);
-
-  /**
-   * Sets the allowed HTML tags.
-   *
-   * @param array $tags
-   *   The allowed HTML tags.
-   *
-   * @return static
-   */
-  public function setAllowedTags(array $tags = []);
 
 }

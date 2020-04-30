@@ -3,22 +3,20 @@
 namespace Drupal\markdown\Annotation;
 
 /**
- * Class MarkdownExtension.
- *
  * @Annotation
  *
  * @Attributes({
  *   @Attribute("id", type = "string", required = true),
- *   @Attribute("parsers", type = "string[]"),
+ *   @Attribute("requires", type = "string[]"),
  * })
  */
 class MarkdownExtension extends BaseMarkdownAnnotation {
 
   /**
-   * An identifier or array of parser identifiers this extension belongs to.
+   * An array of extension plugin identifiers that is required.
    *
-   * @var string|string[]
+   * @var string[]
    */
-  protected $parsers;
+  protected $requires = [];
 
 }

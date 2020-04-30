@@ -2,9 +2,10 @@
 
 namespace Drupal\markdown\Plugin\Markdown\Extension;
 
-use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
+use Drupal\markdown\Plugin\Markdown\MarkdownPluginSettingsInterface;
+use Drupal\markdown\Traits\MarkdownPluginSettingsTrait;
 use Drupal\user\Entity\User;
 use League\CommonMark\Inline\Element\Link;
 use League\CommonMark\Inline\Parser\InlineParserInterface;
@@ -16,23 +17,76 @@ use League\CommonMark\InlineParserContext;
  *   label = @Translation("@ Autolinker"),
  *   installed = TRUE,
  *   description = @Translation("Automatically link commonly used references that come after an at character (@) without having to use the link syntax."),
- *   parsers = {"league/commonmark", "league/commonmark-gfm"},
  * )
  */
-class AtAutolinker extends CommonMarkExtension implements InlineParserInterface, MarkdownGuidelinesAlterInterface {
+class AtAutolinker extends CommonMarkExtensionBase implements InlineParserInterface, MarkdownGuidelinesAlterInterface, MarkdownPluginSettingsInterface {
+
+  use MarkdownPluginSettingsTrait {
+    buildSettingsForm as traitBuildSettingsForm;
+    defaultSettings as traitDefaultSettings;
+  }
 
   /**
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return NestedArray::mergeDeep(
-      parent::defaultSettings(),
-      [
-        'type' => 'user',
-        'format_username' => TRUE,
-        'url' => 'https://www.drupal.org/u/[text]',
-      ]
-    );
+    return [
+      'type' => 'user',
+      'format_username' => TRUE,
+      'url' => 'https://www.drupal.org/u/[text]',
+    ] + static::traitDefaultSettings();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
+    $element = $this->traitBuildSettingsForm($element, $form_state);
+
+    $selector = $this->getSatesSelector($this->getElementParents($element), 'type');
+
+    $element['type'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Map text to'),
+      '#default_value' => $this->getSetting('type'),
+      '#options' => [
+        'user' => $this->t('User'),
+        'url' => $this->t('URL'),
+      ],
+    ];
+
+    $element['format_username'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Replace username with formatted display name'),
+      '#description' => $this->t('If enabled, it will replace the matched text with the formatted username.'),
+      '#default_value' => $this->getSetting('format_username'),
+      '#states' => [
+        'visible' => [
+          $selector => ['value' => 'user'],
+        ],
+      ],
+    ];
+
+    $element['url'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('URL'),
+      '#description' => $this->t('A URL to format text with. Use the token "[text]" where it is needed. If you need to include the @, use the URL encoded equivalent: <code>%40</code>. Example: <code>https://twitter.com/search?q=%40[text]</code>.'),
+      '#default_value' => $this->getSetting('url'),
+      '#states' => [
+        'visible' => [
+          $selector => ['value' => 'url'],
+        ],
+      ],
+    ];
+
+    return $element;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function extensionSettingsKey() {
+    return FALSE;
   }
 
   /**
@@ -136,50 +190,4 @@ class AtAutolinker extends CommonMarkExtension implements InlineParserInterface,
 
     return TRUE;
   }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
-    $element = parent::buildSettingsForm($element, $form_state);
-
-    $selector = $this->getSatesSelector($this->getElementParents($element), 'type');
-
-    $element['type'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Map text to'),
-      '#default_value' => $this->getSetting('type'),
-      '#options' => [
-        'user' => $this->t('User'),
-        'url' => $this->t('URL'),
-      ],
-    ];
-
-    $element['format_username'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Replace username with formatted display name'),
-      '#description' => $this->t('If enabled, it will replace the matched text with the formatted username.'),
-      '#default_value' => $this->getSetting('format_username'),
-      '#states' => [
-        'visible' => [
-          $selector => ['value' => 'user'],
-        ],
-      ],
-    ];
-
-    $element['url'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('URL'),
-      '#description' => $this->t('A URL to format text with. Use the token "[text]" where it is needed. If you need to include the @, use the URL encoded equivalent: <code>%40</code>. Example: <code>https://twitter.com/search?q=%40[text]</code>.'),
-      '#default_value' => $this->getSetting('url'),
-      '#states' => [
-        'visible' => [
-          $selector => ['value' => 'url'],
-        ],
-      ],
-    ];
-
-    return $element;
-  }
-
 }

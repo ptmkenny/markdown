@@ -28,7 +28,7 @@ function markdown_twig_help($route_name, RouteMatchInterface $route_match) {
  * {@inheritdoc}
  */
 function markdown_filter_element_info_alter(array &$info) {
-  $info['text_format']['#process'][] = ['\Drupal\markdown\Plugin\Filter\Markdown', 'processTextFormat'];
+  $info['text_format']['#process'][] = '\\Drupal\\markdown_filter\\Plugin\\Filter\\Markdown::processTextFormat';
 }
 
 /**

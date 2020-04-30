@@ -3,8 +3,11 @@
 namespace Drupal\markdown;
 
 use Drupal\Core\Session\AccountInterface;
-use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
 
+/**
+ * @method mixed[] getDefinitions($includeBroken = TRUE)
+ * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface createInstance($plugin_id, array $configuration = [])
+ */
 interface MarkdownParserPluginManagerInterface extends MarkdownPluginManagerInterface {
 
   /**

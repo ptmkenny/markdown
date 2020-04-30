@@ -7,9 +7,11 @@ use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\markdown\Plugin\Markdown\MarkdownInstallablePluginInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownPluginSettingsInterface;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
-abstract class BaseMarkdownPluginManager extends DefaultPluginManager implements MarkdownPluginManagerInterface {
+abstract class MarkdownPluginManagerBase extends DefaultPluginManager implements MarkdownPluginManagerInterface {
 
   use ContainerAwareTrait;
   use StringTranslationTrait;
@@ -28,8 +30,22 @@ abstract class BaseMarkdownPluginManager extends DefaultPluginManager implements
    */
   public function all(array $configuration = [], $includeBroken = FALSE) {
     return array_map(function (array $definition) use ($configuration) {
-      return $this->createInstance($definition['id'], $configuration);
+      return $this->createInstance($definition['id'], isset($configuration[$definition['id']]) ? $configuration[$definition['id']] : $configuration);
     }, $this->getDefinitions($includeBroken));
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * @return \Drupal\markdown\Plugin\Markdown\MarkdownPluginInterface
+   */
+  public function createInstance($plugin_id, array $configuration = []) {
+    /** @var \Drupal\markdown\Plugin\Markdown\MarkdownPluginInterface $instance */
+    $instance = parent::createInstance($plugin_id, $configuration);
+    if ($instance instanceof ContainerAwareInterface) {
+      $instance->setContainer($this->getContainer());
+    }
+    return $instance;
   }
 
   /**
@@ -37,6 +53,15 @@ abstract class BaseMarkdownPluginManager extends DefaultPluginManager implements
    */
   public function firstInstalledPluginId() {
     return current(array_keys($this->installedDefinitions())) ?: $this->getFallbackPluginId();
+  }
+
+  /**
+   * Retrieves the container.
+   *
+   * @return \Symfony\Component\DependencyInjection\ContainerInterface
+   */
+  public function getContainer() {
+    return $this->container instanceof ContainerInterface ? $this->container : \Drupal::getContainer();
   }
 
   /**
@@ -63,7 +88,7 @@ abstract class BaseMarkdownPluginManager extends DefaultPluginManager implements
    */
   public function installed(array $configuration = []) {
     return array_map(function (array $definition) use ($configuration) {
-      return $this->createInstance($definition['id'], $configuration);
+      return $this->createInstance($definition['id'], isset($configuration[$definition['id']]) ? $configuration[$definition['id']] : $configuration);
     }, $this->installedDefinitions());
   }
 
@@ -98,11 +123,9 @@ abstract class BaseMarkdownPluginManager extends DefaultPluginManager implements
       return;
     }
 
-    // Determine if plugin has settings.
-    if (is_subclass_of($class, MarkdownPluginSettingsInterface::class)) {
-      if (!isset($definition['settings'])) {
-        $definition['settings'] = $class::defaultSettings();
-      }
+    // Provide default settings.
+    if (!isset($definition['settings'])) {
+      $definition['settings'] = is_subclass_of($class, MarkdownPluginSettingsInterface::class) ? $class::defaultSettings() : [];
     }
 
     if (is_subclass_of($class, MarkdownInstallablePluginInterface::class)) {
@@ -154,21 +177,14 @@ abstract class BaseMarkdownPluginManager extends DefaultPluginManager implements
   }
 
   /**
-   * Sorts a definitions array.
-   *
-   * This sorts the definitions array first by the weight column, and then by
-   * the plugin label, ensuring a stable, deterministic, and testable ordering
-   * of plugins.
-   *
-   * @param array $definitions
-   *   The definitions array to sort.
+   * {@inheritdoc}
    */
-  protected function sortDefinitions(array &$definitions) {
-    $weight = array_column($definitions, 'weight', 'id');
-    $label = array_map(function ($label) {
+  public function sortDefinitions(array &$definitions) {
+    $weights = array_column($definitions, 'weight', 'id');
+    $labels = array_map(function ($label) {
       return preg_replace("/[^a-z0-9]/", '', strtolower($label));
     }, array_column($definitions, 'label', 'id'));
-    array_multisort($weight, SORT_ASC, SORT_NUMERIC, $label, SORT_ASC, SORT_NATURAL, $definitions);
+    array_multisort($weights, SORT_ASC, SORT_NUMERIC, $labels, SORT_ASC, SORT_NATURAL, $definitions);
   }
 
 }

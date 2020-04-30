@@ -2,9 +2,7 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
-use Drupal\Component\Plugin\PluginInspectionInterface;
-
-interface MarkdownInstallablePluginInterface extends PluginInspectionInterface {
+interface MarkdownInstallablePluginInterface extends MarkdownPluginInterface {
 
   /**
    * Indicates whether the parser is installed.
@@ -21,14 +19,6 @@ interface MarkdownInstallablePluginInterface extends PluginInspectionInterface {
   public static function version();
 
   /**
-   * Retrieves the description of the plugin, if set.
-   *
-   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
-   *   The description.
-   */
-  public function getDescription();
-
-  /**
    * Displays the human-readable label of the plugin.
    *
    * @param bool $version
@@ -38,13 +28,6 @@ interface MarkdownInstallablePluginInterface extends PluginInspectionInterface {
    *   The label.
    */
   public function getLabel($version = TRUE);
-
-  /**
-   * Retrieves the URL of the plugin, if set.
-   *
-   * @return \Drupal\Core\Url|null
-   */
-  public function getUrl();
 
   /**
    * The current version of the parser.

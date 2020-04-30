@@ -11,8 +11,11 @@ services:
     arguments: ['@cache.markdown', '@file_system', '@http_client', '@plugin.manager.markdown.parser', '@markdown.settings']
 
   markdown.settings:
-    class: Drupal\markdown\MarkdownSettings
-    arguments: ['markdown.settings', '@config.storage', '@event_dispatcher', '@config.typed', '@plugin.manager.markdown.parser']
+    class: Drupal\markdown\Config\ImmutableMarkdownSettings
+    factory: Drupal\markdown\Config\ImmutableMarkdownSettings::load
+    arguments: [markdown.settings]
+    calls:
+      - [setKeyPrefix, ['parser']]
 
   plugin.manager.markdown.extension:
     class: Drupal\markdown\MarkdownExtensionPluginManager

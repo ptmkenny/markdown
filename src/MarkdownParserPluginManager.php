@@ -14,8 +14,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface[] all(array $configuration = [], $includeBroken = FALSE) : array
  * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface[] installed(array $configuration = []) : array
+ * @method \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface createInstance($plugin_id, array $configuration = [])
  */
-class MarkdownParserPluginManager extends BaseMarkdownPluginManager implements MarkdownParserPluginManagerInterface {
+class MarkdownParserPluginManager extends MarkdownPluginManagerBase implements MarkdownParserPluginManagerInterface {
 
   /**
    * {@inheritdoc}

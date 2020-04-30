@@ -7,18 +7,6 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 interface MarkdownSettingsInterface extends ContainerInjectionInterface {
 
   /**
-   * Creates a new instance using provided data or loading existing config data.
-   *
-   * @param string $name
-   *   The config name where the data is stored.
-   * @param array $data
-   *   Optional. Initial data to use.
-   *
-   * @return static
-   */
-  public static function load($name, array $data = NULL);
-
-  /**
    * Retrieves the parser, using provided settings and configuration.
    *
    * @param array $configuration
@@ -53,12 +41,40 @@ interface MarkdownSettingsInterface extends ContainerInjectionInterface {
   public function getParserConfiguration(array $configuration = []);
 
   /**
-   * Retrieves the parser extensions to be used with constructing plugins.
+   * Retrieves a specific parser extension setting.
+   *
+   * @param string $extension
+   *   The name of extension for which to retrieve settings for.
+   * @param string $name
+   *   The setting name.
+   * @param mixed $default
+   *   Optional. The default value to provide if $name isn't set.
+   *
+   * @return mixed
+   */
+  public function getParserExtensionSetting($extension, $name, $default = NULL);
+
+  /**
+   * Retrieves a specific parser extension settings.
+   *
+   * @param string $extension
+   *   The name of extension for which to retrieve settings for.
+   *
+   * @return mixed
+   */
+  public function getParserExtensionSettings($extension);
+
+  /**
+   * Retrieves all parser extension settings.
+   *
+   * @param bool $keyed
+   *   Flag indicating whether to return an associative array of parser
+   *   extensions, keyed by parser extension identifier.
    *
    * @return array
    *   The parser extensions.
    */
-  public function getParserExtensions();
+  public function getParserExtensions($keyed = FALSE);
 
   /**
    * Retrieves a specific parser setting.

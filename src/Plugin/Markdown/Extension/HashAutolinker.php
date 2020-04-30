@@ -7,6 +7,8 @@ use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
+use Drupal\markdown\Plugin\Markdown\MarkdownPluginSettingsInterface;
+use Drupal\markdown\Traits\MarkdownPluginSettingsTrait;
 use League\CommonMark\Inline\Element\Link;
 use League\CommonMark\Inline\Parser\InlineParserInterface;
 use League\CommonMark\InlineParserContext;
@@ -17,24 +19,88 @@ use League\CommonMark\InlineParserContext;
  *   label = @Translation("# Autolinker"),
  *   installed = TRUE,
  *   description = @Translation("Automatically link commonly used references that come after a hash character (#) without having to use the link syntax."),
- *   parsers = {"league/commonmark", "league/commonmark-gfm"},
  * )
  */
-class HashAutolinker extends CommonMarkExtension implements InlineParserInterface, MarkdownGuidelinesAlterInterface {
+class HashAutolinker extends CommonMarkExtensionBase implements InlineParserInterface, MarkdownGuidelinesAlterInterface, MarkdownPluginSettingsInterface {
+
+  use MarkdownPluginSettingsTrait {
+    buildSettingsForm as traitBuildSettingsForm;
+    defaultSettings as traitDefaultSettings;
+  }
 
   /**
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return NestedArray::mergeDeep(
-      parent::defaultSettings(),
-      [
-        'type' => 'node',
-        'node_title' => TRUE,
-        'url' => 'https://www.drupal.org/node/[text]',
-        'url_title' => TRUE,
-      ]
-    );
+    return [
+      'type' => 'node',
+      'node_title' => TRUE,
+      'url' => 'https://www.drupal.org/node/[text]',
+      'url_title' => TRUE,
+    ] + static::traitDefaultSettings();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
+    $element = $this->traitBuildSettingsForm($element, $form_state);
+
+    $selector = $this->getSatesSelector($this->getElementParents($element), 'type');
+
+    $element['type'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Map text to'),
+      '#default_value' => $this->getSetting('type'),
+      '#options' => [
+        'node' => $this->t('Node'),
+        'url' => $this->t('URL'),
+      ],
+    ];
+
+    $element['node_title'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Replace text with title of node'),
+      '#description' => $this->t('If enabled, it will replace the matched text with the title of the node.'),
+      '#default_value' => $this->getSetting('node_title'),
+      '#states' => [
+        'visible' => [
+          $selector => ['value' => 'node'],
+        ],
+      ],
+    ];
+
+    $element['url'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('URL'),
+      '#description' => $this->t('A URL to format text with. Use the token "[text]" where it is needed. If you need to include the #, use the URL encoded equivalent: <code>%23</code>. Example: <code>https://twitter.com/search?q=%23[text]</code>.'),
+      '#default_value' => $this->getSetting('url'),
+      '#states' => [
+        'visible' => [
+          $selector => ['value' => 'url'],
+        ],
+      ],
+    ];
+
+    $element['url_title'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Replace text with title of URL'),
+      '#description' => $this->t('If enabled, it will replace the matched text with the title of the URL.'),
+      '#default_value' => $this->getSetting('url_title'),
+      '#states' => [
+        'visible' => [
+          $selector => ['value' => 'url'],
+        ],
+      ],
+    ];
+    return $element;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function extensionSettingsKey() {
+    return FALSE;
   }
 
   /**
@@ -80,6 +146,42 @@ class HashAutolinker extends CommonMarkExtension implements InlineParserInterfac
    */
   public function getCharacters(): array {
     return ['#'];
+  }
+
+  /**
+   * Retrieves a URL page title.
+   *
+   * @param string $url
+   *   The URL to retrieve the title from.
+   *
+   * @return string|false
+   *   The URL title or FALSE if it could not be retrieved.
+   */
+  protected function getUrlTitle($url) {
+    $response = \Drupal::httpClient()->get($url);
+    if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 400) {
+      $dom = new \DOMDocument();
+      @$dom->loadHTML($response->getBody()->getContents());
+      if (($title = $dom->getElementsByTagName('title')) && $title->length) {
+        return Html::escape(trim(preg_replace('/\s+/', ' ', $title->item(0)->textContent)));
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Retrieves an Entity object for the current route.
+   *
+   * @return \Drupal\Core\Entity\EntityInterface|null
+   *   An Entity object or NULL if none could be found.
+   */
+  protected function currentRouteEntity() {
+    $route_match = \Drupal::routeMatch();
+    foreach ($route_match->getParameters()->all() as $item) {
+      if ($item instanceof EntityInterface) {
+        return $item;
+      }
+    }
   }
 
   /**
@@ -139,98 +241,6 @@ class HashAutolinker extends CommonMarkExtension implements InlineParserInterfac
     $inline_context->getContainer()->appendChild(new Link($url, $text, $title));
 
     return TRUE;
-  }
-
-  /**
-   * Retrieves a URL page title.
-   *
-   * @param string $url
-   *   The URL to retrieve the title from.
-   *
-   * @return string|false
-   *   The URL title or FALSE if it could not be retrieved.
-   */
-  protected function getUrlTitle($url) {
-    $response = \Drupal::httpClient()->get($url);
-    if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 400) {
-      $dom = new \DOMDocument();
-      @$dom->loadHTML($response->getBody()->getContents());
-      if (($title = $dom->getElementsByTagName('title')) && $title->length) {
-        return Html::escape(trim(preg_replace('/\s+/', ' ', $title->item(0)->textContent)));
-      }
-    }
-    return FALSE;
-  }
-
-  /**
-   * Retrieves an Entity object for the current route.
-   *
-   * @return \Drupal\Core\Entity\EntityInterface|null
-   *   An Entity object or NULL if none could be found.
-   */
-  protected function currentRouteEntity() {
-    $route_match = \Drupal::routeMatch();
-    foreach ($route_match->getParameters()->all() as $item) {
-      if ($item instanceof EntityInterface) {
-        return $item;
-      }
-    }
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
-    $element = parent::buildSettingsForm($element, $form_state);
-
-    $selector = $this->getSatesSelector($this->getElementParents($element), 'type');
-
-    $element['type'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Map text to'),
-      '#default_value' => $this->getSetting('type'),
-      '#options' => [
-        'node' => $this->t('Node'),
-        'url' => $this->t('URL'),
-      ],
-    ];
-
-    $element['node_title'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Replace text with title of node'),
-      '#description' => $this->t('If enabled, it will replace the matched text with the title of the node.'),
-      '#default_value' => $this->getSetting('node_title'),
-      '#states' => [
-        'visible' => [
-          $selector => ['value' => 'node'],
-        ],
-      ],
-    ];
-
-    $element['url'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('URL'),
-      '#description' => $this->t('A URL to format text with. Use the token "[text]" where it is needed. If you need to include the #, use the URL encoded equivalent: <code>%23</code>. Example: <code>https://twitter.com/search?q=%23[text]</code>.'),
-      '#default_value' => $this->getSetting('url'),
-      '#states' => [
-        'visible' => [
-          $selector => ['value' => 'url'],
-        ],
-      ],
-    ];
-
-    $element['url_title'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Replace text with title of URL'),
-      '#description' => $this->t('If enabled, it will replace the matched text with the title of the URL.'),
-      '#default_value' => $this->getSetting('url_title'),
-      '#states' => [
-        'visible' => [
-          $selector => ['value' => 'url'],
-        ],
-      ],
-    ];
-    return $element;
   }
 
 }

@@ -13,10 +13,9 @@ use Webuni\CommonMark\AttributesExtension\AttributesExtension as WebuniAttribute
  *   label = @Translation("Attributes"),
  *   description = @Translation("Adds a syntax to define attributes on the various HTML elements in markdown’s output."),
  *   url = "https://github.com/webuni/commonmark-attributes-extension",
- *   parsers = {"league/commonmark", "league/commonmark-gfm"},
  * )
  */
-class AttributesExtension extends CommonMarkExtension implements EnvironmentAwareInterface {
+class AttributesExtension extends CommonMarkExtensionBase implements EnvironmentAwareInterface {
 
   /**
    * {@inheritdoc}

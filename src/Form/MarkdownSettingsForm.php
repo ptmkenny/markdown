@@ -2,6 +2,7 @@
 
 namespace Drupal\markdown\Form;
 
+use Drupal\Component\Serialization\Json;
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Form\FormBase;
@@ -9,23 +10,31 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformState;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Link;
+use Drupal\Core\Plugin\PluginDependencyTrait;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
+use Drupal\markdown\Config\MarkdownSettings;
 use Drupal\markdown\MarkdownParserPluginManagerInterface;
 use Drupal\markdown\MarkdownSettingsInterface;
 use Drupal\markdown\Plugin\Markdown\ExtensibleMarkdownParserInterface;
+use Drupal\markdown\Plugin\Markdown\MarkdownPluginSettingsInterface;
+use Drupal\markdown\Traits\MarkdownExtensionPluginManagerTrait;
+use Drupal\markdown\Traits\MarkdownParserPluginManagerTrait;
 use Drupal\markdown\Traits\MarkdownStatesTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class MarkdownSettingsForm extends FormBase {
 
+  use MarkdownExtensionPluginManagerTrait;
+  use MarkdownParserPluginManagerTrait;
   use MarkdownStatesTrait;
+  use PluginDependencyTrait;
 
   /**
    * The Markdown Settings.
    *
-   * @var \Drupal\markdown\MarkdownSettings
+   * @var \Drupal\markdown\Config\MarkdownSettings
    */
   protected $settings;
 
@@ -67,7 +76,7 @@ class MarkdownSettingsForm extends FormBase {
     }
     return new static(
       $container->get('plugin.manager.markdown.parser'),
-      $container->get('markdown.settings')
+      MarkdownSettings::load('markdown.settings', NULL, $container)->setKeyPrefix('parser')
     );
   }
 
@@ -117,11 +126,6 @@ class MarkdownSettingsForm extends FormBase {
       '#parents' => [],
       '#title' => $this->t('Markdown'),
     ];
-    $subform = ['#parents' => []];
-
-    $subform_state = SubformState::createForSubform($subform, $form, $form_state);
-
-    $form['markdown'] = $this->buildSettings($subform, $subform_state);
 
     $form['actions']['#type'] = 'actions';
     $form['actions']['submit'] = [
@@ -133,13 +137,17 @@ class MarkdownSettingsForm extends FormBase {
     // By default, render the form using system-config-form.html.twig.
     $form['#theme'] = 'system_config_form';
 
+    // Build markdown settings.
+    $subform = ['#parents' => []];
+    $form['markdown'] = $this->buildSettings($subform, SubformState::createForSubform($subform, $form, $form_state));
+
     return $form;
   }
 
   public function buildSettings(array $element, SubformStateInterface $form_state) {
     // Immediately return if there are no installed parsers.
     if (!($labels = $this->parserManager->labels())) {
-      $element['parser'] = [
+      $element['missing'] = [
         '#type' => 'item',
         '#title' => $this->t('No markdown parsers installed.'),
         '#description' => $this->t('Visit the <a href=":system.status" target="_blank">@system.status</a> page for more details.', [
@@ -163,29 +171,49 @@ class MarkdownSettingsForm extends FormBase {
       );
     }
 
+    // Add the markdown.admin library to update summaries in vertical tabs.
+    $element['#attached']['library'][] = 'markdown/markdown.admin';
+
     $parents = isset($element['#parents']) ? $element['#parents'] : [];
     $parserId = $form_state->getValue(array_merge($parents, ['parser', 'id']), $this->getParserId());
     $configuration = NestedArray::mergeDeep($this->getParserConfiguration(), $form_state->getValue('parser', []));
     $id = Html::getUniqueId('markdown-parser-ajax');
 
-    // Build a wrapper for the ajax response.
     $element['ajax'] = [
       '#type' => 'container',
-      '#attributes' => ['id' => $id],
-      '#parents' => $parents,
-      '#tree' => TRUE,
+      '#id' => $id,
+      '#attributes' => [
+        'data-markdown-element' => 'wrapper',
+      ],
     ];
 
-    $element['ajax']['parser'] = [
-      '#type' => 'container',
-      '#parents' => array_merge($parents, ['parser']),
+    // Build a wrapper for the ajax response.
+    $element['ajax']['vertical_tabs'] = [
+      '#type' => 'vertical_tabs',
+      '#parents' => array_merge($parents, ['vertical_tabs']),
     ];
 
-    $element['ajax']['parser']['id'] = [
-      '#type' => 'select',
+    // Determine the group that details should be referencing for vertical tabs.
+    $group = implode('][', array_merge($parents, ['vertical_tabs']));
+
+    $element['parser'] = [
+      '#type' => 'details',
       '#title' => $this->t('Parser'),
+      '#tree' => TRUE,
+      '#parents' => array_merge($parents, ['parser']),
+      '#group' => $group,
+      '#weight' => -1,
+    ];
+    $parserElement = &$element['parser'];
+
+    $parserElement['id'] = [
+      '#type' => 'select',
       '#options' => $labels,
       '#default_value' => $parserId,
+      '#attributes' => [
+        'data-markdown-element' => 'parser',
+        'data-markdown-id' => $parserId,
+      ],
       '#ajax' => [
         'callback' => '\Drupal\markdown\Form\MarkdownSettingsForm::ajaxChangeParser',
         'event' => 'change',
@@ -195,13 +223,13 @@ class MarkdownSettingsForm extends FormBase {
 
     if ($includeSiteWideOption) {
       if (\Drupal::currentUser()->hasPermission('administer markdown')) {
-        $element['ajax']['parser']['id']['#description'] = $this->t('Site-wide parser settings can be adjusted by visiting the <a href=":markdown.settings" target="_blank">@markdown.settings</a> page.', [
+        $parserElement['id']['#description'] = $this->t('Site-wide parser settings can be adjusted by visiting the <a href=":markdown.settings" target="_blank">@markdown.settings</a> page.', [
           '@markdown.settings' => $this->t('Markdown Settings'),
           ':markdown.settings' => Url::fromRoute('markdown.settings')->toString(),
         ]);
       }
       else {
-        $element['ajax']['parser']['id']['#description'] = $this->t('Site-wide parser settings can only be adjusted by administrators.');
+        $parserElement['id']['#description'] = $this->t('Site-wide parser settings can only be adjusted by administrators.');
       }
     }
 
@@ -212,6 +240,9 @@ class MarkdownSettingsForm extends FormBase {
     // Retrieve the parser.
     $parser = $this->parserManager->createInstance($parserId, $configuration);
 
+    // Indicate if parser is installed.
+    $parserElement['id']['#attributes']['data-markdown-installed'] = $parser->isInstalled();
+
     // Add the parser description.
     $descriptions = [];
     if ($description = $parser->getDescription()) {
@@ -220,66 +251,107 @@ class MarkdownSettingsForm extends FormBase {
     if ($url = $parser->getUrl()) {
       $descriptions[] = Link::fromTextAndUrl($this->t('[More Info]'), $url)->toString();
     }
-    $element['ajax']['parser']['id']['#description'] = Markup::create(implode(' ', $descriptions));
+    $parserElement['id']['#description'] = Markup::create(implode(' ', $descriptions));
 
     // Add parser specific settings.
-    $element['ajax']['parser']['settings'] = [
-      '#type' => 'fieldset',
-      '#title' => $this->t('Settings'),
-      '#parents' => array_merge($parents, ['parser', 'settings']),
-    ];
-    $subform_state = SubformState::createForSubform($element['ajax']['parser']['settings'], $element, $form_state);
-    $element['ajax']['parser']['settings'] = $parser->buildSettingsForm($element['ajax']['parser']['settings'], $subform_state);
-    $element['ajax']['parser']['settings']['#access'] = !!Element::getVisibleChildren($element['ajax']['parser']['settings']);
-
-    if ($parser instanceof ExtensibleMarkdownParserInterface && ($extensions = $parser->getExtensions())) {
-      // Add any specific extension settings.
-      $element['ajax']['parser']['extensions'] = [
-        '#type' => 'fieldset',
-        '#title' => $this->t('Extensions'),
-        '#parents' => array_merge($parents, ['parser', 'extensions']),
+    if ($parser instanceof MarkdownPluginSettingsInterface) {
+      $parserElement['settings'] = [
+        '#type' => 'details',
+        '#title' => $this->t('Settings'),
+        '#parents' => array_merge($parents, ['parser', 'settings']),
+        '#open' => TRUE,
       ];
-      foreach ($extensions as $pluginId => $extension) {
-        $enabled = $extension->isEnabled();
-        $label = $extension->getLabel();
-        $descriptions = [];
-        if ($description = $extension->getDescription()) {
-          $descriptions[] = $description;
-        }
-        if ($url = $extension->getUrl()) {
-          $descriptions[] = Link::fromTextAndUrl($this->t('[More Info]'), $url)->toString();
-        }
-        if ($disabled = !$extension->isInstalled()) {
-          $descriptions[] = $this->t('(Not Installed)');
-        }
+      $settingsElement = &$parserElement['settings'];
+      $subform_state = SubformState::createForSubform($settingsElement, $element, $form_state);
+      $settingsElement = $parser->buildSettingsForm($settingsElement, $subform_state);
+      $settingsElement['#access'] = !!Element::getVisibleChildren($settingsElement);
+    }
 
-        // Extension enabled checkbox.
-        $element['ajax']['parser']['extensions'][$pluginId]['enabled'] = [
-          '#type' => 'checkbox',
-          '#title' => $label,
-          '#description' => Markup::create(implode(' ', $descriptions)),
-          '#default_value' => $enabled,
-          '#disabled' => $disabled,
-        ];
+    if ($parser instanceof ExtensibleMarkdownParserInterface) {
+      $parserElement = $this->buildExtensions($parser, $parserElement, $form_state, $group);
+    }
 
-        // Extension settings.
-        $element['ajax']['parser']['extensions'][$pluginId]['settings'] = [
+    return $element;
+  }
+
+  protected function buildExtensions(ExtensibleMarkdownParserInterface $parser, array $element, SubformStateInterface $form_state, $group = NULL) {
+    $extensions = $parser->extensions();
+    if (!$extensions) {
+      return $element;
+    }
+
+    $parents = $element['#parents'];
+
+    // Add any specific extension settings.
+    foreach ($extensions as $extensionId => $extension) {
+      $bundled = in_array($extensionId, $parser->getBundledExtensionIds(), TRUE);
+      $installed = $extension->isInstalled();
+      $enabled = $form_state->getValue(array_merge($parents, ['extensions', $extensionId, 'enabled']), $extension->isEnabled());
+      $label = $extension->getLabel();
+
+      $element['extensions'][$extensionId] = [
+        '#type' => 'details',
+        '#title' => $label,
+        '#group' => $group,
+      ];
+      $extensionElement = &$element['extensions'][$extensionId];
+
+      $descriptions = [];
+      if ($description = $extension->getDescription()) {
+        $descriptions[] = $description;
+      }
+      if ($url = $extension->getUrl()) {
+        $descriptions[] = Link::fromTextAndUrl($this->t('[More Info]'), $url)->toString();
+      }
+
+      // Extension enabled checkbox.
+      $extensionElement['enabled'] = [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Enable'),
+        '#attributes' => [
+          'data-markdown-element' => 'extension',
+          'data-markdown-id' => $extensionId,
+          'data-markdown-label' => $label,
+          'data-markdown-installed' => $installed ? 'true' : 'false',
+          'data-markdown-bundle' => $bundled ? $parser->getLabel(FALSE) : 'false',
+          'data-markdown-requires' => Json::encode($extension->requires()),
+          'data-markdown-required-by' => Json::encode($extension->requiredBy()),
+        ],
+        '#description' => Markup::create(implode(' ', $descriptions)),
+        '#default_value' => $bundled || $enabled,
+        '#disabled' => $bundled || !$installed,
+      ];
+
+      // Handle extension dependencies.
+      if ($requiredBy = $extension->requiredBy()) {
+        foreach ($requiredBy as $dependent) {
+          $requiredBySelector = $this->getSatesSelector(array_merge($parents, ['extensions', $dependent]), 'enabled');
+          $extensionElement['enabled']['#states']['checked'][$requiredBySelector] = ['checked' => TRUE];
+          $extensionElement['enabled']['#states']['disabled'][$requiredBySelector] = ['checked' => TRUE];
+        }
+      }
+
+      // Installed extension settings.
+      if ($installed && $extension instanceof MarkdownPluginSettingsInterface) {
+        $extensionElement['settings'] = [
           '#type' => 'details',
-          '#title' => $this->t('@label Settings', ['@label' => $label]),
-          '#open' => $enabled,
-          '#parents' => array_merge($parents, ['parser', 'extensions', $pluginId, 'settings']),
+          '#title' => $this->t('Settings'),
+          '#open' => TRUE,
+          '#parents' => array_merge($parents, ['extensions', $extensionId, 'settings']),
         ];
-        $subform_state = SubformState::createForSubform($element['ajax']['parser']['extensions'][$pluginId]['settings'], $element, $form_state);
+        $extensionSettingsElement = &$extensionElement['settings'];
+        $subform_state = SubformState::createForSubform($extensionSettingsElement, $element, $form_state);
 
-        $selector = $this->getSatesSelector(array_merge($parents, ['parser', 'extensions', $pluginId]), 'enabled');
-        $element['ajax']['parser']['extensions'][$pluginId]['settings']['#states'] = [
+        $selector = $this->getSatesSelector(array_merge($parents, ['extensions', $extensionId]), 'enabled');
+
+        $extensionSettingsElement['#states'] = [
           'visible' => [
-            $selector => ['checked' => TRUE],
+            [$selector => ['checked' => TRUE]],
           ],
         ];
 
-        $element['ajax']['parser']['extensions'][$pluginId]['settings'] = $extension->buildSettingsForm($element['ajax']['parser']['extensions'][$pluginId]['settings'], $subform_state);
-        $element['ajax']['parser']['extensions'][$pluginId]['settings']['#access'] = !!Element::getVisibleChildren($element['ajax']['parser']['extensions'][$pluginId]['settings']);
+        $extensionSettingsElement = $extension->buildSettingsForm($extensionSettingsElement, $subform_state);
+        $extensionSettingsElement['#access'] = !!Element::getVisibleChildren($extensionSettingsElement);
       }
     }
 
@@ -291,6 +363,7 @@ class MarkdownSettingsForm extends FormBase {
    */
   public static function ajaxChangeParser(array $form, FormStateInterface $form_state) {
     $parents = array_slice($form_state->getTriggeringElement()['#array_parents'], 0, -2);
+    $parents[] = 'ajax';
     return NestedArray::getValue($form, $parents);
   }
 
@@ -321,66 +394,43 @@ class MarkdownSettingsForm extends FormBase {
   }
 
   /**
-   * Normalizes config values.
+   * Retrieves configuration from values.
    *
    * @param array $values
    *   An array of values.
    *
    * @return array
-   *   The normalized config values.
+   *   The configuration array.
    */
-  public static function normalizeConfigValues(array $values) {
-    $parser = [];
-    $original = isset($values['parser']) ? $values['parser'] : $values;
-    $original += ['id' => '', 'extensions' => [], 'settings' => []];
+  public function getConfigurationFromValues(array $values) {
+    $defaults = ['id' => '', 'settings' => [], 'extensions' => []];
+    $pluginConfiguration = (isset($values['parser']) ? $values['parser'] : $values) + $defaults;
+    $parser = static::markdownParserPluginManager()->createInstance($pluginConfiguration['id'], $pluginConfiguration);
+    $configuration = $parser->getConfiguration();
 
-    // Save the parser identifier.
-    $parser['id'] = $original['id'];
+    // Sort $configuration by using the $defaults keys. This ensures there
+    // is a consistent order when saving the config.
+    $configuration = array_replace(array_flip(array_keys(array_intersect_key($defaults, $configuration))), $configuration);
 
-    // Normalize extensions and their settings.
-    $extensions = [];
-    if (!empty($original['extensions'])) {
-      foreach ($original['extensions'] as $id => $extension) {
-        // Skip disabled extensions.
-        if (isset($extension['enabled']) && empty($extension['enabled'])) {
-          continue;
-        }
+    $this->addDependencies($this->getPluginDependencies($parser));
 
-        $extension += ['settings' => []];
-
-        // Remove enabled property, all extensions stored in config are enabled.
-        unset($extension['enabled']);
-
-        // Prepend the extension identifier. This is necessary so
-        // markdown_extension_settings.* schema can work.
-        $extensions[] = array_merge(['id' => $id], $extension);
-      }
-    }
-
-    // Only add parser extensions if some are enabled.
-    if (!empty($extensions)) {
-      $parser['extensions'] = $extensions;
-    }
-
-    // Only add parser settings if it exists.
-    if (!empty($original['settings'])) {
-      $parser['settings'] = $original['settings'];
-    }
-
-    return ['parser' => $parser];
+    return [
+      'dependencies' => $this->dependencies,
+      'parser' => $configuration,
+    ];
   }
 
   /**
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $values = $form_state->cleanValues()->getValues() + ['parser' => []];
+    $values = $form_state->cleanValues()->getValues();
 
     // Normalize parser values into config data.
-    $data = static::normalizeConfigValues($values);
+    $configuration = $this->getConfigurationFromValues($values);
 
     $this->settings
-      ->setData($data)
+      ->setData($configuration)
       ->save();
 
     $this->messenger()->addStatus($this->t('The configuration options have been saved.'));

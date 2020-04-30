@@ -2,23 +2,24 @@
 
 namespace Drupal\markdown;
 
+/**
+ * @method mixed[] getDefinitions($includeBroken = TRUE)
+ * @method \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface createInstance($plugin_id, array $configuration = [])
+ */
 interface MarkdownExtensionPluginManagerInterface extends MarkdownPluginManagerInterface {
 
   /**
-   * Retrieves MarkdownExtension plugins.
+   * Retrieves extensions for a specific parser.
    *
-   * @param string $parser
-   *   Optional. A specific parser's extensions to retrieve. If not set, all
-   *   available extensions are returned, regardless of the parser.
-   * @param bool $enabled
-   *   Flag indicating whether to filter results based on enabled status. By
-   *   default, all extensions are returned. If set to TRUE, only enabled
-   *   extensions are returned. If set to FALSE, only disabled extensions are
-   *   returned.
+   * @param string|\Drupal\markdown\Plugin\Markdown\MarkdownParserInterface $parserId
+   *   A parser identifier or MarkdownParser instance.
+   * @param array $configuration
+   *   The configuration used to create plugin instances. This should be an
+   *   associative array, keyed by extension plugin identifiers.
    *
    * @return \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface[]
    *   An array of MarkdownExtension plugins.
    */
-  public function getExtensions($parser = NULL, $enabled = NULL);
+  public function getParserExtensions($parserId, array $configuration = []);
 
 }

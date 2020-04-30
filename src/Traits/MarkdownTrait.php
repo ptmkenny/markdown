@@ -17,7 +17,7 @@ trait MarkdownTrait {
    * @return \Drupal\markdown\MarkdownInterface
    *   The Markdown service.
    */
-  public function markdown() {
+  protected static function markdown() {
     if (!isset(static::$markdown)) {
       static::$markdown = \Drupal::service('markdown');
     }

@@ -2,7 +2,7 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
-use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 
 /**
@@ -13,7 +13,7 @@ use Drupal\Core\Language\LanguageInterface;
  *   weight = 21,
  * )
  */
-class Parsedown extends BaseParser {
+class Parsedown extends MarkdownParserBase implements MarkdownPluginSettingsInterface {
 
   /**
    * The Parsedown class to use.
@@ -33,15 +33,22 @@ class Parsedown extends BaseParser {
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return NestedArray::mergeDeep(
-      parent::defaultSettings(),
-      [
-        'breaks_enabled' => FALSE,
-        'markup_escaped' => FALSE,
-        'safe_mode' => FALSE,
-        'urls_linked' => TRUE,
-      ]
-    );
+    return [
+      'breaks_enabled' => FALSE,
+      'markup_escaped' => FALSE,
+      'safe_mode' => FALSE,
+      'urls_linked' => TRUE,
+    ] + parent::defaultSettings();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
+    $element = parent::buildSettingsForm($element, $form_state);
+
+    $element['todo']['#markup'] = 'TODO: Implement \Drupal\markdown\Plugin\Markdown\Parsedown::buildSettingsForm() method.';
+    return $element;
   }
 
   /**
@@ -77,7 +84,7 @@ class Parsedown extends BaseParser {
   protected function parsedown() {
     if (!$this->parsedown) {
       $this->parsedown = new static::$parsedownClass();
-      foreach ($this->settings as $name => $value) {
+      foreach ($this->getSettings() as $name => $value) {
         if ($method = $this->getSettingMethod($name)) {
           $this->parsedown->$method($value);
         }

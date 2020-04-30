@@ -3,10 +3,11 @@
 namespace Drupal\markdown\Plugin\Markdown\Extension;
 
 use Drupal\Component\Utility\Html;
-use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Url;
 use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
+use Drupal\markdown\Plugin\Markdown\MarkdownPluginSettingsInterface;
+use Drupal\markdown\Traits\MarkdownPluginSettingsTrait;
 use League\CommonMark\ElementRendererInterface;
 use League\CommonMark\HtmlElement;
 use League\CommonMark\Inline\Element\AbstractInline;
@@ -19,23 +20,78 @@ use League\CommonMark\Inline\Renderer\InlineRendererInterface;
  *   label = @Translation("Enhanced Links"),
  *   installed = TRUE,
  *   description = @Translation("Extends CommonMark to provide additional enhancements when rendering links."),
- *   parsers = {"league/commonmark", "league/commonmark-gfm"},
  * )
  */
-class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInterface, InlineRendererInterface, MarkdownGuidelinesAlterInterface {
+class LinkRenderer extends CommonMarkExtensionBase implements CommonMarkRendererInterface, InlineRendererInterface, MarkdownGuidelinesAlterInterface, MarkdownPluginSettingsInterface {
+
+  use MarkdownPluginSettingsTrait {
+    buildSettingsForm as traitBuildSettingsForm;
+    defaultSettings as traitDefaultSettings;
+  }
 
   /**
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return NestedArray::mergeDeep(
-      parent::defaultSettings(),
-      [
-        'external_new_window' => TRUE,
-        'internal_host_whitelist' => \Drupal::request()->getHost(),
-        'no_follow' => 'external',
-      ]
-    );
+    return [
+      'external_new_window' => TRUE,
+      'internal_host_whitelist' => \Drupal::request()->getHost(),
+      'no_follow' => 'external',
+    ] + static::traitDefaultSettings();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
+    $element = $this->traitBuildSettingsForm($element, $form_state);
+
+    if (!empty($element['#description'])) {
+      $element['#description'] = '<p>' . $element['#description'] . '</p>';
+    }
+    elseif (!isset($element['#description'])) {
+      $element['#description'] = '';
+    }
+
+    $element['#description'] .= '<p><strong>' . $this->t('NOTE: These settings only apply to markdown links rendered using the parser, if a raw HTML <code>&lt;a&gt;</code> tag is used, then these settings will not be applied to them.') . '</strong></p>';
+
+    $element['internal_host_whitelist'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Internal Host Whitelist'),
+      '#description' => $this->t('Allows additional host names to be treated as "internal" when they would normally be considered as "external". This is useful in cases where a multi-site is using different sub-domains. The current host name, %host, will always be considered "internal" (even if removed from this list). Enter one host name per line. No regular expressions are allowed, just exact host name matches.', [
+        '%host' => \Drupal::request()->getHost(),
+      ]),
+      '#default_value' => $form_state->getValue('internal_host_whitelist', $this->getSetting('internal_host_whitelist')),
+    ];
+
+    $element['external_new_window'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Open external links in new windows'),
+      '#description' => $this->t('When this setting is enabled, any link that does not contain one of the above internal whitelisted host names will automatically be considered as an "external" link. All external links will then have the <code>target="_blank"</code> attribute and value added to it.'),
+      '#default_value' => $form_state->getValue('external_new_window', $this->getSetting('external_new_window')),
+    ];
+
+    $element['no_follow'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Add <code>rel="nofollow"</code> to'),
+      '#description' => $this->t('The rel="nofollow" attribute and value instructs some search engines that the link should not influence the ranking of the link\'s target in the search engine\'s index.'),
+      '#default_value' => $form_state->getValue('no_follow', $this->getSetting('no_follow')),
+      '#options' => [
+        '' => $this->t('None of the links'),
+        'all' => $this->t('All of the links'),
+        'external' => $this->t('External links only'),
+        'internal' => $this->t('Internal links only'),
+      ],
+    ];
+
+    return $element;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function extensionSettingsKey() {
+    return FALSE;
   }
 
   /**
@@ -106,7 +162,7 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
    * {@inheritdoc}
    */
   public function rendererClass() {
-    return 'Link';
+    return Link::class;
   }
 
   /**
@@ -185,53 +241,6 @@ class LinkRenderer extends CommonMarkExtension implements CommonMarkRendererInte
     }
 
     return !$internal;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function buildSettingsForm(array $element, SubformStateInterface $form_state) {
-    $element = parent::buildSettingsForm($element, $form_state);
-
-    if (!empty($element['#description'])) {
-      $element['#description'] = '<p>' . $element['#description'] . '</p>';
-    }
-    elseif (!isset($element['#description'])) {
-      $element['#description'] = '';
-    }
-
-    $element['#description'] .= '<p><strong>' . $this->t('NOTE: These settings ONLY apply to CommonMark Markdown links, if a user manually enters an <code>&lt;a&gt;</code> tag, then these settings will not be processed on them.') . '</strong></p>';
-
-    $element['internal_host_whitelist'] = [
-      '#type' => 'textarea',
-      '#title' => $this->t('Internal Host Whitelist'),
-      '#description' => $this->t('Allows additional host names to be treated as "internal" when they would normally be considered as "external". This is useful in cases where a multi-site is using different sub-domains. The current host name, %host, will always be considered "internal" (even if removed from this list). Enter one host name per line. No regular expressions are allowed, just exact host name matches.', [
-        '%host' => \Drupal::request()->getHost(),
-      ]),
-      '#default_value' => $this->getSetting('internal_host_whitelist'),
-    ];
-
-    $element['external_new_window'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Open external links in new windows'),
-      '#description' => $this->t('When this setting is enabled, any link that does not contain one of the above internal whitelisted host names will automatically be considered as an "external" link. All external links will then have the <code>target="_blank"</code> attribute and value added to it.'),
-      '#default_value' => $this->getSetting('external_new_window'),
-    ];
-
-    $element['no_follow'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Add <code>rel="nofollow"</code> to'),
-      '#description' => $this->t('The rel="nofollow" attribute and value instructs some search engines that the link should not influence the ranking of the link\'s target in the search engine\'s index.'),
-      '#default_value' => $this->getSetting('no_follow'),
-      '#options' => [
-        '' => $this->t('None of the links'),
-        'all' => $this->t('All of the links'),
-        'external' => $this->t('External links only'),
-        'internal' => $this->t('Internal links only'),
-      ],
-    ];
-
-    return $element;
   }
 
 }

@@ -4,20 +4,19 @@ namespace Drupal\markdown;
 
 use Drupal\Component\Utility\Crypt;
 use Drupal\Component\Utility\Unicode;
-use Drupal\Component\Utility\Xss;
 use Drupal\Core\Language\LanguageInterface;
 
 class ParsedMarkdown implements ParsedMarkdownInterface {
 
   /**
-   * An array of allowed HTML tags that are permitted in the parsed HTML.
+   * HTML that is allowed in the parsed markdown.
    *
-   * This is to ensure it is safe from XSS vulnerabilities.
-   * If TRUE, all tags are allowed.
+   * This is to ensure it is safe from XSS vulnerabilities. If TRUE, HTML is
+   * returned as is.
    *
-   * @var array|true
+   * @var string|true
    */
-  protected $allowedTags = self::ALLOWED_TAGS;
+  protected $allowedHtml = self::ALLOWED_HTML;
 
   /**
    * A UNIX timestamp of when this object is to expire.
@@ -124,10 +123,19 @@ class ParsedMarkdown implements ParsedMarkdownInterface {
    * {@inheritdoc}
    */
   public function getHtml() {
-    if ($this->allowedTags === TRUE) {
+    // Return HTML as is.
+    if ($this->allowedHtml === TRUE) {
       return $this->html;
     }
-    return Xss::filter($this->html, $this->allowedTags);
+
+    $filter = new MarkdownFilterHtml([
+      'settings' => [
+        'allowed_html' => $this->allowedHtml,
+        'filter_html_help' => 0,
+        'filter_html_nofollow' => 0,
+      ],
+    ], 'filter_html', ['provider' => 'markdown']);
+    return (string) $filter->process($this->html, $this->language->getId());
   }
 
   /**
@@ -208,11 +216,8 @@ class ParsedMarkdown implements ParsedMarkdownInterface {
   /**
    * {@inheritdoc}
    */
-  public function setAllowedTags($allowed_tags = self::ALLOWED_TAGS) {
-    if ($allowed_tags !== TRUE && !is_array($allowed_tags)) {
-      $allowed_tags = static::ALLOWED_TAGS;
-    }
-    $this->allowedTags = $allowed_tags;
+  public function setAllowedHtml($allowed_html = self::ALLOWED_HTML) {
+    $this->allowedHtml = $allowed_html;
     return $this;
   }
 

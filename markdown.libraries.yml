@@ -1,0 +1,6 @@
+markdown.admin:
+  js:
+    js/markdown.admin.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal

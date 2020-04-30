@@ -3,6 +3,8 @@ markdown.settings:
   type: config_object
   label: 'Markdown Settings'
   mapping:
+    dependencies:
+      type: config_dependencies
     parser:
       type: markdown_parser
 
@@ -36,16 +38,22 @@ markdown_parser:
 markdown_parser_settings.*:
   type: mapping
   label: 'Markdown Parser Settings'
+  mapping:
+    drupal_allowed_html:
+      type: string
+
 markdown_parser_settings.league/commonmark:
   type: mapping
   label: 'CommonMark Parser Settings'
   mapping:
-    # @todo finish adding the rest of the config settings
-    # @see https://commonmark.thephpleague.com/1.4/configuration/
-    html_input:
-      type: string
     allow_unsafe_links:
       type: boolean
+    enable_em:
+      type: boolean
+    enable_strong:
+      type: boolean
+    html_input:
+      type: string
     max_nesting_level:
       type: integer
     renderer:
@@ -57,6 +65,12 @@ markdown_parser_settings.league/commonmark:
           type: string
         soft_break:
           type: string
+    unordered_list_markers:
+      type: string
+    use_asterisk:
+      type: boolean
+    use_underscore:
+      type: boolean
 
 markdown_parser_settings.league/commonmark-gfm:
   type: markdown_parser_settings.league/commonmark
@@ -66,6 +80,7 @@ markdown_parser_settings.league/commonmark-gfm:
 markdown_extension_settings.*:
   type: mapping
   label: 'Markdown Extension Settings'
+
 markdown_extension_settings.hash_autolinker:
   type: mapping
   label: 'Hash Autolinker'
@@ -88,6 +103,38 @@ markdown_extension_settings.enhanced_links:
     external_new_window:
       type: boolean
     no_follow:
+      type: string
+
+markdown_extension_settings.league/commonmark-ext-heading-permalink:
+  type: mapping
+  label: 'Heading Permalinks'
+  mapping:
+    html_class:
+      type: string
+    id_prefix:
+      type: string
+    inner_contents:
+      type: string
+    insert:
+      type: string
+    title:
+      type: string
+
+markdown_extension_settings.league/commonmark-ext-toc:
+  type: mapping
+  label: 'Table Of Contents'
+  mapping:
+    html_class:
+      type: string
+    max_heading_level:
+      type: integer
+    min_heading_level:
+      type: integer
+    normalize:
+      type: string
+    position:
+      type: string
+    style:
       type: string
 
 # @todo finish adding the rest of the settings for the other parsers

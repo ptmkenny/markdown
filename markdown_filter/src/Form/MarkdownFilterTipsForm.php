@@ -46,7 +46,7 @@ class MarkdownFilterTipsForm extends FormBase {
   }
 
   protected function buildGuidelines(array $guides = []) {
-    $allowedTags = $this->parser->getAllowedTags();
+    $allowedTags = $this->parser->getAllowedHtml();
     $build = $this->parser->getSummary();
 
     $build['help']['#markup'] = '<p>' . $this->t('This site renders CommonMark Markdown. While learning all of the Markdown syntax may feel intimidating at first, learning how to use a very small number of the most basic Markdown syntax is very easy. The following sections will provide examples for commonly used Markdown syntax, what HTML output it generates and how it will display on the site.') . '</p>';

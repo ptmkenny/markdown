@@ -2,21 +2,33 @@
 
 namespace Drupal\markdown\Plugin\Markdown\Extension;
 
-use Drupal\Core\Form\FormStateInterface;
 use Drupal\markdown\Plugin\Markdown\MarkdownInstallablePluginInterface;
-use Drupal\markdown\Plugin\Markdown\MarkdownPluginSettingsInterface;
 
 /**
  * Interface ExtensionInterface.
  */
-interface MarkdownExtensionInterface extends MarkdownInstallablePluginInterface, MarkdownPluginSettingsInterface {
+interface MarkdownExtensionInterface extends MarkdownInstallablePluginInterface {
 
   /**
-   * Indicates whether the extension is being used.
+   * Indicates whether the extension is enabled.
    *
    * @return bool
    *   TRUE or FALSE
    */
   public function isEnabled();
+
+  /**
+   * Retrieves identifiers of extensions that this extension requires.
+   *
+   * @return string[]
+   */
+  public function requires();
+
+  /**
+   * Retrieves identifiers of extensions that are required by this extension.
+   *
+   * @return string[]
+   */
+  public function requiredBy();
 
 }

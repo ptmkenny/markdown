@@ -8,7 +8,8 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 
 /**
- * @method string getFallbackPluginId($plugin_id = NULL, array $configuration = [])
+ * @method mixed[] getDefinitions($includeBroken = TRUE)
+ * @method \Drupal\markdown\Plugin\Markdown\MarkdownPluginInterface createInstance($plugin_id, array $configuration = [])
  */
 interface MarkdownPluginManagerInterface extends ContainerAwareInterface, ContainerInjectionInterface, PluginManagerInterface, FallbackPluginManagerInterface {
 
@@ -63,5 +64,17 @@ interface MarkdownPluginManagerInterface extends ContainerAwareInterface, Contai
    *   An array of labels, keyed by plugin identifier.
    */
   public function labels($installed = TRUE, $version = TRUE);
+
+  /**
+   * Sorts a definitions array.
+   *
+   * This sorts the definitions array first by the weight column, and then by
+   * the plugin label, ensuring a stable, deterministic, and testable ordering
+   * of plugins.
+   *
+   * @param array $definitions
+   *   The definitions array to sort.
+   */
+  public function sortDefinitions(array &$definitions);
 
 }

@@ -10,23 +10,16 @@ use Drupal\Core\Language\LanguageInterface;
 interface ParsedMarkdownInterface extends MarkupInterface, \Countable, \Serializable {
 
   /**
-   * A list of the default HTML tags that are allowed.
+   * Default list of allowed HTML.
    *
-   * @var array
+   * @var string
    *
-   * @see \Drupal\Component\Utility\Xss::filterAdmin()
+   * @see \Drupal\filter\Plugin\Filter\FilterHtml::process()
    */
-  const ALLOWED_TAGS = [
-    'a', 'abbr', 'acronym', 'address', 'article', 'aside', 'b', 'bdi', 'bdo',
-    'big', 'blockquote', 'br', 'caption', 'cite', 'code', 'col', 'colgroup',
-    'command', 'dd', 'del', 'details', 'dfn', 'div', 'dl', 'dt', 'em',
-    'figcaption', 'figure', 'footer', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'header', 'hgroup', 'hr', 'i', 'img', 'ins', 'kbd', 'li', 'mark', 'menu',
-    'meter', 'nav', 'ol', 'output', 'p', 'pre', 'progress', 'q', 'rp', 'rt',
-    'ruby', 's', 'samp', 'section', 'small', 'span', 'strong', 'sub',
-    'summary', 'sup', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'time',
-    'tr', 'tt', 'u', 'ul', 'var', 'wbr',
-  ];
+  const ALLOWED_HTML = '<a href hreflang> <abbr> <acronym> <address> <article> <aside> <b> <bdi> <bdo> <big> <blockquote cite> <br> <caption> <cite> <code>' .
+    '<col> <colgroup> <command> <dd> <del> <details> <dfn> <div> <dl> <dt> <em> <figcaption> <figure> <footer> <g> <h2 id=\'jump-*\'> <h3 id> <h4 id> <h5 id> <h6 id>' .
+    '<header> <hgroup> <hr> <i> <img> <ins> <kbd> <li> <mark> <menu> <meter> <nav> <ol start type=\'1 A I\'> <output> <p> <path d fill*> <pre> <progress> <q> <rp> <rt> <ruby> <s>' .
+    '<samp> <section> <small> <span> <strong> <sub> <summary> <sup> <svg viewBox> <table> <tbody> <td> <tfoot> <th> <thead> <time> <tr> <tt> <u> <ul type> <var> <wbr>';
 
   /**
    * Indicates the item should never be removed unless explicitly deleted.
@@ -138,16 +131,16 @@ interface ParsedMarkdownInterface extends MarkupInterface, \Countable, \Serializ
   public function matches($markdown);
 
   /**
-   * Sets the allowed tags.
+   * Sets the allowed HTML.
    *
-   * @param array|true $allowed_tags
-   *   Optional. An array of allowed HTML tags that are permitted in the parsed
-   *   HTML to ensure it is safe from XSS vulnerabilities. Pass TRUE if all
-   *   tags are allowed.
+   * @param string|true $allowed_html
+   *   Optional. HTML that is allowed in the parsed markdown to ensure it is
+   *   safe from XSS vulnerabilities. If TRUE is passed, the HTML parsed from
+   *   markdown will be returned as is.
    *
    * @return static
    */
-  public function setAllowedTags($allowed_tags = self::ALLOWED_TAGS);
+  public function setAllowedHtml($allowed_html = self::ALLOWED_HTML);
 
   /**
    * Sets the object's expiration timestamp.
