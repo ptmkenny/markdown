@@ -6,6 +6,7 @@ use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Entity\EntityFormInterface;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Link;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
@@ -267,21 +268,17 @@ class FilterMarkdown extends FilterBase implements FilterMarkdownInterface, Cont
    */
   public function tips($long = FALSE) {
     // On the "short" tips, don't show anything.
-    // @see \Drupal\markdown\Plugin\Filter\Markdown::processTextFormat
+    // @see \Drupal\markdown\Plugin\Filter\FilterMarkdown::processTextFormat
     if (!$long) {
       return NULL;
     }
-
-    // On the long tips, the render array must be retrieved as a "form" due to
-    // the fact that vertical tabs require form processing to work properly.
-    $parser = $this->getParser();
-    $formBuilder = \Drupal::formBuilder();
-    $formState = (new FormState())->addBuildInfo('args', [$long, $parser]);
-    $form = $formBuilder->buildForm('\Drupal\markdown\Form\FilterTipsForm', $formState);
-
-    // Since this is essentially "hacking" the FAPI and not an actual "form",
-    // just extract the relevant "tips" child element and render it.
-    return \Drupal::service('renderer')->render($form['tips']);
+    return $this->t('Parses markdown and converts it to HTML. @moreInfo', [
+      '@moreInfo' => Link::fromTextAndUrl($this->t('[More Info]'), Url::fromUri('https://www.drupal.org/docs/8/modules/markdown', [
+        'attributes' => [
+          'target' => '_blank',
+        ],
+      ]))->toString(),
+    ]);
   }
 
 }

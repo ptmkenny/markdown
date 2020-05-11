@@ -7,7 +7,6 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\PluginFormInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
-use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\SettingsTrait;
 use League\CommonMark\Inline\Element\Link;
@@ -22,7 +21,7 @@ use League\CommonMark\InlineParserContext;
  *   description = @Translation("Automatically link commonly used references that come after a hash character (#) without having to use the link syntax."),
  * )
  */
-class HashAutolinker extends BaseExtension implements InlineParserInterface, MarkdownGuidelinesAlterInterface, SettingsInterface, PluginFormInterface {
+class HashAutolinker extends BaseExtension implements InlineParserInterface, SettingsInterface, PluginFormInterface {
 
   use SettingsTrait;
 
@@ -96,44 +95,6 @@ class HashAutolinker extends BaseExtension implements InlineParserInterface, Mar
    */
   public function settingsKey() {
     return FALSE;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function alterGuidelines(array &$guides = []) {
-    if ($this->getSetting('type') === 'node') {
-      $description = [t('Text that starts with hash symbol (#) followed by numbers will be automatically be linked to a node on this site.')];
-      if ($this->getSetting('node_title')) {
-        $description[] = t('The node title will be used in place the text.');
-      }
-      $description[] = t('If the node does not exist, it will not automatically link.');
-      $guides['links']['items'][] = [
-        'title' => t('# Autolinker'),
-        'description' => $description,
-      ];
-    }
-    elseif ($this->getSetting('type') === 'url') {
-      $description = [
-        t('Text that starts with a hash symbol (#) followed by any character other than a space will automatically be linked to the following URL: <code>@url</code>', [
-          '@url' => $this->getSetting('url'),
-        ]),
-      ];
-      if ($this->getSetting('url_title')) {
-        $description[] = t('The URL title will be used in place of the original text.');
-      }
-      $guides['links']['items'][] = [
-        'title' => t('@ Autolinker'),
-        'description' => $description,
-        'tags' => [
-          'a' => [
-            '#3060',
-            '#2562913',
-            '#259843',
-          ],
-        ],
-      ];
-    }
   }
 
   /**

@@ -27,18 +27,6 @@ abstract class BaseExtensibleParser extends BaseParser implements ExtensiblePars
   /**
    * {@inheritdoc}
    */
-  public function alterGuidelines(array &$guides = []) {
-    // Allow enabled extensions to alter existing guides.
-    foreach ($this->extensions() as $plugin_id => $extension) {
-      if ($extension instanceof MarkdownGuidelinesAlterInterface) {
-        $extension->alterGuidelines($guides);
-      }
-    }
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function getBundledExtensionIds() {
     return isset($this->pluginDefinition['bundledExtensions']) ? $this->pluginDefinition['bundledExtensions'] : [];
   }
@@ -83,22 +71,6 @@ abstract class BaseExtensibleParser extends BaseParser implements ExtensiblePars
     }
 
     return $configuration;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getGuidelines() {
-    $guides = parent::getGuidelines();
-
-    // Allow enabled extensions to provide their own guides.
-    foreach ($this->extensions() as $plugin_id => $extension) {
-      if ($extension instanceof MarkdownGuidelinesInterface && ($element = $extension->getGuidelines())) {
-        $guides['extensions'][$plugin_id] = $element;
-      }
-    }
-
-    return $guides;
   }
 
   /**

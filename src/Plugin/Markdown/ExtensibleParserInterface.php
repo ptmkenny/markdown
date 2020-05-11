@@ -7,7 +7,7 @@ use Drupal\markdown\BcSupport\ObjectWithPluginCollectionInterface;
 /**
  * Interface MarkdownInterface.
  */
-interface ExtensibleParserInterface extends ParserInterface, MarkdownGuidelinesAlterInterface, ObjectWithPluginCollectionInterface {
+interface ExtensibleParserInterface extends ParserInterface, ObjectWithPluginCollectionInterface {
 
   /**
    * Retrieves a specific extension plugin instance.

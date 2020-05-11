@@ -5,7 +5,6 @@ namespace Drupal\markdown\Plugin\Markdown\CommonMark\Extension;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\PluginFormInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
-use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\SettingsTrait;
 use Drupal\user\Entity\User;
@@ -21,7 +20,7 @@ use League\CommonMark\InlineParserContext;
  *   description = @Translation("Automatically link commonly used references that come after an at character (@) without having to use the link syntax."),
  * )
  */
-class AtAutolinker extends BaseExtension implements InlineParserInterface, MarkdownGuidelinesAlterInterface, SettingsInterface, PluginFormInterface {
+class AtAutolinker extends BaseExtension implements InlineParserInterface, SettingsInterface, PluginFormInterface {
 
   use SettingsTrait;
 
@@ -87,44 +86,6 @@ class AtAutolinker extends BaseExtension implements InlineParserInterface, Markd
    */
   public function settingsKey() {
     return FALSE;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function alterGuidelines(array &$guides = []) {
-    $user = \Drupal::currentUser();
-    if ($user->isAnonymous()) {
-      $user = User::load(1);
-    }
-
-    if ($this->getSetting('type') === 'user') {
-      $description = [$this->t('Text that starts with an at symbol (@) followed by any character other than a space will be automatically linked to users on this site.')];
-      if ($this->getSetting('format_username')) {
-        $description[] = $this->t('The formatted user name will be used in place of the text.');
-      }
-      $description[] = $this->t('If the user does not exist, it will not automatically link.');
-      $guides['links']['items'][] = [
-        'title' => $this->t('@ Autolinker'),
-        'description' => $description,
-        'tags' => [
-          'a' => '@' . $user->getAccountName(),
-        ],
-      ];
-    }
-    elseif ($this->getSetting('type') === 'url') {
-      $guides['links']['items'][] = [
-        'title' => $this->t('@ Autolinker'),
-        'description' => $this->t('Text that starts with an at symbol (@) followed by any character other than a space will automatically be linked to the following URL: <code>@url</code>', [
-          '@url' => $this->getSetting('url'),
-        ]),
-        'tags' => [
-          'a' => [
-            '@dries',
-          ],
-        ],
-      ];
-    }
   }
 
   /**

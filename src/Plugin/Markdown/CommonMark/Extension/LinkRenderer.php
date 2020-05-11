@@ -8,7 +8,6 @@ use Drupal\Core\Plugin\PluginFormInterface;
 use Drupal\Core\Url;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\CommonMark\RendererInterface;
-use Drupal\markdown\Plugin\Markdown\MarkdownGuidelinesAlterInterface;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\SettingsTrait;
 use League\CommonMark\ElementRendererInterface;
@@ -25,7 +24,7 @@ use League\CommonMark\Inline\Renderer\InlineRendererInterface;
  *   description = @Translation("Extends CommonMark to provide additional enhancements when rendering links."),
  * )
  */
-class LinkRenderer extends BaseExtension implements RendererInterface, InlineRendererInterface, MarkdownGuidelinesAlterInterface, SettingsInterface, PluginFormInterface {
+class LinkRenderer extends BaseExtension implements RendererInterface, InlineRendererInterface, SettingsInterface, PluginFormInterface {
 
   use SettingsTrait;
 
@@ -103,70 +102,6 @@ class LinkRenderer extends BaseExtension implements RendererInterface, InlineRen
    */
   public function settingsKey() {
     return FALSE;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function alterGuidelines(array &$guides = []) {
-    if (!isset($guides['links']['items'][0]['description'])) {
-      $guides['links']['items'][0]['description'] = [];
-    }
-    elseif (isset($guides['links']['items'][0]['description']) && !is_array($guides['links']['items'][0]['description'])) {
-      $guides['links']['items'][0]['description'] = [$guides['links']['items'][0]['description']];
-    }
-
-    if ($this->getSetting('external_new_window')) {
-      $guides['links']['items'][0]['description'][] = '<p>' . $this->t('All external links will open in a new window or tab.') . '</p>';
-      $guides['links']['items'][0]['tags']['a'][] = '[' . $this->t('External link opens in new window') . '](http://example.com)';
-    }
-    else {
-      $guides['links']['items'][0]['tags']['a'][] = '[' . $this->t('External link') . '](http://example.com)';
-    }
-
-    if ($this->getSetting('no_follow') === 'all') {
-      $guides['links']['items'][0]['description'][] = '<p>' . $this->t('All links will have the <code>rel="nofollow"</code> attribute applied to it.') . '</p>';
-    }
-    elseif ($this->getSetting('no_follow') === 'external') {
-      $guides['links']['items'][0]['description'][] = '<p>' . $this->t('All external links will have the <code>rel="nofollow"</code> attribute applied to it.') . '</p>';
-    }
-    elseif ($this->getSetting('no_follow') === 'internal') {
-      $guides['links']['items'][0]['description'][] = '<p>' . $this->t('All internal links will have the <code>rel="nofollow"</code> attribute applied to it.') . '</p>';
-    }
-
-    // Determine the internal whitelist host names.
-    $hosts = preg_split("/\r\n|\n/", $this->getSetting('internal_host_whitelist'), -1, PREG_SPLIT_NO_EMPTY);
-
-    // Ensure that the site's base url host name is always in this whitelist.
-    $base_host = \Drupal::request()->getHost();
-    $key = array_search($base_host, $hosts);
-    if ($key === FALSE) {
-      $hosts[] = $base_host;
-    }
-
-    // Only show this description if there are multiple host names.
-    if (count($hosts) > 1) {
-      foreach ($hosts as &$host) {
-        $host = '<code>' . Html::escape($host) . '</code>';
-      }
-      $guides['links']['items'][0]['description'][] = '<p>' . $this->t('Links with the following URL host names will be treated as "internal" links: !hosts.', ['!hosts' => implode(', ', $hosts)]) . '</p>';
-    }
-
-    $base_url = Url::fromRoute('<front>', [], ['absolute' => TRUE])->toString();
-    $site_name = \Drupal::config('system.site')->get('name');
-
-    $guides['links']['items'][] = [
-      'title' => $this->t('Manual links (using raw HTML)'),
-      'description' => $this->t('The above examples are only for links using the Markdown syntax. Manually defined links using raw HTML are always processed "as is". You will be responsible for adding all attributes and values. Suffice it to say, it is always best to avoid using raw HTML and instead use the Markdown syntax whenever possible.'),
-      'tags' => [
-        'a' => [
-          "<a href=\"$base_url\">$site_name</a>",
-          "<a href=\"http://example.com\">External link</a>",
-          "<a href=\"$base_url\" target=\"_blank\" rel=\"nofollow\">$site_name</a>",
-          "<a href=\"http://example.com\" target=\"_blank\" rel=\"nofollow\">External link</a>",
-        ],
-      ],
-    ];
   }
 
   /**
