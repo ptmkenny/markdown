@@ -1,8 +1,0 @@
-name: 'Markdown Benchmark'
-type: module
-description: 'Provides benchmark functionality to compare markdown parsing and rendering times.'
-package: 'Markdown'
-core: 8.x
-php: 5.5.9
-dependencies:
-  - markdown:markdown
