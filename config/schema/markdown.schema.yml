@@ -209,16 +209,24 @@ markdown_extension_settings.hash_autolinker:
     url_title:
       type: boolean
 
-markdown_extension_settings.enhanced_links:
+markdown_extension_settings.league/commonmark-ext-external-links:
   type: markdown_extension_settings
   label: 'Enhanced Links'
   mapping:
-    internal_host_whitelist:
+    html_class:
       type: string
-    external_new_window:
+    internal_hosts:
+      type: sequence
+      sequence:
+        type: string
+    nofollow:
+      type: string
+    noopener:
+      type: string
+    noreferrer:
+      type: string
+    open_in_new_window:
       type: boolean
-    no_follow:
-      type: string
 
 markdown_extension_settings.league/commonmark-ext-heading-permalink:
   type: markdown_extension_settings

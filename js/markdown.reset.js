@@ -91,7 +91,7 @@
       switch (this.target.nodeName.toLowerCase()) {
         case 'radio':
         case 'select':
-          var option = this.target.querySelector('[value=' + this.defaultValue + ']');
+          var option = this.target.querySelector(this.defaultValue ? '[value=' + this.defaultValue + ']' : '[value]');
           if (option) {
             option.selected = true;
           }
