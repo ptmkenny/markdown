@@ -206,7 +206,11 @@ class MarkdownBenchmark implements \Serializable {
     $ms += $this->diff->h * 3600000;
     $ms += $this->diff->i * 60000;
     $ms += $this->diff->s * 1000;
-    $ms += $this->diff->f * 1000;
+    /* @noinspection PhpElementIsNotAvailableInCurrentPhpVersionInspection */
+    if (isset($this->diff->f)) {
+      /* @noinspection PhpElementIsNotAvailableInCurrentPhpVersionInspection */
+      $ms += $this->diff->f * 1000;
+    }
     return $format ? number_format($ms, 2) : $ms;
   }
 
@@ -289,6 +293,8 @@ class MarkdownBenchmark implements \Serializable {
 
     // Compress and encode the markdown and html output.
     if ($data['gzip']) {
+      /* @noinspection PhpComposerExtensionStubsInspection */
+      // @todo Add PHP extension requirements to definitions and check for it.
       $data['object'] = base64_encode(gzencode($data['object'], 9));
     }
 
@@ -305,6 +311,8 @@ class MarkdownBenchmark implements \Serializable {
     if ($data['gzip']) {
       // Decompress data if PHP has gzip capabilities.
       if (extension_loaded('zlib')) {
+        /* @noinspection PhpComposerExtensionStubsInspection */
+        // @todo Add PHP extension requirements to definitions and check for it.
         $data['object'] = gzdecode(base64_decode($data['object']));
       }
       else {

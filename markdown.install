@@ -8,14 +8,19 @@
 use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Core\Link;
 use Drupal\Core\Render\Markup;
-use Drupal\markdown\MarkdownParserPluginManager;
-use Drupal\markdown\Plugin\Markdown\MarkdownParserInterface;
+use Drupal\markdown\Plugin\Markdown\ParserInterface;
+use Drupal\markdown\PluginManager\ParserManager;
 
 /**
  * Implements hook_requirements().
  *
- * Note: this is currently being ignored in Drush <= 9.7.2.
+ * {@inheritdoc}
+ *
+ * Note: this is currently being ignored in Drush >=9 <=9.7.2.
+ *
  * @see https://github.com/drush-ops/drush/pull/4337
+ * @noinspection PhpInappropriateInheritDocUsageInspection
+ * @noinspection PhpUnused
  */
 function markdown_requirements($phase) {
   $requirements = [];
@@ -42,7 +47,7 @@ function markdown_requirements($phase) {
       $containerNamespaces->offsetSet('Drupal\\markdown', str_replace(\Drupal::root() . '/', '', $src));
     }
 
-    $parserManager = MarkdownParserPluginManager::create();
+    $parserManager = ParserManager::create();
   }
 
   // Reset parser plugin cache.
@@ -57,15 +62,19 @@ function markdown_requirements($phase) {
   // Install.
   if ($phase === 'install') {
     if (!$installed) {
-      $items = array_map(function (MarkdownParserInterface $parser) {
-        $label = $parser->getLabel(FALSE);
-        $url = $parser->getUrl();
-        if (!$url) {
-          return $label;
+      $items = array_map(function (ParserInterface $parser) {
+        $definition = $parser->getPluginDefinition();
+        if (!empty($definition['versionException'])) {
+          $reason = $definition['versionException'];
         }
-        return new FormattableMarkup('@label (@url)', [
-          '@label' => $label,
-          '@url' => $url->toString(),
+        else {
+          $reason = t('Not Installed');
+        }
+        $url = $parser->getUrl();
+        return new FormattableMarkup($url ? '@id - @reason (@url)' : '@id - @reason', [
+          '@id' => $parser->getPluginId(),
+          '@reason' => $reason,
+          '@url' => $url ? $url->toString() : NULL,
         ]);
       }, $parsers);
       if (php_sapi_name() === 'cli') {

@@ -5,13 +5,86 @@
  * Markdown module.
  */
 
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\markdown\Markdown;
+use Drupal\markdown\Util\FilterFormatAwareInterface;
+
+/**
+ * Implements hook_element_info_alter().
+ * @noinspection PhpUnused
+ * @noinspection PhpDocSignatureInspection
+ */
+function markdown_element_info_alter(array &$info) {
+  $info['text_format']['#process'][] = '\\Drupal\\markdown\\Plugin\\Filter\\FilterMarkdown::processTextFormat';
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_load().
+ * @noinspection PhpUnused
+ * @noinspection PhpDocSignatureInspection
+ */
+function markdown_filter_format_load($entities) {
+  // Because core doesn't provide any association between filter formats and
+  // their filters, it must be done here manually when filter format has loaded.
+  /** @var \Drupal\filter\Entity\FilterFormat $format */
+  foreach ($entities as $format) {
+    // Store the current filter format in static cache to prevent recursion.
+    // @see \Drupal\markdown\Plugin\Filter\FilterMarkdown::setConfiguration()
+    $currentFilterFormat = &drupal_static(__FUNCTION__);
+    $currentFilterFormat = $format;
+    /* @var \Drupal\filter\Plugin\FilterInterface  $filter */
+    foreach ($format->filters() as $id => $filter) {
+      if ($filter instanceof FilterFormatAwareInterface) {
+        $configuration = $filter->getConfiguration();
+        $configuration['format'] = $format;
+        $format->setFilterConfig($filter->getPluginId(), $configuration);
+      }
+    }
+  }
+  drupal_static_reset(__FUNCTION__);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ * @noinspection PhpUnused
+ * @noinspection PhpDocSignatureInspection
+ * @noinspection PhpUnusedParameterInspection
+ */
+function markdown_form_alter(&$form, FormStateInterface $form_state, $formId) {
+  // Ignore non-filter-format forms.
+  if (!in_array($formId, ['filter_format_add_form', 'filter_format_edit_form'], TRUE)) {
+    return;
+  }
+
+  static $compatibleFilters;
+  if (!isset($compatibleFilters)) {
+    /** @var \Drupal\filter\FilterPluginManager $filterManager */
+    $filterManager = \Drupal::service('plugin.manager.filter');
+    $compatibleFilters = array_fill_keys(array_keys($filterManager->getDefinitions()), TRUE);
+    \Drupal::moduleHandler()->alter('markdown_compatible_filters', $compatibleFilters);
+    $compatibleFilters = array_keys(array_filter($compatibleFilters));
+  }
+  foreach (Element::children($form['filters']['status']) as $name) {
+    if (!in_array($name, $compatibleFilters, TRUE)) {
+      $form['filters']['status']['markdown']['#states']['enabled']['[name="filters[' . $name . '][status]"]'] = ['checked' => FALSE];
+      $form['filters']['status'][$name]['#states']['enabled']['[name="filters[markdown][status]"]'] = ['checked' => FALSE];
+      if (!isset($form['filters']['status'][$name]['#description'])) {
+        $form['filters']['status'][$name]['#description'] = '';
+      }
+      $form['filters']['status'][$name]['#description'] .= t('Note: not compatible with the Markdown filter.');
+    }
+  }
+}
 
 /**
  * Implements hook_help().
  *
- * {@inheritdoc}
+ * @noinspection PhpUnused
+ * @noinspection PhpDocSignatureInspection
+ * @noinspection PhpUnusedParameterInspection
+ * @noinspection PhpInconsistentReturnPointsInspection
  */
 function markdown_help($route_name, RouteMatchInterface $route_match) {
   switch ($route_name) {
@@ -21,9 +94,36 @@ function markdown_help($route_name, RouteMatchInterface $route_match) {
 }
 
 /**
+ * Implements hook_markdown_compatible_filters_alter().
+ * @noinspection PhpUnused
+ * @noinspection PhpDocSignatureInspection
+ */
+function markdown_markdown_compatible_filters_alter(array &$compatibleFilters) {
+  $compatibleFilters['filter_autop'] = FALSE;
+  $compatibleFilters['filter_html'] = FALSE;
+  $compatibleFilters['filter_htmlcorrector'] = FALSE;
+  $compatibleFilters['filter_html_escape'] = FALSE;
+  $compatibleFilters['filter_url'] = FALSE;
+}
+
+/**
+ * Implements hook_migration_plugins_alter().
+ * @noinspection PhpUnused
+ * @noinspection PhpDocSignatureInspection
+ */
+function markdown_migration_plugins_alter(array &$migrations) {
+  if (isset($migrations['d7_filter_format'])) {
+    $migration = &$migrations['d7_filter_format'];
+
+    // Add mapping from filter_markdown to markdown for D7 migrations.
+    $migration['process']['filters']['process']['id']['map']['filter_markdown'] = 'markdown';
+  }
+}
+
+/**
  * Implements hook_modules_installed().
- *
- * {@inheritdoc}
+ * @noinspection PhpUnused
+ * @noinspection PhpDocSignatureInspection
  */
 function markdown_modules_installed($modules) {
   // Immediately return if not installing the markdown module.
@@ -32,7 +132,7 @@ function markdown_modules_installed($modules) {
   }
 
   // Save the first found parser as the default global parser.
-  /** @var \Drupal\markdown\MarkdownParserPluginManagerInterface $parserManager */
+  /** @var \Drupal\markdown\PluginManager\ParserManagerInterface $parserManager */
   $parserManager = \Drupal::service('plugin.manager.markdown.parser');
   if ($parser = current(array_keys($parserManager->installedDefinitions()))) {
     \Drupal::configFactory()->getEditable('markdown.settings')->set('parser.id', $parser)->save();

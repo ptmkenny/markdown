@@ -1,14 +1,62 @@
 (function ($, Drupal) {
-  Drupal.behaviors.markdownSummary = {
-    attach: function attach(context, settings) {
-      var $context = $(context);
-      var $wrapper = $context.find('[data-markdown-element="wrapper"]');
 
+  Drupal.behaviors.markdownSummary = {
+    attach: function attach(context) {
+      var $context = $(context);
+
+      // @todo Extract input history/dependents into its own library.
+      var savePreviousInput = function (input) {
+        var change = false;
+        var $input = $(input);
+        if ($input.is('[type="checkbox"]')) {
+          if ($input.data('originalChecked') === void 0) {
+            $input.data('originalChecked', $input.prop('checked'));
+            change = true;
+          }
+        }
+        else if ($input.data('originalValue') === void 0) {
+          $input.data('originalValue', $input.val());
+          change = true;
+        }
+        if ($input.data('originalDisabled') === void 0) {
+          $input.data('originalDisabled', $input.prop('disabled'));
+          change = true;
+        }
+        if (change) {
+          $input.trigger('change');
+        }
+      }
+
+      var restorePreviousInput = function (input) {
+        var change = false;
+        var $input = $(input);
+        if ($input.is('[type="checkbox"]') && $input.data('originalChecked') !== void 0) {
+          $input.prop('checked', $input.data('originalChecked'));
+          $input.removeData('originalChecked');
+          change = true;
+        }
+        else if ($input.data('originalValue') !== void 0) {
+          $input.val('checked', $input.data('originalValue'));
+          $input.removeData('originalValue');
+          change = true;
+        }
+        if ($input.data('originalDisabled') !== void 0) {
+          $input.prop('disabled', $input.data('originalDisabled'))
+          $input.removeData('originalDisabled');
+          change = true;
+        }
+        if (change) {
+          $input.trigger('change');
+        }
+      }
+
+      var $wrapper = $context.find('[data-markdown-element="wrapper"]');
       $wrapper.once('markdown-summary').each(function () {
-        var $inputs = $(this).find(':input[data-markdown-element]');
+        // Vertical tab summaries.
+        var $inputs = $(this).find(':input[data-markdown-summary]');
         $inputs.each(function () {
           var $input = $(this);
-          var elementType = $input.data('markdownElement');
+          var summaryType = $input.data('markdownSummary');
           var $item = $input.closest('.js-vertical-tabs-pane,.vertical-tabs__pane');
           var verticalTab = $item.data('verticalTab');
           if (verticalTab) {
@@ -18,9 +66,23 @@
 
             verticalTab.details.drupalSetSummary(function () {
               var summary = [];
-              switch (elementType) {
+              switch (summaryType) {
                 case 'parser':
                   summary.push($input.children(':selected').text())
+                  break;
+
+                case 'render_strategy':
+                  var $selected = $input.children(':selected:first');
+                  var renderStrategy = $selected.text();
+                  if ($selected.val() === 'filter') {
+                    var $allowedHtml = $item.find('[data-markdown-element="allowed_html"]');
+                    var $reset = $item.find('[data-markdown-element="allowed_html_reset"]');
+                    var defaultValue = allowedHtmlDefaultValue($reset);
+                    if (defaultValue && $allowedHtml.val() !== defaultValue) {
+                      renderStrategy += ' (' + Drupal.t('overridden') + ')';
+                    }
+                  }
+                  summary.push(renderStrategy);
                   break;
 
                 case 'extension':
@@ -49,14 +111,21 @@
                       variables['@extensions'] = requiredBy.join(', ');
                       $label.html(Drupal.t('@label (required by: @extensions)', variables))
                       summary.push(Drupal.t('Required by: @extensions', variables));
+                      savePreviousInput($input);
+                      $input.prop('checked', true);
+                      $input.prop('disabled', true);
                     }
                     else if (bundle) {
                       variables['@bundle'] = bundle;
                       $label.html(Drupal.t('@label (required by: @bundle)', variables))
                       summary.push(Drupal.t('Required by: @bundle', variables));
+                      savePreviousInput($input);
+                      $input.prop('checked', true);
+                      $input.prop('disabled', true);
                     }
                     else {
                       $label.html(originalLabel);
+                      restorePreviousInput($input);
                       summary.push($input.is(':checked') ? Drupal.t('Enabled') : Drupal.t('Disabled'));
                     }
 

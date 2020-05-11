@@ -1,5 +1,5 @@
 markdown.settings:
   title: 'Markdown'
-  description: 'Configure the global Markdown parser and settings.'
+  description: 'Configure the site-wide Markdown parser and settings.'
   route_name: markdown.settings
   parent: system.admin_config_content

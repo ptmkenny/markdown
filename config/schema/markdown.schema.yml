@@ -8,6 +8,10 @@ markdown.settings:
     parser:
       type: markdown_parser
 
+# Filter settings.
+filter_settings.markdown:
+  type: markdown.settings
+
 # Markdown Parser type.
 markdown_parser:
   type: mapping
@@ -16,35 +20,59 @@ markdown_parser:
     id:
       type: string
       label: 'Markdown Parser ID'
+    render_strategy:
+      type: markdown_render_strategy.[%parent.id]
     settings:
       type: markdown_parser_settings.[%parent.id]
     extensions:
       type: sequence
       label: 'Markdown Extensions'
       sequence:
-        type: mapping
-        label: 'Markdown Extension'
-        mapping:
-          id:
-            type: string
-            label: 'Markdown Extension ID'
-          enabled:
-            type: boolean
-            label: 'Markdown Extension Enabled'
-          settings:
-            type: markdown_extension_settings.[%parent.id]
+        type: markdown_extension
+
+# Markdown Extension type.
+markdown_extension:
+  type: mapping
+  label: 'Markdown Extension'
+  mapping:
+    id:
+      type: string
+      label: 'Markdown Extension ID'
+    enabled:
+      type: boolean
+      label: 'Markdown Extension Enabled'
+    settings:
+      type: markdown_extension_settings.[%parent.id]
+
+# Render Strategy.
+markdown_render_strategy:
+  type: mapping
+  mapping:
+    type:
+      type: string
+    allowed_html:
+      type: string
+    plugins:
+      type: sequence
+      sequence:
+        type: string
+
+markdown_render_strategy.*:
+  type: markdown_render_strategy
 
 # Parser settings.
-markdown_parser_settings.*:
+markdown_parser_settings:
   type: mapping
   label: 'Markdown Parser Settings'
   mapping:
-    drupal_allowed_html:
-      type: string
 
+markdown_parser_settings.*:
+  type: markdown_parser_settings
+
+# CommonMark.
 markdown_parser_settings.league/commonmark:
-  type: mapping
-  label: 'CommonMark Parser Settings'
+  type: markdown_parser_settings
+  label: 'CommonMark Settings'
   mapping:
     allow_unsafe_links:
       type: boolean
@@ -66,23 +94,110 @@ markdown_parser_settings.league/commonmark:
         soft_break:
           type: string
     unordered_list_markers:
-      type: string
+      type: sequence
+      sequence:
+        type: string
     use_asterisk:
       type: boolean
     use_underscore:
       type: boolean
 
+# CommonMark GFM.
 markdown_parser_settings.league/commonmark-gfm:
   type: markdown_parser_settings.league/commonmark
-  label: 'CommonMark GFM Parser Settings'
+  label: 'CommonMark GFM Settings'
+
+# Parsedown.
+markdown_parser_settings.erusev/parsedown:
+  type: markdown_parser_settings
+  label: 'Parsedown Settings'
+  mapping:
+    breaks_enabled:
+      type: boolean
+    markup_escaped:
+      type: boolean
+    safe_mode:
+      type: boolean
+    strict_mode:
+      type: boolean
+    urls_linked:
+      type: boolean
+
+# Parsedown Extra.
+markdown_parser_settings.erusev/parsedown-extra:
+  type: markdown_parser_settings.erusev/parsedown
+  label: 'Parsedown Extra Settings'
+
+# PHP Markdown.
+markdown_parser_settings.michelf/php-markdown:
+  type: markdown_parser_settings
+  label: 'PHP Markdown Settings'
+  mapping:
+    empty_element_suffix:
+      type: string
+    enhanced_ordered_list:
+      type: boolean
+    hard_wrap:
+      type: boolean
+    no_entities:
+      type: boolean
+    no_markup:
+      type: boolean
+    predef_titles:
+      type: sequence
+      sequence:
+        type: string
+    predef_urls:
+      type: sequence
+      sequence:
+        type: string
+    tab_width:
+      type: integer
+
+# PHP Markdown Extra.
+markdown_parser_settings.michelf/php-markdown-extra:
+  type: markdown_parser_settings.erusev/parsedown
+  label: 'PHP Markdown Extra Settings'
+  mapping:
+    code_attr_on_pre:
+      type: boolean
+    code_class_prefix:
+      type: string
+    fn_backlink_class:
+      type: string
+    fn_backlink_html:
+      type: string
+    fn_backlink_label:
+      type: string
+    fn_backlink_title:
+      type: string
+    fn_id_prefix:
+      type: string
+    fn_link_class:
+      type: string
+    fn_link_title:
+      type: string
+    hashtag_protection:
+      type: boolean
+    omit_footnotes:
+      type: boolean
+    predef_abbr:
+      type: sequence
+      sequence:
+        type: string
+    table_align_class_tmpl:
+      type: string
 
 # Extension settings.
-markdown_extension_settings.*:
+markdown_extension_settings:
   type: mapping
   label: 'Markdown Extension Settings'
 
+markdown_extension_settings.*:
+  type: markdown_extension_settings
+
 markdown_extension_settings.hash_autolinker:
-  type: mapping
+  type: markdown_extension_settings
   label: 'Hash Autolinker'
   mapping:
     type:
@@ -95,7 +210,7 @@ markdown_extension_settings.hash_autolinker:
       type: boolean
 
 markdown_extension_settings.enhanced_links:
-  type: mapping
+  type: markdown_extension_settings
   label: 'Enhanced Links'
   mapping:
     internal_host_whitelist:
@@ -106,7 +221,7 @@ markdown_extension_settings.enhanced_links:
       type: string
 
 markdown_extension_settings.league/commonmark-ext-heading-permalink:
-  type: mapping
+  type: markdown_extension_settings
   label: 'Heading Permalinks'
   mapping:
     html_class:
@@ -121,7 +236,7 @@ markdown_extension_settings.league/commonmark-ext-heading-permalink:
       type: string
 
 markdown_extension_settings.league/commonmark-ext-toc:
-  type: mapping
+  type: markdown_extension_settings
   label: 'Table Of Contents'
   mapping:
     html_class:
@@ -131,6 +246,8 @@ markdown_extension_settings.league/commonmark-ext-toc:
     min_heading_level:
       type: integer
     normalize:
+      type: string
+    placeholder:
       type: string
     position:
       type: string

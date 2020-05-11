@@ -9,6 +9,9 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
+/**
+ * Markdown Config.
+ */
 class MarkdownConfig extends Config implements ContainerInjectionInterface {
 
   /**
@@ -70,6 +73,7 @@ class MarkdownConfig extends Config implements ContainerInjectionInterface {
    * Retrieves the key prefix, if any.
    *
    * @return string|null
+   *   The key prefix, if set.
    */
   public function getKeyPrefix() {
     return $this->keyPrefix;
@@ -119,7 +123,7 @@ class MarkdownConfig extends Config implements ContainerInjectionInterface {
    *
    * @return static
    */
-  public function setKeyPrefix(string $keyPrefix) {
+  public function setKeyPrefix($keyPrefix) {
     $this->keyPrefix = rtrim($keyPrefix, '.');
     return $this;
   }

@@ -3,16 +3,23 @@
 namespace Drupal\markdown;
 
 use Drupal\Component\Utility\Crypt;
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
+use Drupal\markdown\Config\ImmutableMarkdownConfig;
 use Drupal\markdown\Exception\MarkdownFileNotExistsException;
 use Drupal\markdown\Exception\MarkdownUrlNotExistsException;
+use Drupal\markdown\PluginManager\ParserManagerInterface;
+use Drupal\markdown\Render\ParsedMarkdownInterface;
 use GuzzleHttp\ClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
+/**
+ * Markdown service.
+ */
 class Markdown implements MarkdownInterface {
 
   use StringTranslationTrait;
@@ -41,14 +48,14 @@ class Markdown implements MarkdownInterface {
   /**
    * The MarkdownParser Plugin Manager.
    *
-   * @var \Drupal\markdown\MarkdownParserPluginManagerInterface
+   * @var \Drupal\markdown\PluginManager\ParserManagerInterface
    */
   protected $parserManager;
 
   /**
    * The global Markdown config settings.
    *
-   * @var \Drupal\markdown\Config\ImmutableMarkdownSettings
+   * @var \Drupal\markdown\Config\ImmutableMarkdownConfig
    */
   protected $settings;
 
@@ -61,12 +68,12 @@ class Markdown implements MarkdownInterface {
    *   The File System service.
    * @param \GuzzleHttp\ClientInterface $httpClient
    *   The HTTP Client service.
-   * @param \Drupal\markdown\MarkdownParserPluginManagerInterface $parserManager
+   * @param \Drupal\markdown\PluginManager\ParserManagerInterface $parserManager
    *   The Markdown Parser Plugin Manager service.
-   * @param \Drupal\markdown\MarkdownSettingsInterface $settings
+   * @param \Drupal\markdown\Config\ImmutableMarkdownConfig $settings
    *   The Markdown Settings.
    */
-  public function __construct(CacheBackendInterface $cache, FileSystemInterface $fileSystem, ClientInterface $httpClient, MarkdownParserPluginManagerInterface $parserManager, MarkdownSettingsInterface $settings) {
+  public function __construct(CacheBackendInterface $cache, FileSystemInterface $fileSystem, ClientInterface $httpClient, ParserManagerInterface $parserManager, ImmutableMarkdownConfig $settings) {
     $this->cache = $cache;
     $this->fileSystem = $fileSystem;
     $this->httpClient = $httpClient;
@@ -157,7 +164,8 @@ class Markdown implements MarkdownInterface {
     if ($parserId !== NULL) {
       return $this->parserManager->createInstance($parserId, $configuration);
     }
-    return $this->settings->getParser($configuration);
+    $configuration = NestedArray::mergeDeep($this->settings->get('parser'), $configuration);
+    return $this->parserManager->createInstance(isset($configuration['id']) ? $configuration['id'] : NULL, $configuration);
   }
 
   /**

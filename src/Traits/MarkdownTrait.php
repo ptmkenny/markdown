@@ -2,6 +2,9 @@
 
 namespace Drupal\markdown\Traits;
 
+/**
+ * Trait for adding the Markdown service to classes.
+ */
 trait MarkdownTrait {
 
   /**

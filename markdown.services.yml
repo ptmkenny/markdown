@@ -11,20 +11,35 @@ services:
     arguments: ['@cache.markdown', '@file_system', '@http_client', '@plugin.manager.markdown.parser', '@markdown.settings']
 
   markdown.settings:
-    class: Drupal\markdown\Config\ImmutableMarkdownSettings
-    factory: Drupal\markdown\Config\ImmutableMarkdownSettings::load
+    class: Drupal\markdown\Config\ImmutableMarkdownConfig
+    factory: Drupal\markdown\Config\ImmutableMarkdownConfig::load
     arguments: [markdown.settings]
     calls:
       - [setKeyPrefix, ['parser']]
 
-  plugin.manager.markdown.extension:
-    class: Drupal\markdown\MarkdownExtensionPluginManager
+  markdown_plugin_manager:
+    abstract: true
     arguments: ['@container.namespaces', '@cache.discovery', '@module_handler']
     calls:
       - [setContainer, ['@service_container']]
+    tags:
+      - { name: plugin_manager_cache_clear }
+
+  plugin.manager.markdown.extension:
+    parent: markdown_plugin_manager
+    class: Drupal\markdown\PluginManager\ExtensionManager
 
   plugin.manager.markdown.parser:
-    class: Drupal\markdown\MarkdownParserPluginManager
-    arguments: ['@container.namespaces', '@cache.discovery', '@module_handler', '@config.factory']
-    calls:
-      - [setContainer, ['@service_container']]
+    parent: markdown_plugin_manager
+    class: Drupal\markdown\PluginManager\ParserManager
+
+  plugin.manager.markdown.allowed_html:
+    parent: markdown_plugin_manager
+    class: Drupal\markdown\PluginManager\AllowedHtmlManager
+    arguments: ['@plugin.manager.filter', '@theme_handler', '@theme.manager', '@plugin.manager.markdown.parser', '@plugin.manager.markdown.extension']
+
+  twig.extension.markdown:
+    class: Drupal\markdown\Twig\Extension
+    arguments: ['@markdown']
+    tags:
+      - { name: twig.extension }

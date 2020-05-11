@@ -4,6 +4,7 @@ namespace Drupal\markdown;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\markdown\Render\ParsedMarkdownInterface;
 
 /**
  * Interface MarkdownInterface.
@@ -31,7 +32,7 @@ interface MarkdownInterface extends ContainerInjectionInterface {
    * @param \Drupal\Core\Language\LanguageInterface $language
    *   Optional. The language of the markdown that is being parsed.
    *
-   * @return \Drupal\markdown\ParsedMarkdownInterface
+   * @return \Drupal\markdown\Render\ParsedMarkdownInterface
    *   A ParsedMarkdown object.
    *
    * @throws \Drupal\markdown\Exception\MarkdownFileNotExistsException
@@ -51,7 +52,7 @@ interface MarkdownInterface extends ContainerInjectionInterface {
    * @param \Drupal\Core\Language\LanguageInterface $language
    *   Optional. The language of the markdown that is being parsed.
    *
-   * @return \Drupal\markdown\ParsedMarkdownInterface
+   * @return \Drupal\markdown\Render\ParsedMarkdownInterface
    *   A ParsedMarkdown object.
    *
    * @throws \Drupal\markdown\Exception\MarkdownUrlNotExistsException
@@ -66,7 +67,7 @@ interface MarkdownInterface extends ContainerInjectionInterface {
    * @param \Drupal\Core\Language\LanguageInterface $language
    *   Optional. The language of the markdown that is being parsed.
    *
-   * @return \Drupal\markdown\ParsedMarkdownInterface
+   * @return \Drupal\markdown\Render\ParsedMarkdownInterface
    *   A ParsedMarkdown object.
    */
   public function parse($markdown, LanguageInterface $language = NULL);
@@ -80,7 +81,7 @@ interface MarkdownInterface extends ContainerInjectionInterface {
    * @param array $configuration
    *   An array of configuration relevant to the plugin instance.
    *
-   * @return \Drupal\markdown\Plugin\Markdown\MarkdownParserInterface
+   * @return \Drupal\markdown\Plugin\Markdown\ParserInterface
    *   A MarkdownParser plugin.
    */
   public function getParser($parserId = NULL, array $configuration = []);
@@ -90,10 +91,10 @@ interface MarkdownInterface extends ContainerInjectionInterface {
    *
    * @param string $id
    *   The identifier to use when saving the parsed markdown object.
-   * @param \Drupal\markdown\ParsedMarkdownInterface $parsed
+   * @param \Drupal\markdown\Render\ParsedMarkdownInterface $parsed
    *   The parsed markdown object to save.
    *
-   * @return \Drupal\markdown\ParsedMarkdownInterface
+   * @return \Drupal\markdown\Render\ParsedMarkdownInterface
    *   The passed parsed markdown.
    */
   public function save($id, ParsedMarkdownInterface $parsed);

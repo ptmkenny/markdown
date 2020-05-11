@@ -3,7 +3,7 @@
 namespace Drupal\markdown_benchmark;
 
 use Drupal\Core\Language\LanguageInterface;
-use Drupal\markdown\ParsedMarkdown;
+use Drupal\markdown\Render\ParsedMarkdown;
 
 trait MarkdownParserBenchmarkTrait {
 
@@ -87,7 +87,7 @@ trait MarkdownParserBenchmarkTrait {
   /**
    * {@inheritdoc}
    *
-   * @return \Drupal\markdown\ParsedMarkdownInterface
+   * @return \Drupal\markdown\Render\ParsedMarkdownInterface
    */
   public function parse($markdown, LanguageInterface $language = NULL) {
     return ParsedMarkdown::create($markdown, static::$benchmark ?: $this->convertToHtml($markdown, $language), $language);

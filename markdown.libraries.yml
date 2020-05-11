@@ -1,4 +1,14 @@
-markdown.admin:
+util:
+  js:
+    js/markdown.util.js: {}
+  dependencies:
+    - core/drupal
+reset:
+  js:
+    js/markdown.reset.js: {}
+  dependencies:
+    - markdown/util
+admin:
   js:
     js/markdown.admin.js: {}
   dependencies:

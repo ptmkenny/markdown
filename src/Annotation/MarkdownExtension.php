@@ -3,6 +3,8 @@
 namespace Drupal\markdown\Annotation;
 
 /**
+ * Markdown Extension Annotation.
+ *
  * @Annotation
  *
  * @Attributes({

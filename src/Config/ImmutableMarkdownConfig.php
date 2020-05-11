@@ -4,6 +4,9 @@ namespace Drupal\markdown\Config;
 
 use Drupal\Core\Config\ImmutableConfigException;
 
+/**
+ * Immutable Markdown Config.
+ */
 class ImmutableMarkdownConfig extends MarkdownConfig {
 
   /**

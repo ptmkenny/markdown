@@ -4,6 +4,9 @@ namespace Drupal\markdown\Annotation;
 
 use Drupal\Component\Annotation\Plugin;
 
+/**
+ * Base Markdown Plugin Annotation.
+ */
 abstract class BaseMarkdownAnnotation extends Plugin {
 
   /**
@@ -30,7 +33,8 @@ abstract class BaseMarkdownAnnotation extends Plugin {
   /**
    * Flag indicating whether plugin is installed.
    *
-   * @var boolean
+   * @var bool|string
+   *   TRUE or FALSE
    */
   protected $installed;
 
@@ -47,6 +51,13 @@ abstract class BaseMarkdownAnnotation extends Plugin {
    * @var string
    */
   protected $version;
+
+  /**
+   * The constraint for which the provided version must satisfy.
+   *
+   * @var string
+   */
+  protected $versionConstraint;
 
   /**
    * The weight of the plugin.
