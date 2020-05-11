@@ -117,18 +117,4 @@ class HeadingPermalinkExtension extends BaseExtension implements EnvironmentAwar
     return $element;
   }
 
-  /**
-   * {@inheritdoc}
-   */
-  public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    // Intentionally do nothing. This is just required to be implemented.
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function validateConfigurationForm(array &$form, FormStateInterface $form_state) {
-    // Intentionally do nothing. This is just required to be implemented.
-  }
-
 }

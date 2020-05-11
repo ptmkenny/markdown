@@ -70,20 +70,6 @@ class AtAutolinker extends BaseExtension implements InlineParserInterface, Setti
   /**
    * {@inheritdoc}
    */
-  public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    // Intentionally do nothing. This is just required to be implemented.
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function validateConfigurationForm(array &$form, FormStateInterface $form_state) {
-    // Intentionally do nothing. This is just required to be implemented.
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function settingsKey() {
     return FALSE;
   }

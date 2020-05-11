@@ -243,6 +243,19 @@ markdown_extension_settings.league/commonmark-ext-heading-permalink:
     title:
       type: string
 
+markdown_extension_settings.league/commonmark-ext-smart-punctuation:
+  type: markdown_extension_settings
+  label: 'Smart Punctuation'
+  mapping:
+    double_quote_opener:
+      type: string
+    double_quote_closer:
+      type: string
+    single_quote_opener:
+      type: string
+    single_quote_closer:
+      type: string
+
 markdown_extension_settings.league/commonmark-ext-toc:
   type: markdown_extension_settings
   label: 'Table Of Contents'
@@ -261,5 +274,3 @@ markdown_extension_settings.league/commonmark-ext-toc:
       type: string
     style:
       type: string
-
-# @todo finish adding the rest of the settings for the other parsers
