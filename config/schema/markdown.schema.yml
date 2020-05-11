@@ -196,18 +196,32 @@ markdown_extension_settings:
 markdown_extension_settings.*:
   type: markdown_extension_settings
 
-markdown_extension_settings.hash_autolinker:
-  type: markdown_extension_settings
-  label: 'Hash Autolinker'
+league/commonmark-ext-autolink_inline_mention:
+  type: mapping
   mapping:
-    type:
+    map:
       type: string
-    node_title:
+    entity_type_id:
+      type: string
+    entity_label:
+      type: boolean
+    keep_symbol:
       type: boolean
     url:
       type: string
     url_title:
       type: boolean
+    url_title_levels:
+      type: integer
+
+markdown_extension_settings.league/commonmark-ext-autolink:
+  type: markdown_extension_settings
+  label: 'Autolink'
+  mapping:
+    at:
+      type: league/commonmark-ext-autolink_inline_mention
+    hash:
+      type: league/commonmark-ext-autolink_inline_mention
 
 markdown_extension_settings.league/commonmark-ext-external-links:
   type: markdown_extension_settings
