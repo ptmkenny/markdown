@@ -19,6 +19,7 @@ use League\CommonMark\Environment;
  *     "\Drupal\markdown\Plugin\Markdown\CommonMark\ExtensionInterface",
  *   },
  *   bundledExtensions = {
+ *     "league/commonmark-ext-autolink",
  *     "league/commonmark-ext-disallowed-raw-html",
  *     "league/commonmark-ext-strikethrough",
  *     "league/commonmark-ext-table",
