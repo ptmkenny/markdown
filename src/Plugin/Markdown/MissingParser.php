@@ -26,7 +26,7 @@ class MissingParser extends PluginBase implements ParserInterface {
    * {@inheritdoc}
    */
   public function getAllowedHtml() {
-    return $this->config()->get('render_strategy.allowed_html') ?: FilterHtml::ALLOWED_HTML;
+    return $this->config()->get('render_strategy.allowed_html');
   }
 
   /**

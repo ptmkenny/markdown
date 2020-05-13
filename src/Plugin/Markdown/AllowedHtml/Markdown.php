@@ -21,8 +21,8 @@ class Markdown extends PluginBase implements AllowedHtmlInterface {
    * {@inheritdoc}
    */
   public function allowedHtmlTags(ParserInterface $parser, ActiveTheme $activeTheme = NULL) {
-    // @see https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes
     return [
+      // @see https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes
       '*' => [
         'aria*' => TRUE,
         'class' => TRUE,
@@ -31,6 +31,49 @@ class Markdown extends PluginBase implements AllowedHtmlInterface {
         'name' => TRUE,
         'tabindex' => TRUE,
         'title' => TRUE,
+      ],
+      'a' => [
+        'href' => TRUE,
+        'hreflang' => TRUE,
+      ],
+      'abbr' => [],
+      'blockquote' => [
+        'cite' => TRUE,
+      ],
+      'b' => [],
+      'br' => [],
+      'cite' => [],
+      'code' => [],
+      'div' => [],
+      'em' => [],
+      'h2' => [],
+      'h3' => [],
+      'h4' => [],
+      'h5' => [],
+      'h6' => [],
+      'hr' => [],
+      'i' => [],
+      'img' => [
+        'alt' => TRUE,
+        'height' => TRUE,
+        'src' => TRUE,
+        'width' => TRUE,
+      ],
+      'li' => [],
+      'ol' => [
+        'start' => TRUE,
+        'type' => [
+          '1' => TRUE,
+          'A' => TRUE,
+          'I' => TRUE,
+        ],
+      ],
+      'p' => [],
+      'pre' => [],
+      'span' => [],
+      'strong' => [],
+      'ul' => [
+        'type' => TRUE,
       ],
     ];
   }

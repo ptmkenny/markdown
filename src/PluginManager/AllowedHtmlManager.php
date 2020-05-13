@@ -136,8 +136,7 @@ class AllowedHtmlManager extends BasePluginManager {
       // Filter group definitions based on enabled status of the parser when
       // an active theme has been provided.
       if ($activeTheme) {
-        $enabled = $parser->getAllowedHtmlPlugins();
-        $groupDefinitions = array_intersect_key($groupDefinitions, array_flip($enabled));
+        $groupDefinitions = array_intersect_key($groupDefinitions, array_filter($parser->getAllowedHtmlPlugins()));
       }
 
       switch ($group) {

@@ -55,7 +55,7 @@ markdown_render_strategy:
     plugins:
       type: sequence
       sequence:
-        type: string
+        type: boolean
 
 markdown_render_strategy.*:
   type: markdown_render_strategy

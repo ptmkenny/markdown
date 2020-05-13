@@ -18,13 +18,6 @@ class FilterHtml extends CoreFilterHtml implements ParserAwareInterface {
   use ParserAwareTrait;
 
   /**
-   * Default list of allowed HTML.
-   *
-   * @var string
-   */
-  const ALLOWED_HTML = "<a href hreflang> <abbr> <blockquote cite> <br> <cite> <code> <div> <em> <h2> <h3> <h4> <h5> <h6> <hr> <img alt height src width> <li> <ol start type='1 A I'> <p> <pre> <span> <strong> <ul type>";
-
-  /**
    * The placeholder value used to protect asterisks in values.
    *
    * @var string
@@ -39,7 +32,7 @@ class FilterHtml extends CoreFilterHtml implements ParserAwareInterface {
    *
    * @return static
    */
-  public static function create($allowedHtml = self::ALLOWED_HTML) {
+  public static function create($allowedHtml = '') {
     return new static([
       'settings' => [
         'allowed_html' => $allowedHtml,
@@ -58,7 +51,7 @@ class FilterHtml extends CoreFilterHtml implements ParserAwareInterface {
    * @return static
    */
   public static function fromParser(ParserInterface $parser) {
-    return static::create($parser->getSetting('drupal_allowed_html', FilterHtml::ALLOWED_HTML))->setParser($parser);
+    return static::create($parser->getAllowedHtml())->setParser($parser);
   }
 
   /**
@@ -314,9 +307,6 @@ class FilterHtml extends CoreFilterHtml implements ParserAwareInterface {
     $originalGlobalAttributes = $restrictions['allowed']['*'];
     unset($restrictions['allowed']['*']);
 
-    // Normalize the allowed tags.
-    $normalizedTags = static::normalizeTags($restrictions['allowed']);
-
     // Determine if any user global attributes where provided (from a filter).
     $addedGlobalAttributes = [];
     if (isset($restrictions['allowed'][static::ASTERISK_PLACEHOLDER])) {
@@ -325,6 +315,10 @@ class FilterHtml extends CoreFilterHtml implements ParserAwareInterface {
       unset($restrictions['allowed'][static::ASTERISK_PLACEHOLDER]);
     }
 
+    // Normalize the allowed tags.
+    $normalizedTags = static::normalizeTags($restrictions['allowed']);
+
+    // Merge in plugins allowed HTML tags.
     foreach ($allowedHtmlPlugins as $plugin_id => $allowedHtml) {
       // Retrieve the plugin's allowed HTML tags.
       $tags = $allowedHtml->allowedHtmlTags($parser, $activeTheme);

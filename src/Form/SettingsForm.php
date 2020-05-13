@@ -26,6 +26,7 @@ use Drupal\markdown\PluginManager\ParserManagerInterface;
 use Drupal\markdown\Traits\FilterAwareTrait;
 use Drupal\markdown\Traits\FormTrait;
 use Drupal\markdown\Util\FilterAwareInterface;
+use Drupal\markdown\Util\FilterFormatAwareInterface;
 use Drupal\markdown\Util\FilterHtml;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -566,26 +567,14 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
       ],
     ];
 
-    $renderStrategySubform['allowed_html'] = [
-      '#weight' => -10,
-      '#type' => 'textarea',
-      '#title' => $this->t('Allowed HTML'),
-      '#description' => $this->t('A list of HTML tags that can be used. If a tag has not specified any attributes, then no attributes will be allowed on that tag; each HTML tag must explicitly specify its allowed attributes. You can also specify a global HTML tag above using an asterisk as the tag name (<code>&lt;*&gt;</code>) to provide additional global attributes; use cautiously. Each attribute may allow all values, or only allow specific values. Attribute names or values may be written as a prefix and wildcard like <em>jump-*</em>. JavaScript event attributes, JavaScript URLs, and CSS are always stripped.'),
-      '#default_value' => $renderStrategySubformState->getValue('allowed_html', $parser->getAllowedHtml()),
-      '#attributes' => [
-        'data-markdown-element' => 'allowed_html',
-      ],
-    ];
-    FormTrait::resetToDefault($renderStrategySubform['allowed_html'], 'allowed_html', FilterHtml::ALLOWED_HTML, $renderStrategySubformState);
-    $renderStrategySubformState->addElementState($renderStrategySubform['allowed_html'], 'visible', 'type', ['value' => RenderStrategyInterface::FILTER_OUTPUT]);
-
     // Build allowed HTML plugins.
     $renderStrategySubform['plugins'] = [
+      '#weight' => -10,
       '#type' => 'item',
       '#input' => FALSE,
-      '#title' => $this->t('Allowed HTML Plugins'),
+      '#title' => $this->t('Allowed HTML'),
       '#description_display' => 'before',
-      '#description' => $this->t('The following are registered plugins that allow additional HTML based on your current site configuration. It is likely that these are required to ensure continued functionality with various filters/extensions.'),
+      '#description' => $this->t('The following are registered <code>@MarkdownAllowedHtml</code> plugins provided by various filters, modules, themes, parser and their extensions (if supported) that allow additional HTML tags and attributes based on your current site configuration.<br><br>The goal here is to start of with a small list and and only allow HTML tags or attributes when they are actually needed.<br><br>It is likely that these are required to ensure continued functionality with various supported features, however you may turn them off if you feel they represent a security risk.<br><br>Each plugin displays the list of HTML tags that are allowed to be used. If a tag has not specified any attributes, then only the tag may be used and any attributes encountered will be stripped; each HTML tag must explicitly specify its allowed attributes. It may also specify a global HTML tag using an asterisk as the tag name (<code>&lt;*&gt;</code>) to provide additional global attributes. This means that these attributes will work on any tag and do not need to be specified explicitly for other tags.<br><br>If an attribute is by itself, then all values are allowed. If it specifies a space delimited list of values, then only those values are allowed. Attribute names or values may also be written as a prefix and wildcard like <code>jump-*</code>.<br><br>JavaScript event attributes (<code>on*</code>), JavaScript URLs (<code>javascript://</code>),and the CSS attributes (<code>style</code>) are always stripped.'),
     ];
     $renderStrategySubformState->addElementState($renderStrategySubform['plugins'], 'visible', 'type', ['value' => RenderStrategyInterface::FILTER_OUTPUT]);
 
@@ -602,19 +591,69 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
           '#title' => $this->t(ucfirst($type) . 's'), //phpcs:ignore
           '#parents' => $renderStrategySubformState->createParents(['plugins']),
         ];
+        if ($type === 'module') {
+          $renderStrategySubform['plugins'][$type]['#weight'] = -10;
+        }
+        if ($type === 'filter') {
+          $renderStrategySubform['plugins'][$type]['#weight'] = -9;
+          $renderStrategySubform['plugins'][$type]['#description'] = $this->t('NOTE: these will only be applied when the filter it represents is actually enabled.');
+          $renderStrategySubform['plugins'][$type]['#description_display'] = 'before';
+        }
+        if ($type === 'parser') {
+          $renderStrategySubform['plugins'][$type]['#weight'] = -8;
+        }
+        if ($type === 'extension') {
+          $renderStrategySubform['plugins'][$type]['#weight'] = -7;
+          $renderStrategySubform['plugins'][$type]['#title'] = $this->t('Parser Extensions');
+          $renderStrategySubform['plugins'][$type]['#description'] = $this->t('NOTE: these will only be applied when the parser extension it represents is actually enabled.');
+          $renderStrategySubform['plugins'][$type]['#description_display'] = 'before';
+        }
         if ($type === 'theme') {
+          $renderStrategySubform['plugins'][$type]['#weight'] = -6;
           $renderStrategySubform['plugins'][$type]['#description'] = $this->t('NOTE: these will only be applied when the theme that provides the plugin is the active theme or is a descendant of the active theme.');
           $renderStrategySubform['plugins'][$type]['#description_display'] = 'before';
         }
       }
       $allowedHtmlTags = $allowedHtml->allowedHtmlTags($parser);
+      $allowedHtmlPlugins = $parser->getAllowedHtmlPlugins();
+
+      // Determine the default value.
+      $defaultValue = NULL;
+      if ($allowedHtmlTags) {
+        // Form value.
+        $defaultValue = $renderStrategySubformState->getValue(['plugins', $plugin_id]);
+        // Setting value.
+        if (!isset($defaultValue) && isset($allowedHtmlPlugins[$plugin_id])) {
+          $defaultValue = $allowedHtmlPlugins[$plugin_id];
+        }
+        if (!isset($defaultValue)) {
+          if ($type === 'filter' && ($filter = $this->getFilter()) && $filter instanceof FilterFormatAwareInterface && ($format = $filter->getFilterFormat())) {
+            $definition = $allowedHtml->getPluginDefinition();
+            $filterId = isset($definition['requiresFilter']) ? $definition['requiresFilter'] : $plugin_id;
+            $defaultValue = $format->filters()->has($filterId) ? !!$format->filters($filterId)->status : FALSE;
+          }
+          elseif ($type === 'extension' && $parser instanceof ExtensibleParserInterface && ($parser->extensions()->has($plugin_id))) {
+            $defaultValue = $parser->extension($plugin_id)->isEnabled();
+          }
+          else {
+            $defaultValue = TRUE;
+          }
+        }
+      }
+
       $renderStrategySubform['plugins'][$type][$plugin_id] = [
         '#type' => 'checkbox',
         '#title' => $label,
         '#disabled' => !$allowedHtmlTags,
         '#description' => Markup::create(sprintf('%s<pre><code>%s</code></pre>', $description, $allowedHtmlTags ? htmlentities(FilterHtml::tagsToString($allowedHtmlTags)) : $this->t('No HTML tags provided.'))),
-        '#default_value' => $allowedHtmlTags ? $renderStrategySubformState->getValue(['plugins', $plugin_id], $parser->getSetting("plugins.$plugin_id", TRUE)) : FALSE,
+        '#default_value' => $defaultValue,
+        '#attributes' => [
+          'data-markdown-default-value' => $defaultValue ? 'true' : 'false',
+        ],
       ];
+      if ($plugin_id === 'markdown') {
+        $renderStrategySubform['plugins'][$type][$plugin_id]['#weight'] = -10;
+      }
 
       if (!$allowedHtmlTags) {
         continue;
@@ -629,10 +668,11 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
         $renderStrategySubform['plugins'][$type][$plugin_id]['#title'] = new FormattableMarkup('@title @disabled', [
           '@title' => $renderStrategySubform['plugins'][$type][$plugin_id]['#title'],
           '@disabled' => $renderStrategySubformState->conditionalElement([
-            '#value' => $this->t('(extension disabled)'),
+            '#value' => $this->t('(not used, extension disabled)'),
           ], 'visible', $selector, ['checked' => FALSE]),
         ]);
         $renderStrategySubform['plugins'][$type][$plugin_id]['#states'] = [
+          '!checked' => [$selector => ['checked' => FALSE]],
           'disabled' => [$selector => ['checked' => FALSE]],
         ];
       }
@@ -641,16 +681,29 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
         $renderStrategySubform['plugins'][$type][$plugin_id]['#title'] = new FormattableMarkup('@title @disabled', [
           '@title' => $renderStrategySubform['plugins'][$type][$plugin_id]['#title'],
           '@disabled' => $renderStrategySubformState->conditionalElement([
-            '#value' => $this->t('(filter disabled)'),
+            '#value' => $this->t('(not used, filter disabled)'),
           ], 'visible', $selector, ['checked' => FALSE]),
         ]);
         $renderStrategySubform['plugins'][$type][$plugin_id]['#states'] = [
+          '!checked' => [$selector => ['checked' => FALSE]],
           'disabled' => [$selector => ['checked' => FALSE]],
         ];
-
       }
     }
     $renderStrategySubform['plugins']['#access'] = !!Element::getVisibleChildren($renderStrategySubform['plugins']);
+
+    $renderStrategySubform['allowed_html'] = [
+      '#weight' => -10,
+      '#type' => 'textarea',
+      '#title' => $this->t('Custom Allowed HTML'),
+      '#description' => $this->t('A list of custom HTML tags that can be used. This follows the same rules as above; use cautiously and sparingly. The only time you need to supply the same tags as above is if you intend to disable the plugin and instead manually provide it here. The goal is the same as above: only allow HTML tags and attributes when they are needed. For example: specifying wide reaching attributes like <code>&lt;* data-*&gt;</code> would allow any data attribute to be used on any HTML tag. This kind of "open ended" permission can make your site extremely vulnerable to potential attacks and future unknown exploits due to this attribute namespaces frequent interactions with JavaScript. Instead, it is highly recommended that you only allow specific, known, data attributes that are actively used by libraries on your site. For maximum and long term viability, it is recommended that you create your own custom <code>@MarkdownAllowedHtml</code> plugins as the needs arise.'),
+      '#default_value' => $renderStrategySubformState->getValue('allowed_html', $parser->getAllowedHtml()),
+      '#attributes' => [
+        'data-markdown-element' => 'allowed_html',
+      ],
+    ];
+    FormTrait::resetToDefault($renderStrategySubform['allowed_html'], 'allowed_html', '', $renderStrategySubformState);
+    $renderStrategySubformState->addElementState($renderStrategySubform['allowed_html'], 'visible', 'type', ['value' => RenderStrategyInterface::FILTER_OUTPUT]);
 
     return $element;
   }
@@ -685,12 +738,6 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
       'extensions' => [],
     ];
     $pluginConfiguration = (isset($values['parser']) ? $values['parser'] : $values) + $defaults;
-
-    // Normalize render strategy allowed HTML plugins to an enabled index list.
-    // Being careful not to normalize twice.
-    if (!empty($pluginConfiguration['render_strategy']['plugins']) && !array_filter(array_keys($pluginConfiguration['render_strategy']['plugins']), 'is_numeric')) {
-      $pluginConfiguration['render_strategy']['plugins'] = array_keys(array_filter($pluginConfiguration['render_strategy']['plugins']));
-    }
 
     $parser = $this->parserManager->createInstance($pluginConfiguration['id'], $pluginConfiguration);
     $configuration = $parser->getConfiguration();
