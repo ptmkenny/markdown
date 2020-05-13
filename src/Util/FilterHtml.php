@@ -336,11 +336,16 @@ class FilterHtml extends CoreFilterHtml implements ParserAwareInterface {
     // Replace the allowed tags with the normalized/merged tags.
     $restrictions['allowed'] = $normalizedTags;
 
-    // Now merge the original global attributes with the added global attributes
-    // using the array union (+) operator. This ensures that the original core
-    // defined global attributes are never overridden so users cannot specify
-    // attributes like 'style' and 'on*' which are highly vulnerable to XSS.
-    $restrictions['allowed']['*'] = $originalGlobalAttributes + $addedGlobalAttributes['*'];
+    // Restore the original global attributes.
+    $restrictions['allowed']['*'] = $originalGlobalAttributes;
+
+    // Now merge the added global attributes using the array union (+) operator.
+    // This ensures that the original core defined global attributes are never
+    // overridden so users cannot specify attributes like 'style' and 'on*'
+    // which are highly vulnerable to XSS.
+    if (!empty($addedGlobalAttributes['*'])) {
+      $restrictions['allowed']['*'] += $addedGlobalAttributes['*'];
+    }
 
     $discoveryCache->set($cid, $restrictions, CacheBackendInterface::CACHE_PERMANENT, $cacheTags);
 
