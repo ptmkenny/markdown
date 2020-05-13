@@ -737,6 +737,14 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
       'settings' => [],
       'extensions' => [],
     ];
+
+    // Some older 8.x-2.x code used to have the parser value as a string.
+    // This needs to be converted to an "id" property inside an array.
+    // @todo Remove after 8.x-2.0 release.
+    if (isset($values['parser']) && is_string($values['parser'])) {
+      $values['parser'] = ['id' => $values['parser']];
+    }
+
     $pluginConfiguration = (isset($values['parser']) ? $values['parser'] : $values) + $defaults;
 
     $parser = $this->parserManager->createInstance($pluginConfiguration['id'], $pluginConfiguration);
