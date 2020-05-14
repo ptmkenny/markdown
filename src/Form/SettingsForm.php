@@ -307,7 +307,7 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
     }
 
     $parents = isset($element['#parents']) ? $element['#parents'] : [];
-    $configuration = NestedArray::mergeDeep($this->settings->get('parser'), $form_state->getValue('parser', []));
+    $configuration = NestedArray::mergeDeep($this->settings->get('parser') ?: [], $form_state->getValue('parser', []));
 
     $element['parser'] = [
       '#weight' => -20,
