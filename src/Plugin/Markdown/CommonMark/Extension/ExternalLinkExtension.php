@@ -13,9 +13,8 @@ use Drupal\markdown\Plugin\Markdown\ParserInterface;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\SettingsTrait;
 use Drupal\markdown\Util\KeyValuePipeConverter;
+use League\CommonMark\ConfigurableEnvironmentInterface;
 use League\CommonMark\ElementRendererInterface;
-use League\CommonMark\EnvironmentAwareInterface;
-use League\CommonMark\EnvironmentInterface;
 use League\CommonMark\HtmlElement;
 use League\CommonMark\Inline\Element\AbstractInline;
 use League\CommonMark\Inline\Element\Link;
@@ -37,7 +36,7 @@ use League\CommonMark\Extension\ExternalLink\ExternalLinkExtension as LeagueExte
  *   description = @Translation("Automatically detect links to external sites and adjust the markup accordingly."),
  * )
  */
-class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterface, EnvironmentAwareInterface, RendererInterface, InlineRendererInterface, SettingsInterface, PluginFormInterface {
+class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterface, RendererInterface, InlineRendererInterface, SettingsInterface, PluginFormInterface {
 
   use SettingsTrait {
     getConfiguration as getConfigurationTrait;
@@ -185,8 +184,8 @@ class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterfac
   /**
    * {@inheritdoc}
    */
-  public function settingsKey() {
-    return 'external_link';
+  public function register(ConfigurableEnvironmentInterface $environment) {
+    $environment->addExtension(new LeagueExternalLinkExtension());
   }
 
   /**
@@ -245,8 +244,8 @@ class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterfac
   /**
    * {@inheritdoc}
    */
-  public function setEnvironment(EnvironmentInterface $environment) {
-    $environment->addExtension(new LeagueExternalLinkExtension());
+  public function settingsKey() {
+    return 'external_link';
   }
 
 }

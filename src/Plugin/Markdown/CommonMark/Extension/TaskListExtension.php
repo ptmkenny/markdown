@@ -6,8 +6,7 @@ use Drupal\Core\Theme\ActiveTheme;
 use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
-use League\CommonMark\EnvironmentAwareInterface;
-use League\CommonMark\EnvironmentInterface;
+use League\CommonMark\ConfigurableEnvironmentInterface;
 use League\CommonMark\Extension\TaskList\TaskListExtension as LeagueTaskListExtension;
 
 /**
@@ -26,7 +25,7 @@ use League\CommonMark\Extension\TaskList\TaskListExtension as LeagueTaskListExte
  *   installed = "\League\CommonMark\Extension\TaskList\TaskListExtension",
  * )
  */
-class TaskListExtension extends BaseExtension implements AllowedHtmlInterface, EnvironmentAwareInterface {
+class TaskListExtension extends BaseExtension implements AllowedHtmlInterface {
 
   /**
    * {@inheritdoc}
@@ -44,7 +43,7 @@ class TaskListExtension extends BaseExtension implements AllowedHtmlInterface, E
   /**
    * {@inheritdoc}
    */
-  public function setEnvironment(EnvironmentInterface $environment) {
+  public function register(ConfigurableEnvironmentInterface $environment) {
     $environment->addExtension(new LeagueTaskListExtension());
   }
 

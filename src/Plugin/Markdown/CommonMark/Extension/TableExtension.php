@@ -6,8 +6,7 @@ use Drupal\Core\Theme\ActiveTheme;
 use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
-use League\CommonMark\EnvironmentAwareInterface;
-use League\CommonMark\EnvironmentInterface;
+use League\CommonMark\ConfigurableEnvironmentInterface;
 use League\CommonMark\Extension\Table\TableExtension as LeagueTableExtension;
 
 /**
@@ -26,7 +25,7 @@ use League\CommonMark\Extension\Table\TableExtension as LeagueTableExtension;
  *   installed = "\League\CommonMark\Extension\Table\TableExtension",
  * )
  */
-class TableExtension extends BaseExtension implements AllowedHtmlInterface, EnvironmentAwareInterface {
+class TableExtension extends BaseExtension implements AllowedHtmlInterface {
 
   /**
    * {@inheritdoc}
@@ -63,7 +62,7 @@ class TableExtension extends BaseExtension implements AllowedHtmlInterface, Envi
   /**
    * {@inheritdoc}
    */
-  public function setEnvironment(EnvironmentInterface $environment) {
+  public function register(ConfigurableEnvironmentInterface $environment) {
     $environment->addExtension(new LeagueTableExtension());
   }
 

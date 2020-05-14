@@ -7,8 +7,7 @@ use Drupal\Core\Plugin\PluginFormInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\SettingsTrait;
-use League\CommonMark\EnvironmentAwareInterface;
-use League\CommonMark\EnvironmentInterface;
+use League\CommonMark\ConfigurableEnvironmentInterface;
 use League\CommonMark\Extension\SmartPunct\SmartPunctExtension as LeagueSmartPunctExtension;
 
 /**
@@ -22,7 +21,7 @@ use League\CommonMark\Extension\SmartPunct\SmartPunctExtension as LeagueSmartPun
  *   url = "https://commonmark.thephpleague.com/extensions/smart-punctuation/",
  * )
  */
-class SmartPunctuationExtension extends BaseExtension implements EnvironmentAwareInterface, PluginFormInterface, SettingsInterface {
+class SmartPunctuationExtension extends BaseExtension implements PluginFormInterface, SettingsInterface {
 
   use SettingsTrait;
 
@@ -66,15 +65,15 @@ class SmartPunctuationExtension extends BaseExtension implements EnvironmentAwar
   /**
    * {@inheritdoc}
    */
-  public function settingsKey() {
-    return 'smartpunct';
+  public function register(ConfigurableEnvironmentInterface $environment) {
+    $environment->addExtension(new LeagueSmartPunctExtension());
   }
 
   /**
    * {@inheritdoc}
    */
-  public function setEnvironment(EnvironmentInterface $environment) {
-    $environment->addExtension(new LeagueSmartPunctExtension());
+  public function settingsKey() {
+    return 'smartpunct';
   }
 
 }

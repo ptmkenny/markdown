@@ -3,8 +3,7 @@
 namespace Drupal\markdown\Plugin\Markdown\CommonMark\Extension;
 
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
-use League\CommonMark\EnvironmentAwareInterface;
-use League\CommonMark\EnvironmentInterface;
+use League\CommonMark\ConfigurableEnvironmentInterface;
 use Webuni\CommonMark\AttributesExtension\AttributesExtension as WebuniAttributesExtension;
 
 /**
@@ -16,12 +15,12 @@ use Webuni\CommonMark\AttributesExtension\AttributesExtension as WebuniAttribute
  *   url = "https://github.com/webuni/commonmark-attributes-extension",
  * )
  */
-class AttributesExtension extends BaseExtension implements EnvironmentAwareInterface {
+class AttributesExtension extends BaseExtension {
 
   /**
    * {@inheritdoc}
    */
-  public function setEnvironment(EnvironmentInterface $environment) {
+  public function register(ConfigurableEnvironmentInterface $environment) {
     $environment->addExtension(new WebuniAttributesExtension());
   }
 

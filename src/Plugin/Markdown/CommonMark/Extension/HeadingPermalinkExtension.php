@@ -13,8 +13,7 @@ use Drupal\markdown\Plugin\Markdown\ParserInterface;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\SettingsTrait;
 use Drupal\markdown\Util\FilterHtml;
-use League\CommonMark\EnvironmentAwareInterface;
-use League\CommonMark\EnvironmentInterface;
+use League\CommonMark\ConfigurableEnvironmentInterface;
 use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension as LeagueHeadingPermalinkExtension;
 use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkRenderer;
 
@@ -33,7 +32,7 @@ use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkRenderer;
  *   installed = "\League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension",
  * )
  */
-class HeadingPermalinkExtension extends BaseExtension implements EnvironmentAwareInterface, SettingsInterface, PluginFormInterface, AllowedHtmlInterface {
+class HeadingPermalinkExtension extends BaseExtension implements AllowedHtmlInterface, PluginFormInterface, SettingsInterface {
 
   use SettingsTrait;
 
@@ -59,20 +58,6 @@ class HeadingPermalinkExtension extends BaseExtension implements EnvironmentAwar
       $tags = FilterHtml::tagsFromHtml($extension->getSetting('inner_contents'));
     }
     return $tags;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function settingsKey() {
-    return 'heading_permalink';
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function setEnvironment(EnvironmentInterface $environment) {
-    $environment->addExtension(new LeagueHeadingPermalinkExtension());
   }
 
   /**
@@ -115,6 +100,20 @@ class HeadingPermalinkExtension extends BaseExtension implements EnvironmentAwar
     ], $form_state);
 
     return $element;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function register(ConfigurableEnvironmentInterface $environment) {
+    $environment->addExtension(new LeagueHeadingPermalinkExtension());
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function settingsKey() {
+    return 'heading_permalink';
   }
 
 }

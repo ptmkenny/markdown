@@ -9,8 +9,7 @@ use Drupal\markdown\Form\SubformState;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\SettingsTrait;
-use League\CommonMark\EnvironmentAwareInterface;
-use League\CommonMark\EnvironmentInterface;
+use League\CommonMark\ConfigurableEnvironmentInterface;
 use League\CommonMark\Extension\Autolink\AutolinkExtension as LeagueAutolinkExtension;
 use League\CommonMark\Extension\Autolink\InlineMentionParser as LeagueInlineMentionParser;
 
@@ -25,7 +24,7 @@ use League\CommonMark\Extension\Autolink\InlineMentionParser as LeagueInlineMent
  *   url = "https://commonmark.thephpleague.com/extensions/autolinks/",
  * )
  */
-class AutolinkExtension extends BaseExtension implements EnvironmentAwareInterface, SettingsInterface, PluginFormInterface {
+class AutolinkExtension extends BaseExtension implements SettingsInterface, PluginFormInterface {
 
   use SettingsTrait {
     getConfiguration as getConfigurationTrait;
@@ -291,15 +290,7 @@ class AutolinkExtension extends BaseExtension implements EnvironmentAwareInterfa
   /**
    * {@inheritdoc}
    */
-  public function settingsKey() {
-    return FALSE;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function setEnvironment(EnvironmentInterface $environment) {
-    /** @var \League\CommonMark\ConfigurableEnvironmentInterface $environment */
+  public function register(ConfigurableEnvironmentInterface $environment) {
     $environment->addExtension(new LeagueAutolinkExtension());
     foreach (static::$symbols as $name => $symbol) {
       if ($map = $this->getSetting("$name.map")) {
@@ -324,6 +315,13 @@ class AutolinkExtension extends BaseExtension implements EnvironmentAwareInterfa
         }
       }
     }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function settingsKey() {
+    return FALSE;
   }
 
 }

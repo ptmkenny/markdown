@@ -8,8 +8,7 @@ use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\FeatureDetectionTrait;
 use Drupal\markdown\Traits\SettingsTrait;
-use League\CommonMark\EnvironmentAwareInterface;
-use League\CommonMark\EnvironmentInterface;
+use League\CommonMark\ConfigurableEnvironmentInterface;
 use League\CommonMark\Extension\TableOfContents\TableOfContentsExtension as LeagueTableOfContentsExtension;
 
 /**
@@ -24,7 +23,7 @@ use League\CommonMark\Extension\TableOfContents\TableOfContentsExtension as Leag
  *   }
  * )
  */
-class TableOfContentsExtension extends BaseExtension implements EnvironmentAwareInterface, SettingsInterface, PluginFormInterface {
+class TableOfContentsExtension extends BaseExtension implements PluginFormInterface, SettingsInterface {
 
   use FeatureDetectionTrait;
   use SettingsTrait;
@@ -144,7 +143,7 @@ class TableOfContentsExtension extends BaseExtension implements EnvironmentAware
   /**
    * {@inheritdoc}
    */
-  public function setEnvironment(EnvironmentInterface $environment) {
+  public function register(ConfigurableEnvironmentInterface $environment) {
     $environment->addExtension(new LeagueTableOfContentsExtension());
   }
 

@@ -10,13 +10,7 @@ use Drupal\markdown\Form\SubformState;
 use Drupal\markdown\Plugin\Markdown\BaseExtensibleParser;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Util\KeyValuePipeConverter;
-use League\CommonMark\Block\Parser\BlockParserInterface;
-use League\CommonMark\Block\Renderer\BlockRendererInterface;
 use League\CommonMark\Environment;
-use League\CommonMark\EnvironmentAwareInterface;
-use League\CommonMark\Extension\ExtensionInterface;
-use League\CommonMark\Inline\Parser\InlineParserInterface;
-use League\CommonMark\Inline\Renderer\InlineRendererInterface;
 
 /**
  * Support for CommonMark by The League of Extraordinary Packages.
@@ -266,12 +260,15 @@ class CommonMark extends BaseExtensibleParser {
       $environment->setConfig(NestedArray::mergeDeep($environment->getConfig(), $settings));
 
       $extensions = $this->extensions();
-      /** @var \Drupal\markdown\Plugin\Markdown\Extension\MarkdownExtensionInterface $extension */
       foreach ($extensions as $extension) {
+        /* @var \Drupal\markdown\Plugin\Markdown\CommonMark\ExtensionInterface $extension */
+
         // Skip disabled extensions.
         if (!$extension->isEnabled()) {
           continue;
         }
+
+        // Add extension settings.
         if ($extension instanceof SettingsInterface) {
           // Because CommonMark is highly extensible, any extension that
           // implements settings should provide a specific and unique settings
@@ -295,37 +292,8 @@ class CommonMark extends BaseExtensibleParser {
           }
         }
 
-        // Allow standalone extensions to be aware of the environment.
-        // This allows extensions to load external instances that may not be
-        // able to be extended from base Drupal plugin class (which is needed
-        // for discovery purposes).
-        if ($extension instanceof EnvironmentAwareInterface && !$extension instanceof BlockParserInterface && !$extension instanceof InlineParserInterface) {
-          $extension->setEnvironment($environment);
-        }
-
-        if ($extension instanceof ExtensionInterface) {
-          $environment->addExtension($extension);
-        }
-
-        // Add Block extensions.
-        if ($extension instanceof BlockParserInterface || ($extension instanceof BlockRendererInterface && $extension instanceof RendererInterface)) {
-          if ($extension instanceof BlockParserInterface) {
-            $environment->addBlockParser($extension);
-          }
-          if ($extension instanceof BlockRendererInterface) {
-            $environment->addBlockRenderer($extension->rendererClass(), $extension);
-          }
-        }
-
-        // Add Inline extensions.
-        if ($extension instanceof InlineParserInterface || ($extension instanceof InlineRendererInterface && $extension instanceof RendererInterface)) {
-          if ($extension instanceof InlineParserInterface) {
-            $environment->addInlineParser($extension);
-          }
-          if ($extension instanceof InlineRendererInterface) {
-            $environment->addInlineRenderer($extension->rendererClass(), $extension);
-          }
-        }
+        // Finally, add the extension to the environment.
+        $environment->addExtension($extension);
       }
 
       $this->environment = $environment;

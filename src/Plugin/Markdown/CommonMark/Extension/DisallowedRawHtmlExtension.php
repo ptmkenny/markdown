@@ -3,8 +3,7 @@
 namespace Drupal\markdown\Plugin\Markdown\CommonMark\Extension;
 
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
-use League\CommonMark\EnvironmentAwareInterface;
-use League\CommonMark\EnvironmentInterface;
+use League\CommonMark\ConfigurableEnvironmentInterface;
 use League\CommonMark\Extension\DisallowedRawHTML\DisallowedRawHTMLExtension as LeagueDisallowedRawHTMLExtension;
 
 /**
@@ -18,12 +17,12 @@ use League\CommonMark\Extension\DisallowedRawHTML\DisallowedRawHTMLExtension as 
  *   url = "https://commonmark.thephpleague.com/extensions/disallowed-raw-html/",
  * )
  */
-class DisallowedRawHtmlExtension extends BaseExtension implements EnvironmentAwareInterface {
+class DisallowedRawHtmlExtension extends BaseExtension {
 
   /**
    * {@inheritdoc}
    */
-  public function setEnvironment(EnvironmentInterface $environment) {
+  public function register(ConfigurableEnvironmentInterface $environment) {
     $environment->addExtension(new LeagueDisallowedRawHTMLExtension());
   }
 

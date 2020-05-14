@@ -6,8 +6,7 @@ use Drupal\Core\Theme\ActiveTheme;
 use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
-use League\CommonMark\EnvironmentAwareInterface;
-use League\CommonMark\EnvironmentInterface;
+use League\CommonMark\ConfigurableEnvironmentInterface;
 use League\CommonMark\Extension\Strikethrough\StrikethroughExtension as LeagueStrikethroughExtension;
 
 /**
@@ -26,7 +25,7 @@ use League\CommonMark\Extension\Strikethrough\StrikethroughExtension as LeagueSt
  *   installed = "\League\CommonMark\Extension\Strikethrough\StrikethroughExtension",
  * )
  */
-class StrikethroughExtension extends BaseExtension implements AllowedHtmlInterface, EnvironmentAwareInterface {
+class StrikethroughExtension extends BaseExtension implements AllowedHtmlInterface {
 
   /**
    * {@inheritdoc}
@@ -40,7 +39,7 @@ class StrikethroughExtension extends BaseExtension implements AllowedHtmlInterfa
   /**
    * {@inheritdoc}
    */
-  public function setEnvironment(EnvironmentInterface $environment) {
+  public function register(ConfigurableEnvironmentInterface $environment) {
     $environment->addExtension(new LeagueStrikethroughExtension());
   }
 

@@ -8,8 +8,7 @@ use Drupal\Core\Theme\ActiveTheme;
 use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
-use League\CommonMark\EnvironmentAwareInterface;
-use League\CommonMark\EnvironmentInterface;
+use League\CommonMark\ConfigurableEnvironmentInterface;
 use RZ\CommonMark\Ext\Footnote\FootnoteExtension as RZFootnoteExtension;
 
 /**
@@ -31,7 +30,7 @@ use RZ\CommonMark\Ext\Footnote\FootnoteExtension as RZFootnoteExtension;
  * @todo Add settings if they ever become configurable.
  * @see https://github.com/rezozero/commonmark-ext-footnotes/issues/7
  */
-class FootnoteExtension extends BaseExtension implements AllowedHtmlInterface, EnvironmentAwareInterface, PluginFormInterface {
+class FootnoteExtension extends BaseExtension implements AllowedHtmlInterface, PluginFormInterface {
 
   /**
    * {@inheritdoc}
@@ -82,8 +81,8 @@ class FootnoteExtension extends BaseExtension implements AllowedHtmlInterface, E
   /**
    * {@inheritdoc}
    */
-  public function validateConfigurationForm(array &$form, FormStateInterface $form_state) {
-    // Intentionally do nothing; implementation is required.
+  public function register(ConfigurableEnvironmentInterface $environment) {
+    $environment->addExtension(new RZFootnoteExtension());
   }
 
   /**
@@ -96,8 +95,8 @@ class FootnoteExtension extends BaseExtension implements AllowedHtmlInterface, E
   /**
    * {@inheritdoc}
    */
-  public function setEnvironment(EnvironmentInterface $environment) {
-    $environment->addExtension(new RZFootnoteExtension());
+  public function validateConfigurationForm(array &$form, FormStateInterface $form_state) {
+    // Intentionally do nothing; implementation is required.
   }
 
 }
