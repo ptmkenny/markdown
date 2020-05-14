@@ -78,4 +78,12 @@ interface SubformStateInterface extends CoreSubformStateInterface {
    */
   public function getAllParents($property = '#parents');
 
+  /**
+   * Retrieves the parent form/element.
+   *
+   * @return array
+   *   The parent form/element.
+   */
+  public function &getParentForm();
+
 }

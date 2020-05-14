@@ -19,6 +19,15 @@ class SubformState extends CoreSubformState implements SubformStateInterface {
   /**
    * {@inheritdoc
    */
+  protected function __construct(array &$subform, array &$parent_form, FormStateInterface $parent_form_state) {
+    $this->decoratedFormState = $parent_form_state;
+    $this->parentForm = &$parent_form;
+    $this->subform = &$subform;
+  }
+
+  /**
+   * {@inheritdoc
+   */
   public function conditionalElement(array $element, $state, $name, array $conditions) {
     $element += ['#type' => 'html_tag'];
     if ($element['#type'] === 'container') {
@@ -84,6 +93,13 @@ class SubformState extends CoreSubformState implements SubformStateInterface {
 
     // Merge the parent form and subform's relative parents.
     return array_merge($this->parentForm[$property], $this->getParents($property));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function &getParentForm() {
+    return $this->parentForm;
   }
 
 }
