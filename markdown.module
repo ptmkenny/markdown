@@ -138,3 +138,111 @@ function markdown_modules_installed($modules) {
     \Drupal::configFactory()->getEditable('markdown.settings')->set('parser.id', $parser)->save();
   }
 }
+
+/**
+ * Implements hook_token_info_alter().
+ */
+function markdown_token_info_alter(&$data) {
+  // Supply the various "current-request" based tokens.
+  // @todo Remove once provided by core.
+  // @see https://www.drupal.org/project/drupal/issues/3136361
+  if (!isset($data['types']['current-request'])) {
+    $data['types']['current-request'] = [
+      'name' => t('Current Request'),
+      'description' => t('Tokens related to the current request.'),
+    ];
+  }
+  if (!isset($data['tokens']['current-request'])) {
+    $currentRequest['base-path'] = [
+      'name' => t('Base Path'),
+      'description' => t('The current request base path, if any (e.g. /drupal).'),
+    ];
+    $currentRequest['fragment'] = [
+      'name' => t('Fragment'),
+      'description' => t('The current request fragment, if any (e.g. #fragment).'),
+    ];
+    $currentRequest['host'] = [
+      'name' => t('Host'),
+      'description' => t('The current request host name (example.com).'),
+    ];
+    $currentRequest['password'] = [
+      'name' => t('Password'),
+      'description' => t('The current request password, if any.'),
+    ];
+    $currentRequest['path'] = [
+      'name' => t('Path'),
+      'description' => t('The current request path, relative to base path, if any (e.g. /path).'),
+    ];
+    $currentRequest['port'] = [
+      'name' => t('Port'),
+      'description' => t('The current request port (e.g. 443).'),
+    ];
+    $currentRequest['query'] = [
+      'name' => t('Query'),
+      'description' => t('The current request query string, if any (e.g. ?query=string).'),
+    ];
+    $currentRequest['scheme'] = [
+      'name' => t('Scheme'),
+      'description' => t('The current request scheme (http, https, etc.).'),
+    ];
+    $currentRequest['uri'] = [
+      'name' => t('URI'),
+      'description' => t('The current request original URI.'),
+    ];
+    $currentRequest['user'] = [
+      'name' => t('User'),
+      'description' => t('The current request user, if any.'),
+    ];
+    $data['tokens']['current-request'] = $currentRequest;
+  }
+}
+
+/**
+ * Implements hook_tokens().
+ */
+function markdown_tokens($type, $tokens, array $data, array $options, \Drupal\Core\Render\BubbleableMetadata $bubbleable_metadata) {
+  $replacements = [];
+
+  // Supply the various "current-request" based tokens.
+  // @todo Remove once provided by core.
+  // @see https://www.drupal.org/project/drupal/issues/3136361
+  if ($type === 'current-request') {
+    $request = \Drupal::request();
+    foreach ($tokens as $name => $original) {
+      switch ($name) {
+        case 'base-path':
+          $replacements[$original] = $request->getBasePath();
+          break;
+        case 'fragment':
+          $replacements[$original] = parse_url($request->getRequestUri(), PHP_URL_FRAGMENT);
+          break;
+        case 'host':
+          $replacements[$original] = $request->getHost();
+          break;
+        case 'password':
+          $replacements[$original] = $request->getPassword();
+          break;
+        case 'path':
+          $replacements[$original] = $request->getPathInfo();
+          break;
+        case 'port':
+          $replacements[$original] = $request->getPort();
+          break;
+        case 'query':
+          $replacements[$original] = $request->getQueryString();
+          break;
+        case 'scheme':
+          $replacements[$original] = $request->getScheme();
+          break;
+        case 'user':
+          $replacements[$original] = $request->getUser();
+          break;
+        case 'uri':
+          $replacements[$original] = $request->getRequestUri();
+          break;
+      }
+    }
+  }
+
+  return $replacements;
+}

@@ -44,10 +44,14 @@ interface SettingsInterface {
   /**
    * Retrieves the current settings.
    *
+   * @param bool $runtime
+   *   Flag indicating whether the request is for runtime values, which
+   *   may or may not need to be transformed for whatever is consuming it.
+   *
    * @return array
    *   The settings array
    */
-  public function getSettings();
+  public function getSettings($runtime = FALSE);
 
   /**
    * Flag indicating whether a setting exists.

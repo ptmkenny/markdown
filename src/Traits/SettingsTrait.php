@@ -133,7 +133,7 @@ trait SettingsTrait {
   /**
    * {@inheritdoc}
    */
-  public function getSettings() {
+  public function getSettings($runtime = FALSE) {
     return $this->config()->get('settings') ?: [];
   }
 

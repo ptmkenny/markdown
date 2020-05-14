@@ -195,7 +195,7 @@ class CommonMark extends BaseExtensibleParser {
    */
   public function converter() {
     if (!$this->converter) {
-      $this->converter = new static::$converterClass($this->getSettings(), $this->getEnvironment());
+      $this->converter = new static::$converterClass($this->getSettings(TRUE), $this->getEnvironment());
     }
     return $this->converter;
   }
@@ -253,7 +253,7 @@ class CommonMark extends BaseExtensibleParser {
   protected function getEnvironment() {
     if (!$this->environment) {
       $environment = $this->createEnvironment();
-      $settings = $this->getSettings();
+      $settings = $this->getSettings(TRUE);
 
       // Unless the render strategy is set to "none", force the following
       // settings so the parser doesn't attempt to filter things.
@@ -287,8 +287,11 @@ class CommonMark extends BaseExtensibleParser {
 
           // If the extension plugin specifies anything other than FALSE, merge.
           if ($settingsKey !== FALSE) {
-            $settings = $settingsKey ? [$settingsKey => $extension->getSettings()] : $extension->getSettings();
-            $environment->setConfig(NestedArray::mergeDeep($environment->getConfig(), $settings));
+            $extensionSettings = $extension->getSettings(TRUE);
+            if ($settingsKey) {
+              $extensionSettings = [$settingsKey => $extensionSettings];
+            }
+            $environment->setConfig(NestedArray::mergeDeep($environment->getConfig(), $extensionSettings));
           }
         }
 

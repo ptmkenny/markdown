@@ -4,8 +4,12 @@ namespace Drupal\markdown\Plugin\Markdown\CommonMark\Extension;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\PluginFormInterface;
+use Drupal\Core\Theme\ActiveTheme;
+use Drupal\Core\Url;
+use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\CommonMark\RendererInterface;
+use Drupal\markdown\Plugin\Markdown\ParserInterface;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\SettingsTrait;
 use Drupal\markdown\Util\KeyValuePipeConverter;
@@ -26,11 +30,18 @@ use League\CommonMark\Extension\ExternalLink\ExternalLinkExtension as LeagueExte
  *   description = @Translation("Automatically detect links to external sites and adjust the markup accordingly."),
  *   url = "https://commonmark.thephpleague.com/extensions/external-links/",
  * )
+ * @MarkdownAllowedHtml(
+ *   id = "league/commonmark-ext-external-links",
+ *   label = @Translation("External Links"),
+ *   installed = "\League\CommonMark\Extension\ExternalLink\ExternalLinkExtension",
+ *   description = @Translation("Automatically detect links to external sites and adjust the markup accordingly."),
+ * )
  */
-class ExternalLinkExtension extends BaseExtension implements EnvironmentAwareInterface, RendererInterface, InlineRendererInterface, SettingsInterface, PluginFormInterface {
+class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterface, EnvironmentAwareInterface, RendererInterface, InlineRendererInterface, SettingsInterface, PluginFormInterface {
 
   use SettingsTrait {
     getConfiguration as getConfigurationTrait;
+    getSettings as getSettingsTrait;
   }
 
   /**
@@ -39,11 +50,33 @@ class ExternalLinkExtension extends BaseExtension implements EnvironmentAwareInt
   public static function defaultSettings() {
     return [
       'html_class' => '',
-      'internal_hosts' => [\Drupal::request()->getHost()],
+      'internal_hosts' => [
+        '[current-request:host]',
+      ],
       'nofollow' => '',
       'noopener' => 'external',
       'noreferrer' => 'external',
       'open_in_new_window' => TRUE,
+    ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function allowedHtmlTags(ParserInterface $parser, ActiveTheme $activeTheme = NULL) {
+    return [
+      'a' => [
+        'href' => TRUE,
+        'hreflang' => TRUE,
+        'rel' => [
+          'nofollow' => TRUE,
+          'noopener' => TRUE,
+          'noreferrer' => TRUE,
+        ],
+        'target' => [
+          '_blank' => TRUE,
+        ],
+      ],
     ];
   }
 
@@ -57,6 +90,20 @@ class ExternalLinkExtension extends BaseExtension implements EnvironmentAwareInt
       '#type' => 'textarea',
       '#description' => $this->t('Defines a whitelist of hosts which are considered non-external and should not receive the external link treatment. This can be a single host name, like <code>example.com</code>, which must match exactly. Wildcard matching is also supported using regular expression like <code>/(^|\.)example\.com$/</code>. Note that you must use <code>/</code> characters to delimit your regex. By default, if no internal hosts are provided, all links will be considered external. One host per line.'),
     ], $form_state, '\Drupal\markdown\Util\KeyValuePipeConverter::denormalizeNoKeys');
+
+    if (\Drupal::moduleHandler()->moduleExists('token')) {
+      $element['token'] = [
+        '#theme' => 'token_tree_link',
+        '#token_types' => [],
+        '#global_types' => TRUE,
+        '#dialog' => TRUE,
+      ];
+    }
+    else {
+      $element['token']['#markup'] = t('To browse available tokens, install the @token module.', [
+        '@token' => \Drupal\Core\Link::fromTextAndUrl('Token', Url::fromUri('https://www.drupal.org/project/token', ['attributes' => ['target' => '_blank']]))->toString(),
+      ]);
+    }
 
     $element += $this->createSettingElement('html_class', [
       '#type' => 'textfield',
@@ -114,6 +161,25 @@ class ExternalLinkExtension extends BaseExtension implements EnvironmentAwareInt
     }
 
     return $configuration;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getSettings($runtime = FALSE) {
+    $settings = $this->getSettingsTrait($runtime);
+
+    if (!$runtime) {
+      return $settings;
+    }
+
+    $token = \Drupal::token();
+    foreach ($settings['internal_hosts'] as &$host) {
+      $host = $token->replace($host);
+    }
+    $settings['internal_hosts'] = array_unique($settings['internal_hosts']);
+
+    return $settings;
   }
 
   /**
