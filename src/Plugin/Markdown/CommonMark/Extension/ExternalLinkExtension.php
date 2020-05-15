@@ -8,7 +8,6 @@ use Drupal\Core\Theme\ActiveTheme;
 use Drupal\Core\Url;
 use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
-use Drupal\markdown\Plugin\Markdown\CommonMark\RendererInterface;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\SettingsTrait;
@@ -36,7 +35,7 @@ use League\CommonMark\Extension\ExternalLink\ExternalLinkExtension as LeagueExte
  *   description = @Translation("Automatically detect links to external sites and adjust the markup accordingly."),
  * )
  */
-class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterface, RendererInterface, InlineRendererInterface, SettingsInterface, PluginFormInterface {
+class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterface, InlineRendererInterface, SettingsInterface, PluginFormInterface {
 
   use SettingsTrait {
     getConfiguration as getConfigurationTrait;
@@ -186,13 +185,7 @@ class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterfac
    */
   public function register(ConfigurableEnvironmentInterface $environment) {
     $environment->addExtension(new LeagueExternalLinkExtension());
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function rendererClass() {
-    return Link::class;
+    $environment->addInlineRenderer(Link::class, $this);
   }
 
   /**
