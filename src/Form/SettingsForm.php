@@ -350,16 +350,21 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
       }
     }
 
-    // If there's no set parser identifier, then it's the global parser.
+    // If there's no set parser identifier, then use the site-wide parser.
     if (!$parserId) {
-      // Load global parser.
-      $parser = $this->markdown->getParser();
+      // Load site-wide parser, ensuring that the filter's render strategy
+      // settings override the site-wide parser's.
+      $parser = $this->markdown->getParser(NULL, [
+        'render_strategy' => $this->settings->get('parser.render_strategy'),
+      ]);
+
+      // Allow the parser to be filter aware.
       if ($parser instanceof FilterAwareInterface && ($filter = $this->getFilter())) {
         $parser->setFilter($filter);
       }
 
       // Build render strategy (which may allow filters).
-      $parserElement = $this->buildRenderStrategy($parser, $parserElement, $parserSubform);
+      $parserElement = $this->buildRenderStrategy($parser, $parserElement, $parserSubform, TRUE);
       return $element;
     }
 
@@ -534,11 +539,13 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
    *   An element in a render array.
    * @param \Drupal\markdown\Form\SubformStateInterface $form_state
    *   The form state.
+   * @param bool $siteWide
+   *   Flag indicating whether the parser is the site-wide parser.
    *
    * @return array
    *   The $element passed, modified to include the render strategy elements.
    */
-  protected function buildRenderStrategy(ParserInterface $parser, array $element, SubformStateInterface $form_state) {
+  protected function buildRenderStrategy(ParserInterface $parser, array $element, SubformStateInterface $form_state, $siteWide = FALSE) {
     $element['render_strategy'] = [
       '#weight' => -10,
       '#type' => 'details',
@@ -620,8 +627,6 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
       // Determine the default value.
       $defaultValue = NULL;
       if ($allowedHtmlTags) {
-        // Form value.
-        $defaultValue = $renderStrategySubformState->getValue(['plugins', $plugin_id]);
         // Setting value.
         if (!isset($defaultValue) && isset($allowedHtmlPlugins[$plugin_id])) {
           $defaultValue = $allowedHtmlPlugins[$plugin_id];
@@ -646,9 +651,9 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
         '#title' => $label,
         '#disabled' => !$allowedHtmlTags,
         '#description' => Markup::create(sprintf('%s<pre><code>%s</code></pre>', $description, $allowedHtmlTags ? htmlentities(FilterHtml::tagsToString($allowedHtmlTags)) : $this->t('No HTML tags provided.'))),
-        '#default_value' => $defaultValue,
+        '#default_value' => $renderStrategySubformState->getValue(['plugins', $plugin_id], $defaultValue),
         '#attributes' => [
-          'data-markdown-default-value' => $defaultValue ? 'true' : 'false',
+          'data-markdown-default-value' => $renderStrategySubformState->getValue(['plugins', $plugin_id], $defaultValue) ? 'true' : 'false',
         ],
       ];
       if ($plugin_id === 'markdown') {
@@ -661,27 +666,41 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
 
       // Filters should only show based on whether they're enabled.
       if ($type === 'extension') {
-        $parents = array_merge(array_slice($renderStrategySubformState->createParents(), 0, -1), [
-          'extensions', $plugin_id, 'enabled',
-        ]);
-        $selector = ':input[name="' . array_shift($parents) . '[' . implode('][', $parents) . ']"]';
-        $renderStrategySubform['plugins'][$type][$plugin_id]['#title'] = new FormattableMarkup('@title @disabled', [
-          '@title' => $renderStrategySubform['plugins'][$type][$plugin_id]['#title'],
-          '@disabled' => $renderStrategySubformState->conditionalElement([
-            '#value' => $this->t('(not used, extension disabled)'),
-          ], 'visible', $selector, ['checked' => FALSE]),
-        ]);
-        $renderStrategySubform['plugins'][$type][$plugin_id]['#states'] = [
-          '!checked' => [$selector => ['checked' => FALSE]],
-          'disabled' => [$selector => ['checked' => FALSE]],
-        ];
+        // If using the site-wide parser, then allowed HTML plugins that
+        // reference disabled extensions there cannot be enable here.
+        if ($siteWide) {
+          $extensionDisabled = $defaultValue !== TRUE;
+          $renderStrategySubform['plugins'][$type][$plugin_id]['#disabled'] = $extensionDisabled;
+          if ($extensionDisabled) {
+            $renderStrategySubform['plugins'][$type][$plugin_id]['#title'] = new FormattableMarkup('@title @disabled', [
+              '@title' => $renderStrategySubform['plugins'][$type][$plugin_id]['#title'],
+              '@disabled' => $this->t('(extension disabled)'),
+            ]);
+          }
+        }
+        else {
+          $parents = array_merge(array_slice($renderStrategySubformState->createParents(), 0, -1), [
+            'extensions', $plugin_id, 'enabled',
+          ]);
+          $selector = ':input[name="' . array_shift($parents) . '[' . implode('][', $parents) . ']"]';
+          $renderStrategySubform['plugins'][$type][$plugin_id]['#title'] = new FormattableMarkup('@title @disabled', [
+            '@title' => $renderStrategySubform['plugins'][$type][$plugin_id]['#title'],
+            '@disabled' => $renderStrategySubformState->conditionalElement([
+              '#value' => $this->t('(extension disabled)'),
+            ], 'visible', $selector, ['checked' => FALSE]),
+          ]);
+          $renderStrategySubform['plugins'][$type][$plugin_id]['#states'] = [
+            '!checked' => [$selector => ['checked' => FALSE]],
+            'disabled' => [$selector => ['checked' => FALSE]],
+          ];
+        }
       }
       elseif ($type === 'filter') {
         $selector = ':input[name="filters[' . $plugin_id . '][status]"]';
         $renderStrategySubform['plugins'][$type][$plugin_id]['#title'] = new FormattableMarkup('@title @disabled', [
           '@title' => $renderStrategySubform['plugins'][$type][$plugin_id]['#title'],
           '@disabled' => $renderStrategySubformState->conditionalElement([
-            '#value' => $this->t('(not used, filter disabled)'),
+            '#value' => $this->t('(filter disabled)'),
           ], 'visible', $selector, ['checked' => FALSE]),
         ]);
         $renderStrategySubform['plugins'][$type][$plugin_id]['#states'] = [

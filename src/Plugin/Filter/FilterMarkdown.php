@@ -105,15 +105,15 @@ class FilterMarkdown extends FilterBase implements FilterMarkdownInterface, Cont
   public function getParser() {
     if (!isset($this->parser)) {
       // Filter is using a specific parser/configuration.
-      $settings = $this->markdownSettings();
-      if ($parserId = $settings->get('parser.id')) {
-        $configuration = $settings->get('parser');
-        $configuration['filter'] = $this;
-        $this->parser = $this->parserManager->createInstance($parserId, $configuration);
+      $configuration = $this->markdownSettings()->get('parser') ?: [];
+      $configuration['filter'] = $this;
+      // Filter using specific parser.
+      if (!empty($configuration['id'])) {
+        $this->parser = $this->parserManager->createInstance($configuration['id'], $configuration);
       }
-      // Filter is using global parser.
+      // Filter using global parser.
       else {
-        $this->parser = MarkdownService::create()->getParser(NULL, ['filter' => $this]);
+        $this->parser = MarkdownService::create()->getParser(NULL, $configuration);
       }
     }
     return $this->parser;

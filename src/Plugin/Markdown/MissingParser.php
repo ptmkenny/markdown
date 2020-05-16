@@ -67,7 +67,8 @@ class MissingParser extends PluginBase implements ParserInterface {
    * {@inheritdoc}
    */
   public function getRenderStrategy() {
-    return static::FILTER_OUTPUT;
+    $type = $this->config()->get('render_strategy.type');
+    return isset($type) ? $type : static::FILTER_OUTPUT;
   }
 
   /**
