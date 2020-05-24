@@ -108,14 +108,14 @@ class ParserManager extends BasePluginManager implements ParserManagerInterface 
       if (!$definition['extensionInterfaces']) {
         throw new InvalidPluginDefinitionException($plugin_id, sprintf('Markdown parser "%s" implements %s but is missing "extensionInterfaces" in the definition.', $plugin_id, ExtensibleParserInterface::class));
       }
-      foreach ($definition['extensionInterfaces'] as $interface) {
-        if (ltrim($interface, '\\') === ExtensionInterface::class) {
+      foreach (array_map([$this, 'normalizeClassName'], $definition['extensionInterfaces']) as $interface) {
+        if ($interface === ExtensionInterface::class) {
           throw new InvalidPluginDefinitionException($plugin_id, sprintf('Markdown parser "%s" cannot specify %s as the extension interface. It must create its own unique interface that extend from it.', $plugin_id, ExtensionInterface::class));
         }
-        if (!interface_exists(ltrim($interface, '\\'))) {
+        if (!interface_exists($interface)) {
           throw new InvalidPluginDefinitionException($plugin_id, sprintf('Markdown parser "%s" indicates that it supports the extension interface "%s", but this interface does not exist.', $plugin_id, $interface));
         }
-        if (!is_subclass_of(ltrim($interface, '\\'), ExtensionInterface::class)) {
+        if (!is_subclass_of($interface, ExtensionInterface::class)) {
           throw new InvalidPluginDefinitionException($plugin_id, sprintf('Markdown parser "%s" indicates that it supports the extension interface "%s", but this interface does not extend %s.', $plugin_id, $interface, ExtensionInterface::class));
         }
       }
