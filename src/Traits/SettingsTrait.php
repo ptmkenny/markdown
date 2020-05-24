@@ -40,9 +40,9 @@ trait SettingsTrait {
       $element['#access'] = FALSE;
     }
 
-    // Normalize title based on setting name.
+    // Create placeholder title so it can be replaced with a proper translation.
     if (!isset($element['#title'])) {
-      $element['#title'] = $this->t(ucwords(str_replace(['-', '_'], ' ', $name))); // phpcs:ignore
+      $element['#title'] = "@TODO: $name";
     }
 
     // Handle initial setting value (Drupal names this #default_value).
@@ -76,16 +76,17 @@ trait SettingsTrait {
    * {@inheritdoc}
    */
   public function defaultConfiguration() {
-    $settings = isset($this->pluginDefinition['settings']) ? $this->pluginDefinition['settings'] : [];
+    $pluginDefinition = $this->getPluginDefinition();
+    $settings = isset($pluginDefinition['settings']) ? $pluginDefinition['settings'] : [];
     return [
-      'settings' => NestedArray::mergeDeep($settings, static::defaultSettings()),
+      'settings' => NestedArray::mergeDeep($settings, static::defaultSettings($pluginDefinition)),
     ] + parent::defaultConfiguration();
   }
 
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings() {
+  public static function defaultSettings(array $pluginDefinition) {
     return [];
   }
 
@@ -96,7 +97,7 @@ trait SettingsTrait {
     $configuration = parent::getConfiguration();
 
     // Settings can change over time. Ensure only supported settings are saved.
-    $settings = array_intersect_key($this->getSettings(), static::defaultSettings());
+    $settings = array_intersect_key($this->getSettings(), static::defaultSettings($this->getPluginDefinition()));
 
     // Sort settings (in case configuration was provided by form values).
     if ($settings) {
@@ -113,7 +114,7 @@ trait SettingsTrait {
    * {@inheritdoc}
    */
   public function getDefaultSetting($name) {
-    $defaultSettings = static::defaultSettings();
+    $defaultSettings = static::defaultSettings($this->getPluginDefinition());
     $parts = explode('.', $name);
     if (count($parts) == 1) {
       return isset($defaultSettings[$name]) ? $defaultSettings[$name] : NULL;

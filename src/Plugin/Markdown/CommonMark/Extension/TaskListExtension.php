@@ -23,6 +23,7 @@ use League\CommonMark\Extension\TaskList\TaskListExtension as LeagueTaskListExte
  *   id = "league/commonmark-ext-task-list",
  *   label = @Translation("Task List"),
  *   installed = "\League\CommonMark\Extension\TaskList\TaskListExtension",
+ *   url = "https://commonmark.thephpleague.com/extensions/task-lists/",
  * )
  */
 class TaskListExtension extends BaseExtension implements AllowedHtmlInterface {

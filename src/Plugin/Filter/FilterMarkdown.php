@@ -4,7 +4,6 @@ namespace Drupal\markdown\Plugin\Filter;
 
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Entity\EntityFormInterface;
-use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
@@ -18,6 +17,7 @@ use Drupal\markdown\Form\SettingsForm;
 use Drupal\markdown\Markdown as MarkdownService;
 use Drupal\markdown\PluginManager\ParserManagerInterface;
 use Drupal\markdown\Traits\FilterFormatAwareTrait;
+use Drupal\markdown\Traits\MoreInfoTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -34,6 +34,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class FilterMarkdown extends FilterBase implements FilterMarkdownInterface, ContainerFactoryPluginInterface {
 
   use FilterFormatAwareTrait;
+  use MoreInfoTrait;
 
   /**
    * The Markdown Settings for this filter.
@@ -272,13 +273,7 @@ class FilterMarkdown extends FilterBase implements FilterMarkdownInterface, Cont
     if (!$long) {
       return NULL;
     }
-    return $this->t('Parses markdown and converts it to HTML. @moreInfo', [
-      '@moreInfo' => Link::fromTextAndUrl($this->t('[More Info]'), Url::fromUri('https://www.drupal.org/docs/8/modules/markdown', [
-        'attributes' => [
-          'target' => '_blank',
-        ],
-      ]))->toString(),
-    ]);
+    return $this->moreInfo($this->t('Parses markdown and converts it to HTML.'), 'https://www.drupal.org/docs/8/modules/markdown');
   }
 
 }

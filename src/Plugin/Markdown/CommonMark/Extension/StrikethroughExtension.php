@@ -23,6 +23,7 @@ use League\CommonMark\Extension\Strikethrough\StrikethroughExtension as LeagueSt
  *   id = "league/commonmark-ext-strikethrough",
  *   label = @Translation("Strikethrough"),
  *   installed = "\League\CommonMark\Extension\Strikethrough\StrikethroughExtension",
+ *   url = "https://commonmark.thephpleague.com/extensions/strikethrough/",
  * )
  */
 class StrikethroughExtension extends BaseExtension implements AllowedHtmlInterface {

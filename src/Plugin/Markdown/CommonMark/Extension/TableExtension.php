@@ -23,6 +23,7 @@ use League\CommonMark\Extension\Table\TableExtension as LeagueTableExtension;
  *   id = "league/commonmark-ext-table",
  *   label = @Translation("Table"),
  *   installed = "\League\CommonMark\Extension\Table\TableExtension",
+ *   url = "https://commonmark.thephpleague.com/extensions/tables/",
  * )
  */
 class TableExtension extends BaseExtension implements AllowedHtmlInterface {

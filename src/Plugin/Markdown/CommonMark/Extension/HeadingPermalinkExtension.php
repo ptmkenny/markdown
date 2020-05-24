@@ -30,6 +30,7 @@ use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkRenderer;
  *   label = @Translation("Heading Permalink"),
  *   description = @Translation("Dynamically generated tags based on the contents of the 'Inner Contents' setting; updated each save."),
  *   installed = "\League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension",
+ *   url = "https://commonmark.thephpleague.com/extensions/heading-permalinks/",
  * )
  */
 class HeadingPermalinkExtension extends BaseExtension implements AllowedHtmlInterface, PluginFormInterface, SettingsInterface {
@@ -39,7 +40,7 @@ class HeadingPermalinkExtension extends BaseExtension implements AllowedHtmlInte
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings() {
+  public static function defaultSettings(array $pluginDefinition) {
     return [
       'html_class' => 'heading-permalink',
       'id_prefix' => 'user-content',
@@ -68,7 +69,7 @@ class HeadingPermalinkExtension extends BaseExtension implements AllowedHtmlInte
 
     $element += $this->createSettingElement('html_class', [
       '#type' => 'textfield',
-      '#title' => $this->t('HTML class'),
+      '#title' => $this->t('HTML Class'),
       '#description' => $this->t("The value of this nested configuration option should be a <code>string</code> that you want set as the <code>&lt;a&gt;</code> tag's class attribute."),
     ], $form_state);
 
@@ -80,6 +81,7 @@ class HeadingPermalinkExtension extends BaseExtension implements AllowedHtmlInte
 
     $element += $this->createSettingElement('inner_contents', [
       '#type' => 'textarea',
+      '#title' => $this->t('Inner Contents'),
       '#description' => $this->t("This controls the HTML you want to appear inside of the generated <code>&lt;a&gt;</code> tag. Usually this would be something you'd style as some kind of link icon. By default, an embedded <a href=\":octicon-link\" target=\"_blank\">Octicon link SVG,</a> is provided, but you can replace this with any custom HTML you wish.<br>NOTE: The HTML tags and attributes saved here will be dynamically allowed using the corresponding Allowed HTML Plugin in \"Render Strategy\". This means that whatever is added here has the potential to open up security vulnerabilities.<br>If unsure or you wish for maximum security, use a non-HTML based placeholder (e.g. <code>{{ commonmark_heading_permalink_inner_contents }}</code>) value that you can replace post parsing in <code>hook_markdown_html_alter()</code>.", [
         ':octicon-link' => 'https://primer.style/octicons/link',
       ]),
@@ -87,6 +89,7 @@ class HeadingPermalinkExtension extends BaseExtension implements AllowedHtmlInte
 
     $element += $this->createSettingElement('insert', [
       '#type' => 'select',
+      '#title' => $this->t('Insert'),
       '#description' => $this->t("This controls whether the anchor is added to the beginning of the <code>&lt;h1&gt;</code>, <code>&lt;h2&gt;</code> etc. tag or to the end."),
       '#options' => [
         'after' => $this->t('After'),
@@ -94,8 +97,9 @@ class HeadingPermalinkExtension extends BaseExtension implements AllowedHtmlInte
       ],
     ], $form_state);
 
-    $element += $this->createSettingElement('insert', [
+    $element += $this->createSettingElement('title', [
       '#type' => 'textfield',
+      '#title' => $this->t('Title'),
       '#description' => $this->t("This option sets the title attribute on the <code>&lt;a&gt;</code> tag."),
     ], $form_state);
 

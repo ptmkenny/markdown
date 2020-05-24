@@ -33,6 +33,7 @@ use League\CommonMark\Extension\ExternalLink\ExternalLinkExtension as LeagueExte
  *   label = @Translation("External Links"),
  *   installed = "\League\CommonMark\Extension\ExternalLink\ExternalLinkExtension",
  *   description = @Translation("Automatically detect links to external sites and adjust the markup accordingly."),
+ *   url = "https://commonmark.thephpleague.com/extensions/external-links/",
  * )
  */
 class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterface, InlineRendererInterface, SettingsInterface, PluginFormInterface {
@@ -45,7 +46,7 @@ class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterfac
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings() {
+  public static function defaultSettings(array $pluginDefinition) {
     return [
       'html_class' => '',
       'internal_hosts' => [
@@ -86,6 +87,7 @@ class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterfac
 
     $element += $this->createSettingElement('internal_hosts', [
       '#type' => 'textarea',
+      '#title' => $this->t('Internal Hosts'),
       '#description' => $this->t('Defines a whitelist of hosts which are considered non-external and should not receive the external link treatment. This can be a single host name, like <code>example.com</code>, which must match exactly. Wildcard matching is also supported using regular expression like <code>/(^|\.)example\.com$/</code>. Note that you must use <code>/</code> characters to delimit your regex. By default, if no internal hosts are provided, all links will be considered external. One host per line.'),
     ], $form_state, '\Drupal\markdown\Util\KeyValuePipeConverter::denormalizeNoKeys');
 
@@ -111,6 +113,7 @@ class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterfac
 
     $element += $this->createSettingElement('open_in_new_window', [
       '#type' => 'checkbox',
+      '#title' => $this->t('Open in a New Window'),
       '#description' => $this->t('Adds <code>target="_blank"</code> to external link <code>&lt;a&gt;</code> tags.'),
     ], $form_state);
 

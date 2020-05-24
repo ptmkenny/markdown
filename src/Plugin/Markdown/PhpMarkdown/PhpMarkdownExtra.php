@@ -24,6 +24,7 @@ use Drupal\markdown\Util\KeyValuePipeConverter;
  *   id = "michelf/php-markdown-extra",
  *   label = @Translation("PHP Markdown Extra"),
  *   installed = "\Michelf\MarkdownExtra",
+ *   url = "https://michelf.ca/projects/php-markdown/extra",
  * )
  * @method \Michelf\MarkdownExtra getPhpMarkdown()
  * @noinspection PhpFullyQualifiedNameUsageInspection
@@ -38,7 +39,7 @@ class PhpMarkdownExtra extends PhpMarkdown implements AllowedHtmlInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings() {
+  public static function defaultSettings(array $pluginDefinition) {
     return [
       'code_attr_on_pre' => FALSE,
       'code_class_prefix' => '',
@@ -54,7 +55,7 @@ class PhpMarkdownExtra extends PhpMarkdown implements AllowedHtmlInterface {
       'omit_footnotes' => FALSE,
       'predef_abbr' => [],
       'table_align_class_tmpl' => '',
-    ] + parent::defaultSettings();
+    ] + parent::defaultSettings($pluginDefinition);
   }
 
   /**
@@ -112,11 +113,13 @@ class PhpMarkdownExtra extends PhpMarkdown implements AllowedHtmlInterface {
 
     $element += $this->createSettingElement('code_class_prefix', [
       '#type' => 'textfield',
+      '#title' => $this->t('Code Class Prefix'),
       '#description' => $this->t('An optional prefix for the class names associated with fenced code blocks.'),
     ], $form_state);
 
     $element += $this->createSettingElement('hashtag_protection', [
       '#type' => 'checkbox',
+      '#title' => $this->t('Hashtag Protection'),
       '#description' => $this->t('When enabled, prevents ATX-style headers with no space after the initial hash from being interpreted as headers.'),
     ], $form_state);
 
@@ -179,6 +182,7 @@ class PhpMarkdownExtra extends PhpMarkdown implements AllowedHtmlInterface {
 
     $element['footnotes'] += $this->createSettingElement('omit_footnotes', [
       '#type' => 'checkbox',
+      '#title' => $this->t('Omit Footnotes'),
       '#description' => $this->t('When enabled, footnotes are not appended at the end of the generated HTML and the <code>footnotes_assembled</code> variable on the parser object (see <code>hook_markdown_html_alter()</code>) will contain the HTML for the footnote list, allowing footnotes to be moved somewhere else on the page.<br>NOTE: when placing the content of footnotes_assembled on the page, consider adding the attribute <code>role="doc-endnotes"</code> to the HTML element that will enclose the list of footnotes so they are reachable to accessibility tools the same way they would be with the default HTML output.'),
     ], $form_state);
 

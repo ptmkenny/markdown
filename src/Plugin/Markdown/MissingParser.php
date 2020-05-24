@@ -15,9 +15,10 @@ use Drupal\markdown\Util\FilterHtml;
  * @MarkdownParser(
  *   id = "_missing_parser",
  *   label = @Translation("Missing Parser"),
+ *   installed = false,
  * )
  */
-class MissingParser extends PluginBase implements ParserInterface {
+class MissingParser extends InstallablePluginBase implements ParserInterface {
 
   use RefinableCacheableDependencyTrait;
   use SettingsTrait;
@@ -59,30 +60,9 @@ class MissingParser extends PluginBase implements ParserInterface {
   /**
    * {@inheritdoc}
    */
-  public function getLabel($version = TRUE) {
-    return parent::getLabel();
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function getRenderStrategy() {
     $type = $this->config()->get('render_strategy.type');
     return isset($type) ? $type : static::FILTER_OUTPUT;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getVersion() {
-    return NULL;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function isInstalled() {
-    return FALSE;
   }
 
   /**

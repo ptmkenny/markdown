@@ -64,8 +64,8 @@ function markdown_requirements($phase) {
     if (!$installed) {
       $items = array_map(function (ParserInterface $parser) {
         $definition = $parser->getPluginDefinition();
-        if (!empty($definition['versionException'])) {
-          $reason = $definition['versionException'];
+        if (!empty($definition['versionExceptions'])) {
+          $reason = implode(' ', $definition['versionExceptions']);
         }
         else {
           $reason = t('Not Installed');

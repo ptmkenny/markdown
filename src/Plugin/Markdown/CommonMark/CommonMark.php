@@ -54,7 +54,7 @@ class CommonMark extends BaseExtensibleParser {
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings() {
+  public static function defaultSettings(array $pluginDefinition) {
     return [
       'allow_unsafe_links' => TRUE,
       'enable_em' => TRUE,
@@ -69,7 +69,7 @@ class CommonMark extends BaseExtensibleParser {
       'use_asterisk' => TRUE,
       'use_underscore' => TRUE,
       'unordered_list_markers' => ['-', '*', '+'],
-    ] + parent::defaultSettings();
+    ] + parent::defaultSettings($pluginDefinition);
   }
 
   /**
@@ -88,18 +88,20 @@ class CommonMark extends BaseExtensibleParser {
 
     $element += $this->createSettingElement('allow_unsafe_links', [
       '#type' => 'checkbox',
+      '#title' => $this->t('Allow Unsafe Links'),
       '#description' => $this->t('Allows potentially risky links and image URLs to remain in the document.'),
     ], $form_state);
     $this->renderStrategyDisabledSettingState($form_state, $element['allow_unsafe_links']);
 
     $element += $this->createSettingElement('enable_em', [
       '#type' => 'checkbox',
-      '#title' => $this->t('Enable emphasis'),
+      '#title' => $this->t('Enable Emphasis'),
       '#description' => $this->t('Enables <code>&lt;em&gt;</code> parsing.'),
     ], $form_state);
 
     $element += $this->createSettingElement('enable_strong', [
       '#type' => 'checkbox',
+      '#title' => $this->t('Enable Strong'),
       '#description' => $this->t('Enables <code>&lt;strong&gt;</code> parsing.'),
     ], $form_state);
 
@@ -123,6 +125,7 @@ class CommonMark extends BaseExtensibleParser {
 
     $element += $this->createSettingElement('max_nesting_level', [
       '#type' => 'number',
+      '#title' => $this->t('Maximum Nesting Level'),
       '#description' => $this->t('The maximum nesting level for blocks. Setting this to a positive integer can help protect against long parse times and/or segfaults if blocks are too deeply-nested.'),
       '#min' => 0,
       '#max' => 100000,
@@ -135,31 +138,37 @@ class CommonMark extends BaseExtensibleParser {
 
     $element['renderer'] += $this->createSettingElement('renderer.block_separator', [
       '#type' => 'textfield',
+      '#title' => $this->t('Block Separator'),
       '#description' => $this->t('String to use for separating renderer block elements.'),
     ], $rendererSubformState, '\Drupal\markdown\Plugin\Markdown\CommonMark\CommonMark::addcslashes');
 
     $element['renderer'] += $this->createSettingElement('renderer.inner_separator', [
       '#type' => 'textfield',
+      '#title' => $this->t('Inner Separator'),
       '#description' => $this->t('String to use for separating inner block contents.'),
     ], $rendererSubformState, '\Drupal\markdown\Plugin\Markdown\CommonMark\CommonMark::addcslashes');
 
     $element['renderer'] += $this->createSettingElement('renderer.soft_break', [
       '#type' => 'textfield',
+      '#title' => $this->t('Soft Break'),
       '#description' => $this->t('String to use for rendering soft breaks.'),
     ], $rendererSubformState, '\Drupal\markdown\Plugin\Markdown\CommonMark\CommonMark::addcslashes');
 
     $element += $this->createSettingElement('use_asterisk', [
       '#type' => 'checkbox',
+      '#title' => $this->t('Use Asterisk'),
       '#description' => $this->t('Enables parsing of <code>*</code> for emphasis.'),
     ], $form_state);
 
     $element += $this->createSettingElement('use_underscore', [
       '#type' => 'checkbox',
+      '#title' => $this->t('Use Underscore'),
       '#description' => $this->t('Enables parsing of <code>_</code> for emphasis.'),
     ], $form_state);
 
     $element += $this->createSettingElement('unordered_list_markers', [
       '#type' => 'textarea',
+      '#title' => $this->t('Unordered List Markers'),
       '#description' => $this->t('Characters that are used to indicated a bulleted list; only one character per line.'),
     ], $form_state, '\Drupal\markdown\Util\KeyValuePipeConverter::denormalizeNoKeys');
 
@@ -279,7 +288,7 @@ class CommonMark extends BaseExtensibleParser {
           // config altogether.
           $settingsKey = $extension->settingsKey();
           if ($settingsKey === NULL) {
-            throw new InvalidPluginDefinitionException($extension->getPluginId(), sprintf('The "%s" markdown extension must also supply a value in %s. This is a requirement of the parser so it knows how extension settings should be merged.', $extension->getPluginId(), '\Drupal\markdown\Plugin\Markdown\MarkdownPluginSettingsInterface::parserExtensionSettingsKey'));
+            throw new InvalidPluginDefinitionException($extension->getPluginId(), sprintf('The "%s" markdown extension must also supply a value in %s. This is a requirement of the parser so it knows how extension settings should be merged.', $extension->getPluginId(), '\Drupal\markdown\Plugin\Markdown\SettingsInterface::settingsKey'));
           }
 
           // If the extension plugin specifies anything other than FALSE, merge.

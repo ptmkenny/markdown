@@ -10,10 +10,13 @@ interface SettingsInterface {
   /**
    * Provides the default settings for the plugin.
    *
+   * @param array $pluginDefinition
+   *   The plugin definition.
+   *
    * @return array
    *   The default settings.
    */
-  public static function defaultSettings();
+  public static function defaultSettings(array $pluginDefinition);
 
   /**
    * Retrieves the default value for the setting.

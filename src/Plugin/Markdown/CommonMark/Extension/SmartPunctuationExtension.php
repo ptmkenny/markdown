@@ -28,7 +28,7 @@ class SmartPunctuationExtension extends BaseExtension implements PluginFormInter
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings() {
+  public static function defaultSettings(array $pluginDefinition) {
     return [
       'double_quote_opener' => '“',
       'double_quote_closer' => '”',
@@ -45,18 +45,22 @@ class SmartPunctuationExtension extends BaseExtension implements PluginFormInter
 
     $element += $this->createSettingElement('double_quote_opener', [
       '#type' => 'textfield',
+      '#title' => $this->t('Double Quote Opener'),
     ], $form_state);
 
     $element += $this->createSettingElement('double_quote_closer', [
       '#type' => 'textfield',
+      '#title' => $this->t('Double Quote Closer'),
     ], $form_state);
 
     $element += $this->createSettingElement('single_quote_opener', [
       '#type' => 'textfield',
+      '#title' => $this->t('Single Quote Opener'),
     ], $form_state);
 
     $element += $this->createSettingElement('single_quote_closer', [
       '#type' => 'textfield',
+      '#title' => $this->t('Single Quote Closer'),
     ], $form_state);
 
     return $element;

@@ -21,6 +21,7 @@ use Drupal\markdown\Plugin\Markdown\ParserInterface;
  *   id = "erusev/parsedown-extra",
  *   label = @Translation("Parsedown Extra"),
  *   installed = "\ParsedownExtra",
+ *   url = "https://github.com/erusev/parsedown-extra",
  * )
  * @method \ParsedownExtra getParsedown()
  */

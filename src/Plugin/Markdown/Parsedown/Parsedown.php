@@ -26,6 +26,7 @@ use Drupal\markdown\Plugin\Markdown\SettingsInterface;
  *   id = "erusev/parsedown",
  *   label = @Translation("Parsedown"),
  *   installed = "\Parsedown",
+ *   url = "https://parsedown.org",
  * )
  */
 class Parsedown extends BaseParser implements AllowedHtmlInterface, SettingsInterface {
@@ -47,14 +48,14 @@ class Parsedown extends BaseParser implements AllowedHtmlInterface, SettingsInte
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings() {
+  public static function defaultSettings(array $pluginDefinition) {
     return [
       'breaks_enabled' => FALSE,
       'markup_escaped' => FALSE,
       'safe_mode' => FALSE,
       'strict_mode' => FALSE,
       'urls_linked' => TRUE,
-    ] + parent::defaultSettings();
+    ] + parent::defaultSettings($pluginDefinition);
   }
 
   /**
@@ -107,6 +108,7 @@ class Parsedown extends BaseParser implements AllowedHtmlInterface, SettingsInte
     $element += $this->createSettingElement('markup_escaped', [
       '#access' => !!$this->getSettingMethod('markup_escaped'),
       '#type' => 'checkbox',
+      '#title' => $this->t('Markup Escaped'),
       '#description' => $this->t('Enabling this will escape HTML markup.'),
     ], $form_state);
     $this->renderStrategyDisabledSettingState($form_state, $element['markup_escaped']);
@@ -114,6 +116,7 @@ class Parsedown extends BaseParser implements AllowedHtmlInterface, SettingsInte
     $element += $this->createSettingElement('safe_mode', [
       '#access' => !!$this->getSettingMethod('safe_mode'),
       '#type' => 'checkbox',
+      '#title' => $this->t('Safe Mode'),
       '#description' => $this->t('Enabling this will apply sanitization to additional scripting vectors (such as scripting link destinations) that are introduced by the markdown syntax itself.'),
     ], $form_state);
     $this->renderStrategyDisabledSettingState($form_state, $element['safe_mode']);
@@ -127,6 +130,7 @@ class Parsedown extends BaseParser implements AllowedHtmlInterface, SettingsInte
     $element += $this->createSettingElement('strict_mode', [
       '#access' => !!$this->getSettingMethod('strict_mode'),
       '#type' => 'checkbox',
+      '#title' => $this->t('Strict Mode'),
       '#description' => $this->t('Enables strict CommonMark compliance.'),
     ], $form_state);
 

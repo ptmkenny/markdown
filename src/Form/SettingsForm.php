@@ -25,6 +25,7 @@ use Drupal\markdown\PluginManager\AllowedHtmlManager;
 use Drupal\markdown\PluginManager\ParserManagerInterface;
 use Drupal\markdown\Traits\FilterAwareTrait;
 use Drupal\markdown\Traits\FormTrait;
+use Drupal\markdown\Traits\MoreInfoTrait;
 use Drupal\markdown\Util\FilterAwareInterface;
 use Drupal\markdown\Util\FilterFormatAwareInterface;
 use Drupal\markdown\Util\FilterHtml;
@@ -37,6 +38,7 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
 
   use FilterAwareTrait;
   use FormTrait;
+  use MoreInfoTrait;
   use PluginDependencyTrait;
 
   /**
@@ -378,14 +380,10 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
     $this->addDataAttribute($parserElement['id'], 'markdownInstalled', $parser->isInstalled());
 
     // Add the parser description.
-    $descriptions = [];
-    if ($description = $parser->getDescription()) {
-      $descriptions[] = $description;
-    }
+    $parserElement['id']['#description'] = $parser->getDescription();
     if ($url = $parser->getUrl()) {
-      $descriptions[] = Link::fromTextAndUrl($this->t('[More Info]'), $url)->toString();
+      $this->moreInfo($parserElement['id']['#description'], $url);
     }
-    $parserElement['id']['#description'] = Markup::create(implode(' ', $descriptions));
 
     // Build render strategy.
     $parserElement = $this->buildRenderStrategy($parser, $parserElement, $parserSubform);
@@ -482,12 +480,35 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
       $installed = $extension->isInstalled();
       $enabled = $extensionSubform->getValue('enabled', $extension->isEnabled());
 
-      $descriptions = [];
-      if ($description = $extension->getDescription()) {
-        $descriptions[] = $description;
-      }
-      if ($url = $extension->getUrl()) {
-        $descriptions[] = Link::fromTextAndUrl($this->t('[More Info]'), $url)->toString();
+      if ($installed) {
+        $messages = [];
+        if (!$extension->isPreferredInstall()) {
+          if ($preferred = $extension->getPreferredInstallDefinition()) {
+            $messages['status'][] = $this->t('Upgrade available: <a href=":url" target="_blank">:url</a>', [
+              ':url' => isset($preferred['url']) ? $preferred['url'] : $extension->getUrl()->toString(),
+            ]);
+
+          }
+        }
+        if ($deprecation = $extension->getDeprecated()) {
+          $messages['warning'][] = $this->t('The currently installed extension (<a href=":url" target="_blank">:url</a>) is no longer supported. @deprecation', [
+            ':url' => $extension->getUrl()->toString(),
+            '@deprecation' => $deprecation,
+          ]);
+        }
+        if ($messages) {
+          $extensionElement['message'] = [
+            '#weight' => -10,
+            '#theme' => 'status_messages',
+            '#message_list' => $messages,
+            '#status_headings' => [
+              'error' => $this->t('Error message'),
+              'info' => $this->t('Info message'),
+              'status' => $this->t('Status message'),
+              'warning' => $this->t('Warning message'),
+            ],
+          ];
+        }
       }
 
       // Extension enabled checkbox.
@@ -506,10 +527,22 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
             'markdownRequiredBy' => $extension->requiredBy(),
           ],
         ],
-        '#description' => Markup::create(implode(' ', $descriptions)),
+        '#description' => $extension->getDescription(),
         '#default_value' => $bundled || $enabled,
         '#disabled' => $bundled || !$installed,
       ]);
+
+      if (!$installed) {
+        if (!$extension->hasMultipleInstalls() && ($url = $extension->getUrl())) {
+          $this->moreInfo($extensionElement['enabled']['#description'], $url);
+        }
+        elseif ($instructions = $extension->getInstallationInstructions()) {
+          $extensionElement['enabled']['#description'] = new FormattableMarkup('@description @instructions', [
+            '@description' => $extensionElement['enabled']['#description'],
+            '@instructions' => $instructions,
+          ]);
+        }
+      }
 
       // Installed extension settings.
       if ($installed && $extension instanceof PluginFormInterface) {
@@ -558,9 +591,7 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
     $renderStrategySubform['type'] = [
       '#weight' => -10,
       '#type' => 'select',
-      '#description' => $this->t('Determines the strategy to use when dealing with user provided HTML markup. <a href=":markdown_xss" target="_blank">[More Info]</a>', [
-        ':markdown_xss' => RenderStrategyInterface::MARKDOWN_XSS_URL,
-      ]),
+      '#description' => $this->t('Determines the strategy to use when dealing with user provided HTML markup.'),
       '#default_value' => $renderStrategySubformState->getValue('type', $parser->getRenderStrategy()),
       '#attributes' => [
         'data-markdown-element' => 'render_strategy',
@@ -573,6 +604,7 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
         RenderStrategyInterface::NONE => $this->t('None'),
       ],
     ];
+    $this->moreInfo($renderStrategySubform['type']['#description'], RenderStrategyInterface::MARKDOWN_XSS_URL);
 
     // Build allowed HTML plugins.
     $renderStrategySubform['plugins'] = [

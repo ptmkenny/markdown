@@ -40,7 +40,7 @@ class PhpMarkdown extends BaseParser implements SettingsInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings() {
+  public static function defaultSettings(array $pluginDefinition) {
     return [
       'empty_element_suffix' => ' />',
       'enhanced_ordered_list' => FALSE,
@@ -50,7 +50,7 @@ class PhpMarkdown extends BaseParser implements SettingsInterface {
       'predef_titles' => [],
       'predef_urls' => [],
       'tab_width' => 4,
-    ] + parent::defaultSettings();
+    ] + parent::defaultSettings($pluginDefinition);
   }
 
   /**
@@ -62,33 +62,39 @@ class PhpMarkdown extends BaseParser implements SettingsInterface {
 
     $element += $this->createSettingElement('enhanced_ordered_list', [
       '#type' => 'checkbox',
+      '#title' => $this->t('Enhanced Ordered List'),
       '#description' => $this->t('Enabling this allows ordered list to start with a number different from 1.'),
     ], $form_state);
 
     $element += $this->createSettingElement('hard_wrap', [
       '#type' => 'checkbox',
+      '#title' => $this->t('Hard Wrap'),
       '#description' => $this->t('Enabling this will change line breaks into <code>&lt;br /&gt;</code> when the context allows it. When disabled, following the standard Markdown syntax these newlines are ignored unless they a preceded by two spaces.'),
     ], $form_state);
 
     $element += $this->createSettingElement('no_entities', [
       '#type' => 'checkbox',
+      '#title' => $this->t('No Entities'),
       '#description' => $this->t('Enabling this will prevent HTML entities (such as <code>&lt;</code>) from being passed verbatim in the output as it is the standard with Markdown. Instead, the HTML output will be <code>&amp;tl;</code> and once shown in shown the browser it will match perfectly what was written.'),
     ], $form_state);
     $this->renderStrategyDisabledSettingState($form_state, $element['no_entities']);
 
     $element += $this->createSettingElement('no_markup', [
       '#type' => 'checkbox',
+      '#title' => $this->t('No Markup'),
       '#description' => $this->t('Enabling this will prevent HTML tags from the input from being passed to the output.'),
     ], $form_state);
     $this->renderStrategyDisabledSettingState($form_state, $element['no_markup']);
 
     $element += $this->createSettingElement('empty_element_suffix', [
       '#type' => 'textfield',
+      '#title' => $this->t('Empty Element Suffix'),
       '#description' => $this->t('This is the string used to close tags for HTML elements with no content such as <code>&lt;br&gt;</code> and <code>&lt;hr&gt;</code>. The default value creates XML-style empty element tags which are also valid in HTML 5.'),
     ], $form_state);
 
     $element += $this->createSettingElement('tab_width', [
       '#type' => 'number',
+      '#title' => $this->t('Tab Width'),
       '#description' => $this->t('The width of a tab character on input. Changing this will affect how many spaces a tab character represents.<br>NOTE: Keep in mind that when the Markdown syntax spec says "four spaces or one tab", it actually means "four spaces after tabs are expanded to spaces". So this to <code>8</code> will make the parser treat a tab character as two levels of indentation.'),
       '#min' => 4,
       '#max' => 32,

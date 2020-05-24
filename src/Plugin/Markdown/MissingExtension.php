@@ -8,9 +8,10 @@ namespace Drupal\markdown\Plugin\Markdown;
  * @MarkdownExtension(
  *   id = "_missing_extension",
  *   label = @Translation("Missing Extension"),
+ *   installed = false,
  * )
  */
-class MissingExtension extends PluginBase implements ExtensionInterface {
+class MissingExtension extends InstallablePluginBase implements ExtensionInterface {
 
   /**
    * {@inheritdoc}
@@ -29,28 +30,7 @@ class MissingExtension extends PluginBase implements ExtensionInterface {
   /**
    * {@inheritdoc}
    */
-  public function getLabel($version = TRUE) {
-    return parent::getLabel();
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getVersion() {
-    return NULL;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function isEnabled() {
-    return FALSE;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function isInstalled() {
     return FALSE;
   }
 

@@ -217,17 +217,6 @@ abstract class BaseParser extends InstallablePluginBase implements FilterAwareIn
     $selector = ':input[name="' . array_shift($parents) . '[' . implode('][', $parents) . ']"]';
 
     /** @var \Drupal\markdown\Form\SubformStateInterface $form_state */
-    $moreInfo = [
-      '#type' => 'link',
-      '#title' => $this->t('[More Info]'),
-      '#url' => Url::fromUri(RenderStrategyInterface::MARKDOWN_XSS_URL),
-      '#options' => [
-        'attributes' => [
-          'target' => '_blank',
-        ],
-      ],
-      '#prefix' => ' ',
-    ];
     return new FormattableMarkup('@disabled@warning', [
       '@disabled' => $form_state->conditionalElement([
         '#type' => 'container',
@@ -238,9 +227,8 @@ abstract class BaseParser extends InstallablePluginBase implements FilterAwareIn
           ],
         ],
         [
-          '#markup' => $this->t('<strong>NOTE:</strong> This setting is disabled when a render strategy is being used.'),
+          '#markup' => $this->moreInfo($this->t('<strong>NOTE:</strong> This setting is disabled when a render strategy is being used.'), RenderStrategyInterface::MARKDOWN_XSS_URL),
         ],
-        $moreInfo, // phpcs:ignore
       ], 'visible', $selector, ['!value' => static::NONE]),
       '@warning' => $form_state->conditionalElement([
         '#type' => 'container',
@@ -252,9 +240,8 @@ abstract class BaseParser extends InstallablePluginBase implements FilterAwareIn
           ],
         ],
         [
-          '#markup' => $this->t('<strong>WARNING:</strong> This setting does not guarantee protection against malicious JavaScript from being injected. It is recommended to use the "Filter Output" render strategy.'),
+          '#markup' => $this->moreInfo($this->t('<strong>WARNING:</strong> This setting does not guarantee protection against malicious JavaScript from being injected. It is recommended to use the "Filter Output" render strategy.'), RenderStrategyInterface::MARKDOWN_XSS_URL),
         ],
-        $moreInfo, // phpcs:ignore
       ], 'visible', $selector, ['value' => static::NONE]),
     ]);
   }

@@ -4,6 +4,7 @@ namespace Drupal\markdown\PluginManager;
 
 use Composer\Semver\Semver;
 use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\markdown\BcSupport\DiscoveryException;
@@ -49,7 +50,7 @@ abstract class BasePluginManager extends DefaultPluginManager implements Markdow
    */
   protected function normalizeArrayCallbacks(array &$array, array $parents = []) {
     foreach ($array as $key => $value) {
-      if (($callable = is_callable($value)) || (is_array($value) && count($value) === 2 && (is_object($value[0]) || (is_string($value[0]) && strpos($value[0], '\\') !== FALSE)) && is_string($value[1]))) {
+      if (($callable = is_callable($value)) || (is_array($value) && isset($value[0]) && isset($value[1]) && (is_object($value[0]) || (is_string($value[0]) && strpos($value[0], '\\') !== FALSE)) && is_string($value[1]))) {
         if (is_array($value)) {
           list($class, $method) = $value;
           if (is_object($class)) {
@@ -187,27 +188,105 @@ abstract class BasePluginManager extends DefaultPluginManager implements Markdow
    *   The normalized classname.
    */
   protected function normalizeClassName($className) {
-    return ltrim(str_replace('\\\\', '\\', $className), '\\');
+    return is_string($className) ? ltrim(str_replace('\\\\', '\\', $className), '\\') : $className;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function processDefinition(&$definition, $plugin_id) {
+  public function processDefinition(&$definition, $pluginId) {
     if (!is_array($definition) || !($class = isset($definition['class']) ? $definition['class'] : NULL)) {
       return;
     }
 
-    // Determine if plugin is installed.
-    if (isset($definition['installed']) && is_string($definition['installed'])) {
-      $definition['installedClass'] = $this->normalizeClassName($definition['installed']);
-      $definition['installed'] = class_exists($definition['installedClass']) || interface_exists($definition['installedClass']) || function_exists($definition['installedClass']);
+    $installs = &$this->processDefinitionInstalls($definition, $pluginId);
+    foreach ($installs as $installClass => $install) {
+      $install['installed'] = class_exists($installClass) || interface_exists($installClass) || function_exists($installClass);
+      $install = NestedArray::mergeDeep($definition, $install);
+
+      // Provide the default preferred URL even if none are installed.
+      if (!isset($definition['url']) && !empty($install['preferred']) && !empty($install['url'])) {
+        $definition['url'] = $install['url'];
+      }
+
+      // Process the install for any relevant version information.
+      try {
+        $this->processDefinitionVersion($install, $pluginId);
+      }
+      // If there was a version exception, then it's not installed.
+      catch (MarkdownVersionException $exception) {
+        $install['installed'] = FALSE;
+        $definition['versionExceptions'][$installClass] = $exception->getMessage();
+      }
+
+      // If the validating the version failed, then skip this install.
+      if (empty($install['installed'])) {
+        continue;
+      }
+
+      // Version validation passed, use this install.
+      $definition = $install;
+      break;
     }
-    elseif (!isset($definition['installed'])) {
+
+    // Ensure the URL property is provided if there are supported installs.
+    if (!empty($definition['installs']) && empty($definition['url'])) {
+      throw new DiscoveryException('The "url" property must be provided.');
+    }
+  }
+
+  /**
+   * Performs extra processing on plugin definitions to normalize install data.
+   *
+   * @param array $definition
+   *   The definition being processed.
+   * @param string $pluginId
+   *   The plugin identifier.
+   *
+   * @return array
+   *   The installs array, passed by reference.
+   */
+  protected function &processDefinitionInstalls(array &$definition, $pluginId) {
+    $definition['installs'] = [];
+    $definition['installedClass'] = NULL;
+
+    // Determine if plugin is installed.
+    if (!isset($definition['installed'])) {
       $definition['installed'] = $this->providerExists($definition['provider']);
     }
     elseif (!is_bool($definition['installed'])) {
-      throw new DiscoveryException('The "installed" property must either be a class name that is checked for existence or a boolean. If complex requirements are needed, use \Drupal\markdown\Plugin\Markdown\MarkdownPluginInstallableInterface::installed() instead of setting the value in the plugin annotation.');
+      $installed = (array) $definition['installed'];
+      $preferred = FALSE;
+      foreach ($installed as $key => $value) {
+        $installClass = $this->normalizeClassName(is_string($key) && strpos($key, '\\') !== FALSE ? $key : $value);
+        $definition['installs'][$installClass] = is_array($value) ? $value : [];
+        if (!$preferred && !empty($definition['installs'][$installClass]['preferred'])) {
+          $preferred = $installClass;
+        }
+        $definition['installs'][$installClass]['installedClass'] = $installClass;
+      }
+      if (!$preferred) {
+        $preferred = current(array_keys($definition['installs']));
+      }
+      $definition['installs'][$preferred]['preferred'] = TRUE;
+      $definition['installed'] = FALSE;
+    }
+
+    return $definition['installs'];
+  }
+
+  /**
+   * Performs extra processing on plugin definitions to check installed version.
+   *
+   * @param array $definition
+   *   The definition being processed.
+   * @param string $pluginId
+   *   The plugin identifier.
+   */
+  protected function processDefinitionVersion(array &$definition, $pluginId) {
+    // Everything should resolve to a boolean.
+    if (!is_bool($definition['installed'])) {
+      throw new DiscoveryException('The "installed" property must either be a class name, an array of class names that are checked for existence or a boolean.');
     }
 
     // Return if plugin isn't installed.
@@ -232,7 +311,7 @@ abstract class BasePluginManager extends DefaultPluginManager implements Markdow
         }
       }
       else {
-        throw new DiscoveryException('The "version" property must either be a constant or public class constant or property that exists in code somewhere. If complex requirements are needed, use \Drupal\markdown\Plugin\Markdown\MarkdownPluginInstallableInterface::version() instead of setting the value in the plugin annotation.');
+        throw new DiscoveryException('The "version" property must either be a constant or public class constant or property that exists in code somewhere. If complex requirements are needed, use the "versionConstraint" property.');
       }
     }
 

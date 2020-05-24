@@ -10,6 +10,7 @@ use Drupal\Core\Plugin\PluginDependencyTrait;
 use Drupal\Core\Url;
 use Drupal\markdown\BcSupport\ObjectWithPluginCollectionInterface;
 use Drupal\markdown\Config\ImmutableMarkdownConfig;
+use Drupal\markdown\Traits\MoreInfoTrait;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -19,14 +20,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 abstract class PluginBase extends CoreBasePlugin implements PluginInterface {
 
   use ContainerAwareTrait;
+  use MoreInfoTrait;
   use PluginDependencyTrait;
-
-  /**
-   * The Renderer service.
-   *
-   * @var \Drupal\Core\Render\RendererInterface
-   */
-  protected static $renderer;
 
   /**
    * The config for this plugin.
@@ -157,19 +152,6 @@ abstract class PluginBase extends CoreBasePlugin implements PluginInterface {
    */
   public function getWeight() {
     return isset($this->pluginDefinition['weight']) ? (int) $this->pluginDefinition['weight'] : 0;
-  }
-
-  /**
-   * Retrieves the Renderer service.
-   *
-   * @return \Drupal\Core\Render\RendererInterface
-   *   The Renderer service.
-   */
-  protected function renderer() {
-    if (!static::$renderer) {
-      static::$renderer = \Drupal::service('renderer');
-    }
-    return static::$renderer;
   }
 
   /**

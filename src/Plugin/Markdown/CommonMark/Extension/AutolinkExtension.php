@@ -43,7 +43,7 @@ class AutolinkExtension extends BaseExtension implements SettingsInterface, Plug
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings() {
+  public static function defaultSettings(array $pluginDefinition) {
     return [
       'at' => [
         'map' => '',
@@ -100,6 +100,7 @@ class AutolinkExtension extends BaseExtension implements SettingsInterface, Plug
 
       $symbolElement += $this->createSettingElement("$name.keep_symbol", [
         '#type' => 'checkbox',
+        '#title' => $this->t('Keep Symbol'),
         '#description' => $this->t('When enabled, the symbol will always be present at the beginning. If disabled, the symbol will be removed.'),
       ], $symbolSubformState);
       $symbolSubformState->addElementState($symbolElement['keep_symbol'], 'visible', 'map', ['!value' => '']);
@@ -113,6 +114,7 @@ class AutolinkExtension extends BaseExtension implements SettingsInterface, Plug
 
       $symbolElement += $this->createSettingElement("$name.entity_label", [
         '#type' => 'checkbox',
+        '#title' => $this->t('Entity Label'),
         '#description' => $this->t('When enabled, the matched text will be replaced with the entity label.'),
       ], $symbolSubformState);
       $symbolSubformState->addElementState($symbolElement['entity_label'], 'visible', 'map', ['value' => 'entity']);
