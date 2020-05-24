@@ -98,7 +98,7 @@ class ParserManager extends BasePluginManager implements ParserManagerInterface 
   public function processDefinition(&$definition, $plugin_id) {
     parent::processDefinition($definition, $plugin_id);
 
-    if (!is_array($definition) || !($class = isset($definition['class']) ? $definition['class'] : NULL)) {
+    if (!is_array($definition) || empty($definition['installed']) || !($class = isset($definition['class']) ? $definition['class'] : NULL)) {
       return;
     }
 
