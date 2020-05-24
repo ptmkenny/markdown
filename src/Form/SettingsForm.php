@@ -382,7 +382,7 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
     // Add the parser description.
     $parserElement['id']['#description'] = $parser->getDescription();
     if ($url = $parser->getUrl()) {
-      $this->moreInfo($parserElement['id']['#description'], $url);
+      $parserElement['id']['#description'] = $this->moreInfo($parserElement['id']['#description'], $url);
     }
 
     // Build render strategy.
@@ -479,20 +479,21 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
       $bundled = in_array($extensionId, $parser->getBundledExtensionIds(), TRUE);
       $installed = $extension->isInstalled();
       $enabled = $extensionSubform->getValue('enabled', $extension->isEnabled());
+      $url = $extension->getUrl();
 
       if ($installed) {
         $messages = [];
         if (!$extension->isPreferredInstall()) {
           if ($preferred = $extension->getPreferredInstallDefinition()) {
             $messages['status'][] = $this->t('Upgrade available: <a href=":url" target="_blank">:url</a>', [
-              ':url' => isset($preferred['url']) ? $preferred['url'] : $extension->getUrl()->toString(),
+              ':url' => isset($preferred['url']) ? $preferred['url'] : $url->toString(),
             ]);
 
           }
         }
         if ($deprecation = $extension->getDeprecated()) {
           $messages['warning'][] = $this->t('The currently installed extension (<a href=":url" target="_blank">:url</a>) is no longer supported. @deprecation', [
-            ':url' => $extension->getUrl()->toString(),
+            ':url' => $url->toString(),
             '@deprecation' => $deprecation,
           ]);
         }
@@ -533,8 +534,8 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
       ]);
 
       if (!$installed) {
-        if (!$extension->hasMultipleInstalls() && ($url = $extension->getUrl())) {
-          $this->moreInfo($extensionElement['enabled']['#description'], $url);
+        if (!$extension->hasMultipleInstalls() && $url) {
+          $extensionElement['enabled']['#description'] = $this->moreInfo($extensionElement['enabled']['#description'], $url);
         }
         elseif ($instructions = $extension->getInstallationInstructions()) {
           $extensionElement['enabled']['#description'] = new FormattableMarkup('@description @instructions', [
@@ -542,6 +543,9 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
             '@instructions' => $instructions,
           ]);
         }
+      }
+      elseif ($url) {
+        $extensionElement['enabled']['#description'] = $this->moreInfo($extensionElement['enabled']['#description'], $url);
       }
 
       // Installed extension settings.
@@ -604,7 +608,7 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
         RenderStrategyInterface::NONE => $this->t('None'),
       ],
     ];
-    $this->moreInfo($renderStrategySubform['type']['#description'], RenderStrategyInterface::MARKDOWN_XSS_URL);
+    $renderStrategySubform['type']['#description'] = $this->moreInfo($renderStrategySubform['type']['#description'], RenderStrategyInterface::MARKDOWN_XSS_URL);
 
     // Build allowed HTML plugins.
     $renderStrategySubform['plugins'] = [
