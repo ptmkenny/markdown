@@ -2,6 +2,13 @@
 
 namespace Drupal\markdown\BcSupport;
 
+if (!class_exists('\Drupal\Component\Discovery\DiscoveryException')) {
+  /* @noinspection PhpIgnoredClassAliasDeclaration */
+  class_alias('\RuntimeException', '\Drupal\Component\Discovery\DiscoveryException');
+}
+
+use Drupal\Component\Discovery\DiscoveryException as CoreDiscoveryException;
+
 /**
  * Exception thrown during discovery if the data is invalid.
  *
@@ -10,5 +17,5 @@ namespace Drupal\markdown\BcSupport;
  *
  * @see https://www.drupal.org/project/markdown/issues/3103679
  */
-class DiscoveryException extends \RuntimeException {
+class DiscoveryException extends CoreDiscoveryException {
 }

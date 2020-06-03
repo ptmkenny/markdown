@@ -2,7 +2,12 @@
 
 namespace Drupal\markdown\BcSupport;
 
-use Drupal\Core\Form\FormStateInterface;
+if (!interface_exists('\Drupal\Core\Form\SubformStateInterface')) {
+  /* @noinspection PhpIgnoredClassAliasDeclaration */
+  class_alias('\Drupal\Core\Form\FormStateInterface', '\Drupal\Core\Form\SubformStateInterface');
+}
+
+use Drupal\Core\Form\SubformStateInterface as CoreSubformStateInterface;
 
 /**
  * Stores information about the state of a subform.
@@ -12,7 +17,7 @@ use Drupal\Core\Form\FormStateInterface;
  *
  * @see https://www.drupal.org/project/markdown/issues/3103679
  */
-interface SubformStateInterface extends FormStateInterface {
+interface SubformStateInterface extends CoreSubformStateInterface {
 
   /**
    * Gets the complete form state.

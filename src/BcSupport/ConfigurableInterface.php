@@ -2,15 +2,21 @@
 
 namespace Drupal\markdown\BcSupport;
 
+if (!interface_exists('\Drupal\Component\Plugin\ConfigurableInterface')) {
+  /* @noinspection PhpIgnoredClassAliasDeclaration */
+  class_alias('\Drupal\markdown\BcSupport\BcAliasedInterface', '\Drupal\Component\Plugin\ConfigurableInterface');
+}
+
+use Drupal\Component\Plugin\ConfigurableInterface as CoreConfigurableInterface;
+
 /**
  * Provides an interface for a configurable plugin.
  *
  * @deprecated in markdown:8.x-2.0 and is removed from markdown:3.0.0.
  *   Use \Drupal\Component\Plugin\ConfigurableInterface instead.
- *
  * @see https://www.drupal.org/project/markdown/issues/3103679
  */
-interface ConfigurableInterface {
+interface ConfigurableInterface extends CoreConfigurableInterface {
 
   /**
    * Gets this plugin's configuration.
