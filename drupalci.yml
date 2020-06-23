@@ -3,15 +3,15 @@ build:
   assessment:
     validate_codebase:
       csslint:
-        halt-on-fail: true
+        halt-on-fail: false
       eslint:
-        halt-on-fail: true
+        halt-on-fail: false
       phplint:
-        halt-on-fail: true
+        halt-on-fail: false
+      phpstan:
+        halt-on-fail: false
       phpcs:
         sniff-all-files: true
-        halt-on-fail: true
-      phpstan:
         halt-on-fail: true
     testing:
       # run_tests task is executed several times in order of performance speeds.
