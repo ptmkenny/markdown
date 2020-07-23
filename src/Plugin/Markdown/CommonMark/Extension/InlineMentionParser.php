@@ -130,4 +130,11 @@ class InlineMentionParser implements InlineParserInterface {
     return TRUE;
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function getName() {
+    return 'inline-mention';
+  }
+
 }

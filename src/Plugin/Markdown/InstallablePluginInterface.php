@@ -2,32 +2,106 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
+use Drupal\Component\Plugin\DependentPluginInterface;
+use Drupal\Component\Plugin\PluginInspectionInterface;
+use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\markdown\Annotation\InstallableLibrary;
+use Drupal\markdown\BcSupport\ConfigurableInterface;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+
 /**
  * Interface for installable Markdown plugins.
+ *
+ * @method \Drupal\markdown\Annotation\InstallablePlugin getPluginDefinition()
+ *
+ * @todo Move upstream to https://www.drupal.org/project/installable_plugins.
  */
-interface InstallablePluginInterface extends PluginInterface {
+interface InstallablePluginInterface extends ConfigurableInterface, ContainerAwareInterface, ContainerFactoryPluginInterface, DependentPluginInterface, PluginInspectionInterface {
+
+  /**
+   * Builds a display list of supported libraries.
+   *
+   * @return \Drupal\Component\Render\MarkupInterface
+   */
+  public function buildSupportedLibraries();
+
+  /**
+   * Builds a display for a library.
+   *
+   * @param \Drupal\markdown\Annotation\InstallableLibrary $library
+   *   The library to build.
+   *
+   * @return \Drupal\Component\Render\MarkupInterface
+   */
+  public function buildLibrary(InstallableLibrary $library = NULL);
+
+  /**
+   * Builds a display status based on the current state of the plugin.
+   *
+   * @return \Drupal\Component\Render\MarkupInterface
+   */
+  public function buildStatus();
+
+  /**
+   * Retrieves the config instance for this plugin.
+   *
+   * @return \Drupal\markdown\Config\ImmutableMarkdownConfig
+   *   An immutable markdown config instance for this plugin's configuration.
+   */
+  public function config();
+
+  /**
+   * Retrieves the configuration overrides for the plugin.
+   *
+   * @param array $configuration
+   *   Optional. Specific configuration to check. If not set, the currently
+   *   set configuration will be used.
+   *
+   * @return array
+   *   An array of configuration overrides.
+   */
+  public function getConfigurationOverrides(array $configuration = NULL);
 
   /**
    * Retrieves the deprecation message, if any.
    *
-   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|null
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|void
+   *   The deprecated message, if set.
    */
   public function getDeprecated();
 
   /**
-   * Retrieves the installed class.
+   * Retrieves the description of the plugin, if set.
    *
-   * @return string
-   *   The installed class name.
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The description.
    */
-  public function getInstalledClass();
+  public function getDescription();
 
   /**
-   * Retrieves the installation instructions if the plugin is not installed.
+   * Retrieves the experimental message.
    *
-   * @return \Drupal\Component\Render\MarkupInterface
+   * @return bool|\Drupal\Core\StringTranslation\TranslatableMarkup
+   *   TRUE if plugin is experimental or a TranslatableMarkup object if plugin
+   *   is experimental, but has an additional message; FALSE otherwise.
    */
-  public function getInstallationInstructions();
+  public function getExperimental();
+
+  /**
+   * Retrieves the composer package name of the installable library, if any.
+   *
+   * @return string|void
+   *   The installed identifier, if any.
+   */
+  public function getInstalledId();
+
+  /**
+   * Retrieves the installed library used by the plugin.
+   *
+   * @return \Drupal\markdown\Annotation\InstallableLibrary|void
+   *   The installed library, if any.
+   */
+  public function getInstalledLibrary();
 
   /**
    * Displays the human-readable label of the plugin.
@@ -41,23 +115,24 @@ interface InstallablePluginInterface extends PluginInterface {
   public function getLabel($version = TRUE);
 
   /**
-   * Retrieves the merged preferred install plugin definition.
+   * Retrieves the plugin as a link using its label and URL.
    *
-   * @return array
-   *   The merged preferred install definition.
+   * @param string|\Drupal\Component\Render\MarkupInterface $label
+   *   Optional. A specific label to use for the link. If not specified, it
+   *   will default to the label or plugin identifier if present.
+   * @param array $options
+   *   An array of options to pass to the Url object constructor.
+   * @param bool $fallback
+   *   Flag indicating whether to fallback to the original label or plugin
+   *   identifier if no link could be generated.
+   *
+   * @return \Drupal\Core\GeneratedLink|mixed|void
+   *   The link if one was generated or the label if $fallback was provided.
    */
-  public function getPreferredInstallDefinition();
+  public function getLink($label = NULL, array $options = [], $fallback = TRUE);
 
   /**
-   * The current version of the parser.
-   *
-   * @return string|null
-   *   The parser version.
-   */
-  public function getVersion();
-
-  /**
-   * Instantiates a new instance of the installed class.
+   * Instantiates a new instance of the object defined by the installed library.
    *
    * @param mixed $args
    *   An array of arguments.
@@ -69,7 +144,69 @@ interface InstallablePluginInterface extends PluginInterface {
    *
    * @TODO: Refactor to use variadic parameters.
    */
-  public function instantiateInstalledClass($args = NULL, $_ = NULL);
+  public function getObject($args = NULL, $_ = NULL);
+
+  /**
+   * Retrieves the class name of the object defined by the installed library.
+   *
+   * @return string
+   *   The object class name.
+   */
+  public function getObjectClass();
+
+  /**
+   * Retrieves the preferred library of the plugin.
+   *
+   * @return \Drupal\markdown\Annotation\InstallableLibrary|void
+   *   The preferred library, if any.
+   */
+  public function getPreferredLibrary();
+
+  /**
+   * Returns the provider (extension name) of the plugin.
+   *
+   * @return string
+   *   The provider of the plugin.
+   */
+  public function getProvider();
+
+  /**
+   * Retrieves the configuration for the plugin, but sorted.
+   *
+   * @return array
+   *   The sorted configuration array.
+   */
+  public function getSortedConfiguration();
+
+  /**
+   * Retrieves the URL of the plugin, if set.
+   *
+   * @param array $options
+   *   Optional. An array of \Drupal\Core\Url options.
+   *
+   * @return \Drupal\Core\Url|void
+   *   A Url object of the plugin's URL or NULL if no URL was provided.
+   *
+   * @see \Drupal\Core\Url::fromUri
+   * @see \Drupal\Core\Url::fromUserInput
+   */
+  public function getUrl(array $options = []);
+
+  /**
+   * The current version of the plugin.
+   *
+   * @return string|null
+   *   The plugin version.
+   */
+  public function getVersion();
+
+  /**
+   * Returns the weight of the plugin (used for sorting).
+   *
+   * @return int
+   *   The plugin weight.
+   */
+  public function getWeight();
 
   /**
    * Indicates whether plugin has multiple installs to check.
@@ -77,10 +214,10 @@ interface InstallablePluginInterface extends PluginInterface {
    * @return bool
    *   TRUE or FALSE
    */
-  public function hasMultipleInstalls();
+  public function hasMultipleLibraries();
 
   /**
-   * Indicates whether the parser is installed.
+   * Indicates whether the plugin is installed.
    *
    * @return bool
    *   TRUE or FALSE
@@ -88,11 +225,27 @@ interface InstallablePluginInterface extends PluginInterface {
   public function isInstalled();
 
   /**
-   * Indicates whether plugin is using the first defined install.
+   * Indicates whether the plugin is using the preferred library.
    *
    * @return bool
    *   TRUE or FALSE
    */
-  public function isPreferredInstall();
+  public function isPreferred();
+
+  /**
+   * Indicates whether the preferred library is installed.
+   *
+   * @return bool
+   *   TRUE or FALSE
+   */
+  public function isPreferredLibraryInstalled();
+
+  /**
+   * Indicates whether the plugin should be shown in the UI.
+   *
+   * @return bool
+   *   TRUE or FALSE
+   */
+  public function showInUi();
 
 }

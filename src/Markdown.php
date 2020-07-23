@@ -5,6 +5,7 @@ namespace Drupal\markdown;
 use Drupal\Component\Utility\Crypt;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -15,6 +16,7 @@ use Drupal\markdown\Exception\MarkdownUrlNotExistsException;
 use Drupal\markdown\PluginManager\ParserManagerInterface;
 use Drupal\markdown\Render\ParsedMarkdownInterface;
 use GuzzleHttp\ClientInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -32,6 +34,13 @@ class Markdown implements MarkdownInterface {
   protected $cache;
 
   /**
+   * The Config Factory service.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  /**
    * The File System service.
    *
    * @var \Drupal\Core\File\FileSystemInterface
@@ -44,6 +53,13 @@ class Markdown implements MarkdownInterface {
    * @var \GuzzleHttp\ClientInterface
    */
   protected $httpClient;
+
+  /**
+   * A logger.
+   *
+   * @var \Psr\Log\LoggerInterface
+   */
+  protected $logger;
 
   /**
    * The MarkdownParser Plugin Manager.
@@ -64,19 +80,25 @@ class Markdown implements MarkdownInterface {
    *
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    *   The cache backend.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   *   The Config Factory service.
    * @param \Drupal\Core\File\FileSystemInterface $fileSystem
    *   The File System service.
    * @param \GuzzleHttp\ClientInterface $httpClient
    *   The HTTP Client service.
+   * @param \Psr\Log\LoggerInterface
+   *   A logger.
    * @param \Drupal\markdown\PluginManager\ParserManagerInterface $parserManager
    *   The Markdown Parser Plugin Manager service.
    * @param \Drupal\markdown\Config\ImmutableMarkdownConfig $settings
    *   The Markdown Settings.
    */
-  public function __construct(CacheBackendInterface $cache, FileSystemInterface $fileSystem, ClientInterface $httpClient, ParserManagerInterface $parserManager, ImmutableMarkdownConfig $settings) {
+  public function __construct(CacheBackendInterface $cache, ConfigFactoryInterface $configFactory, FileSystemInterface $fileSystem, ClientInterface $httpClient, LoggerInterface $logger, ParserManagerInterface $parserManager, ImmutableMarkdownConfig $settings) {
     $this->cache = $cache;
+    $this->configFactory = $configFactory;
     $this->fileSystem = $fileSystem;
     $this->httpClient = $httpClient;
+    $this->logger = $logger;
     $this->parserManager = $parserManager;
     $this->settings = $settings;
   }
@@ -90,12 +112,15 @@ class Markdown implements MarkdownInterface {
     }
     return new static(
       $container->get('cache.markdown'),
+      $container->get('config.factory'),
       $container->get('file_system'),
       $container->get('http_client'),
+      $container->get('logger.channel.markdown'),
       $container->get('plugin.manager.markdown.parser'),
       $container->get('markdown.settings')
     );
   }
+
 
   /**
    * {@inheritdoc}
@@ -160,19 +185,32 @@ class Markdown implements MarkdownInterface {
   /**
    * {@inheritdoc}
    */
-  public function getParser($parserId = NULL, array $configuration = []) {
-    if ($parserId !== NULL) {
-      return $this->parserManager->createInstance($parserId, $configuration);
+  public function getDefaultParser(array $configuration = []) {
+    $settings = $this->configFactory->getEditable('markdown.settings');
+    if (!($defaultParser = $settings->get('default_parser'))) {
+      $defaultParser = current(array_keys($this->parserManager->installed()));
+      $this->logger->warning($this->t('No default markdown parser set, using first available installed parser "@default_parser".', [
+        '@default_parser' => $defaultParser,
+      ]));
     }
-    $configuration = NestedArray::mergeDeep($this->settings->get('parser'), $configuration);
-    return $this->parserManager->createInstance(isset($configuration['id']) ? $configuration['id'] : NULL, $configuration);
+    return $this->parserManager->createInstance($defaultParser, $configuration);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getParser($parserId = NULL, array $configuration = []) {
+    if ($parserId === NULL) {
+      return $this->getDefaultParser($configuration);
+    }
+    return $this->parserManager->createInstance($parserId, $configuration);
   }
 
   /**
    * {@inheritdoc}
    */
   public function save($id, ParsedMarkdownInterface $parsed) {
-    $this->cache->set($id, $parsed, $parsed->getExpire());
+    $this->cache->set($id, $parsed, $parsed->getExpire(), $parsed->getCacheTags());
     return $parsed;
   }
 

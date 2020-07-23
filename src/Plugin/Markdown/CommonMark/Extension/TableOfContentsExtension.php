@@ -4,23 +4,36 @@ namespace Drupal\markdown\Plugin\Markdown\CommonMark\Extension;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\PluginFormInterface;
+use Drupal\markdown\Annotation\InstallableRequirement;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\FeatureDetectionTrait;
 use Drupal\markdown\Traits\SettingsTrait;
-use League\CommonMark\ConfigurableEnvironmentInterface;
-use League\CommonMark\Extension\TableOfContents\TableOfContentsExtension as LeagueTableOfContentsExtension;
 
 /**
  * @MarkdownExtension(
- *   id = "league/commonmark-ext-toc",
- *   installed = "\League\CommonMark\Extension\TableOfContents\TableOfContentsExtension",
+ *   id = "commonmark-table-of-contents",
  *   label = @Translation("Table Of Contents"),
  *   description = @Translation("Automatically inserts a table of contents into your document with links to the various headings."),
- *   url = "https://commonmark.thephpleague.com/extensions/table-of-contents/",
- *   requires = {
- *     "league/commonmark-ext-heading-permalink",
- *   }
+ *   libraries = {
+ *     @ComposerPackage(
+ *       id = "league/commonmark",
+ *       object = "\League\CommonMark\Extension\TableOfContents\TableOfContentsExtension",
+ *       url = "https://commonmark.thephpleague.com/extensions/table-of-contents/",
+ *       requirements = {
+ *          @InstallableRequirement(
+ *             id = "parser:commonmark",
+ *             callback = "::getVersion",
+ *             constraints = {"Version" = "^1.3 || ^2.0"},
+ *          ),
+ *          @InstallableRequirement(
+ *             id = "extension:commonmark-heading-permalink",
+ *             callback = "::getVersion",
+ *             constraints = {"Version" = "^1.3 || ^2.0"},
+ *          ),
+ *       },
+ *     ),
+ *   },
  * )
  */
 class TableOfContentsExtension extends BaseExtension implements PluginFormInterface, SettingsInterface {
@@ -31,7 +44,9 @@ class TableOfContentsExtension extends BaseExtension implements PluginFormInterf
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings(array $pluginDefinition) {
+  public static function defaultSettings($pluginDefinition) {
+    /* @var \Drupal\markdown\Annotation\InstallablePlugin $pluginDefinition */
+
     $settings = [
       'html_class' => 'table-of-contents',
       'max_heading_level' => 6,
@@ -142,13 +157,6 @@ class TableOfContentsExtension extends BaseExtension implements PluginFormInterf
     ], $form_state);
 
     return $element;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function register(ConfigurableEnvironmentInterface $environment) {
-    $environment->addExtension(new LeagueTableOfContentsExtension());
   }
 
 }

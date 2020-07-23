@@ -9,6 +9,9 @@ reset:
   dependencies:
     - markdown/util
 admin:
+  css:
+    base:
+      css/markdown.admin.css: {}
   js:
     js/markdown.admin.js: {}
   dependencies:

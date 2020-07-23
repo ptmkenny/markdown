@@ -14,7 +14,11 @@ use Drupal\markdown\Plugin\Markdown\ParserInterface;
  *   id = "filter_caption",
  *   description = @Translation("Adds support for the <code>data-caption</code> attribute."),
  *   provider = "filter",
- *   requiresFilter = "filter_caption",
+ *   requirements = {
+ *     @InstallableRequirement(
+ *       id = "filter:filter_caption",
+ *     ),
+ *   },
  * )
  */
 class FilterCaption extends PluginBase implements AllowedHtmlInterface {

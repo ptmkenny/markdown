@@ -6,6 +6,8 @@ use Symfony\Component\Serializer\NameConverter\CamelCaseToSnakeCaseNameConverter
 
 /**
  * Trait for implementing feature detection.
+ *
+ * @todo Move upstream to https://www.drupal.org/project/installable_plugins.
  */
 trait FeatureDetectionTrait {
 

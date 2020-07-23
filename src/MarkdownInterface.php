@@ -12,6 +12,14 @@ use Drupal\markdown\Render\ParsedMarkdownInterface;
 interface MarkdownInterface extends ContainerInjectionInterface {
 
   /**
+   * The base URL for Markdown documentation.
+   *
+   * @var string
+   */
+  const DOCUMENTATION_URL = 'https://www.drupal.org/docs/contributed-modules/markdown';
+
+
+  /**
    * Loads a cached ParsedMarkdown object.
    *
    * @param string $id
@@ -73,11 +81,22 @@ interface MarkdownInterface extends ContainerInjectionInterface {
   public function parse($markdown, LanguageInterface $language = NULL);
 
   /**
+   * Retrieves the site-wide default MarkdownParser plugin.
+   *
+   * @param array $configuration
+   *   An array of configuration relevant to the plugin instance.
+   *
+   * @return \Drupal\markdown\Plugin\Markdown\ParserInterface
+   *   A MarkdownParser plugin.
+   */
+  public function getDefaultParser(array $configuration = []);
+
+  /**
    * Retrieves a MarkdownParser plugin.
    *
    * @param string $parserId
    *   Optional. The plugin identifier of a specific MarkdownParser to retrieve.
-   *   If not provided, the global parser will be used.
+   *   If not provided, the default site-wide parser will be used.
    * @param array $configuration
    *   An array of configuration relevant to the plugin instance.
    *

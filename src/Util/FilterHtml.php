@@ -51,7 +51,7 @@ class FilterHtml extends CoreFilterHtml implements ParserAwareInterface {
    * @return static
    */
   public static function fromParser(ParserInterface $parser) {
-    return static::create($parser->getAllowedHtml())->setParser($parser);
+    return static::create($parser->getCustomAllowedHtml())->setParser($parser);
   }
 
   /**

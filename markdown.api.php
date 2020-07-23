@@ -115,14 +115,14 @@ function hook_markdown_html_alter(&$html, array $context) {
  */
 function hook_markdown_parser_info_alter(array &$info) {
   // Limit maximum nesting value in CommonMark.
-  $info['league/commonmark']['settings']['max_nesting_level'] = 1000;
+  $info['commonmark']['settings']['max_nesting_level'] = 1000;
 
   // If a parser provides a setting that requires a callback, something you
   // cannot configure from the UI, you can supply it here. Note: this
   // callback must reference a publicly callable function or static method
   // since it will be cached in the database.
-  $info['michelf/php-markdown']['settings']['header_id_func'] = '\\Drupal\\my_module\\Markdown::buildHeader';
-  $info['michelf/php-markdown-extra']['settings']['header_id_func'] = '\\Drupal\\my_module\\Markdown::buildHeader';
+  $info['php-markdown']['settings']['header_id_func'] = '\\Drupal\\my_module\\Markdown::buildHeader';
+  $info['php-markdown-extra']['settings']['header_id_func'] = '\\Drupal\\my_module\\Markdown::buildHeader';
 }
 
 /**
@@ -139,7 +139,7 @@ function hook_markdown_parser_info_alter(array &$info) {
  */
 function hook_markdown_extension_info_alter(array &$info) {
   // Use a custom class for TOC.
-  $info['league/commonmark-ext-toc']['settings']['html_class'] = 'my-module-toc-class';
+  $info['commonmark-table-of-contents']['settings']['html_class'] = 'my-module-toc-class';
 }
 
 /**

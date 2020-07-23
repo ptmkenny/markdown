@@ -2,11 +2,16 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
+use Drupal\Component\Plugin\LazyPluginCollection;
+use Drupal\Component\Plugin\PluginInspectionInterface;
 use Drupal\markdown\PluginManager\ExtensionCollection;
 use Drupal\markdown\Util\SortArray;
 
 /**
  * Base class for extensible markdown parsers.
+ *
+ * @property \Drupal\markdown\Annotation\MarkdownParser $pluginDefinition
+ * @method \Drupal\markdown\Annotation\MarkdownParser getPluginDefinition()
  */
 abstract class BaseExtensibleParser extends BaseParser implements ExtensibleParserInterface {
 
@@ -27,50 +32,10 @@ abstract class BaseExtensibleParser extends BaseParser implements ExtensiblePars
   /**
    * {@inheritdoc}
    */
-  public function getBundledExtensionIds() {
-    return isset($this->pluginDefinition['bundledExtensions']) ? $this->pluginDefinition['bundledExtensions'] : [];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getConfiguration() {
-    $configuration = parent::getConfiguration();
-
-    // Normalize extensions and their settings.
-    $extensions = [];
-    $extensionCollection = $this->extensions();
-    /** @var \Drupal\markdown\Plugin\Markdown\ExtensionInterface $extension */
-    foreach ($extensionCollection as $extensionId => $extension) {
-      // Check whether extension is required by another enabled extension.
-      $required = FALSE;
-      if ($requiredBy = $extension->requiredBy()) {
-        foreach ($requiredBy as $dependent) {
-          if ($extensionCollection->get($dependent)->isEnabled()) {
-            $required = TRUE;
-            break;
-          }
-        }
-      }
-
-      // Skip disabled extensions that aren't required.
-      if (!$required && !$extension->isEnabled()) {
-        continue;
-      }
-
-      $extensions[] = $extension->getConfiguration();
-    }
-
-    // Only add extensions if there are extensions to save.
-    if (!empty($extensions)) {
-      // Sort extensions so they're always in the same order.
-      uasort($extensions, function ($a, $b) {
-        return SortArray::sortByKeyString($a, $b, 'id');
-      });
-      $configuration['extensions'] = array_values($extensions);
-    }
-
-    return $configuration;
+  public function defaultConfiguration() {
+    return [
+      'extensions' => [],
+    ] + parent::defaultConfiguration();
   }
 
   /**
@@ -100,8 +65,88 @@ abstract class BaseExtensibleParser extends BaseParser implements ExtensiblePars
   /**
    * {@inheritdoc}
    */
+  public function getBundledExtensionIds() {
+    return isset($this->pluginDefinition['bundledExtensions']) ? $this->pluginDefinition['bundledExtensions'] : [];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getConfiguration() {
+    $configuration = parent::getConfiguration();
+
+    // Normalize extensions and their settings.
+    $extensions = [];
+    $extensionCollection = $this->extensions();
+    /** @var \Drupal\markdown\Plugin\Markdown\ExtensionInterface $extension */
+    foreach ($extensionCollection as $extensionId => $extension) {
+      // Only include extensions that have configuration overrides.
+      if ($overrides = $extension->getConfigurationOverrides()) {
+        $extensionConfiguration = $extension->getSortedConfiguration();
+
+        // This is part of the parser config, the extension dependencies
+        // aren't needed as they're determined and merged elsewhere.
+        unset($extensionConfiguration['dependencies']);
+
+        $extensions[] = $extensionConfiguration;
+      }
+    }
+
+    // Sort extensions so they're always in the same order.
+    uasort($extensions, function ($a, $b) {
+      return SortArray::sortByKeyString($a, $b, 'id');
+    });
+
+    // Don't use an associative array, just an indexed list of extensions.
+    $configuration['extensions'] = array_values($extensions);
+
+    return $configuration;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function getConfigurationSortOrder() {
+    return ['extensions' => 100] + parent::getConfigurationSortOrder();
+  }
+
+  /**
+   * Indicates whether an extension is "required" by another extension.
+   *
+   * @param \Drupal\markdown\Plugin\Markdown\ExtensionInterface $extension
+   *   The extension to check.
+   *
+   * @return bool
+   *   TRUE or FALSE
+   */
+  protected function isExtensionRequired(ExtensionInterface $extension) {
+    // Check whether extension is required by another enabled extension.
+    if ($requiredBy = $extension->requiredBy()) {
+      foreach ($requiredBy as $dependent) {
+        if ($this->extension($dependent)->isEnabled()) {
+          return TRUE;
+        }
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getPluginCollections() {
     return ['extensions' => $this->extensions()];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function getPluginDependencies(PluginInspectionInterface $instance) {
+    // Only include extensions that are enabled or required.
+    if (!($instance instanceof ExtensionInterface) || ($instance->isEnabled() || $this->isExtensionRequired($instance))) {
+      return parent::getPluginDependencies($instance);
+    }
+    return [];
   }
 
   /**

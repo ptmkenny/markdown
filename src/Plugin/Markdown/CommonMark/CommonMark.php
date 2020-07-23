@@ -2,59 +2,117 @@
 
 namespace Drupal\markdown\Plugin\Markdown\CommonMark;
 
+use Composer\Semver\Semver;
 use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\markdown\Form\SubformState;
+use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\BaseExtensibleParser;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
+use Drupal\markdown\Traits\ParserAllowedHtmlTrait;
+use Drupal\markdown\Util\Composer;
 use Drupal\markdown\Util\KeyValuePipeConverter;
-use League\CommonMark\Environment;
 
 /**
  * Support for CommonMark by The League of Extraordinary Packages.
  *
+ * @MarkdownAllowedHtml(
+ *   id = "commonmark",
+ * )
  * @MarkdownParser(
- *   id = "league/commonmark",
+ *   id = "commonmark",
  *   label = @Translation("CommonMark"),
  *   description = @Translation("A robust, highly-extensible Markdown parser for PHP based on the CommonMark specification."),
- *   installed = "\League\CommonMark\CommonMarkConverter",
- *   version = "\League\CommonMark\CommonMarkConverter::VERSION",
- *   versionConstraint = "^1.3 || ^2.0",
- *   url = "https://commonmark.thephpleague.com",
  *   extensionInterfaces = {
  *     "\Drupal\markdown\Plugin\Markdown\CommonMark\ExtensionInterface",
  *   },
+ *   libraries = {
+ *     @ComposerPackage(
+ *       id = "league/commonmark",
+ *       object = "\League\CommonMark\CommonMarkConverter",
+ *       url = "https://commonmark.thephpleague.com",
+ *       requirements = {
+ *         @InstallableRequirement(
+ *           constraints = {"Version" = ">=0.4.0 <=1.0.0 || ^1.0 || ^2.0"}
+ *         ),
+ *       },
+ *     ),
+ *     @ComposerPackage(
+ *       id = "colinodell/commonmark-php",
+ *       deprecated = @Translation("Support for this library was deprecated in markdown:8.x-2.0 and will be removed from markdown:3.0.0."),
+ *       object = "\ColinODell\CommonMark\CommonMarkConverter",
+ *       ui = false,
+ *       url = "https://commonmark.thephpleague.com",
+ *       requirements = {
+ *         @InstallableRequirement(
+ *           constraints = {"Version" = "<0.4.0"},
+ *         ),
+ *       },
+ *     ),
+ *   },
  * )
  */
-class CommonMark extends BaseExtensibleParser {
+class CommonMark extends BaseExtensibleParser implements AllowedHtmlInterface {
+
+  use ParserAllowedHtmlTrait;
 
   /**
    * The converter class.
    *
    * @var string
    */
-  protected static $converterClass = '\\League\\CommonMark\\CommonMarkConverter';
+  protected static $converterClass;
+
+  /**
+   * The environment class.
+   *
+   * @var string
+   */
+  protected static $environmentClass;
+
+  /**
+   * The installed version.
+   *
+   * @var string
+   */
+  protected static $version;
 
   /**
    * A CommonMark converter instance.
    *
-   * @var \League\CommonMark\Converter
+   * @var \League\CommonMark\CommonMarkConverter|\ColinODell\CommonMark\CommonMarkConverter
    */
   protected $converter;
 
   /**
    * A CommonMark environment instance.
    *
-   * @var \League\CommonMark\Environment
+   * @var \League\CommonMark\Environment\ConfigurableEnvironmentInterface|\League\CommonMark\ConfigurableEnvironmentInterface|\League\CommonMark\Environment
    */
   protected $environment;
 
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings(array $pluginDefinition) {
+  public function __sleep() {
+    unset($this->converter);
+    unset($this->environment);
+    return parent::__sleep();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defaultSettings($pluginDefinition) {
+    /* @var \Drupal\markdown\Annotation\InstallablePlugin $pluginDefinition */
+
+    // CommonMark didn't have configuration until 0.6.0.
+    if (!$pluginDefinition->version || Semver::satisfies($pluginDefinition->version, '<0.6.0')) {
+      return [];
+    }
+
     return [
       'allow_unsafe_links' => TRUE,
       'enable_em' => TRUE,
@@ -70,6 +128,53 @@ class CommonMark extends BaseExtensibleParser {
       'use_underscore' => TRUE,
       'unordered_list_markers' => ['-', '*', '+'],
     ] + parent::defaultSettings($pluginDefinition);
+  }
+
+  /**
+   * Retrieves the converter class to be used.
+   *
+   * @return string|\League\CommonMark\CommonMarkConverter|\ColinODell\CommonMark\CommonMarkConverter
+   *   The converter class.
+   */
+  public static function converterClass() {
+    if (!isset(static::$converterClass)) {
+      $classes = [
+        // >=0.4.0.
+        '\\League\\CommonMark\\CommonMarkConverter',
+        // 0.1.0 - 0.3.0.
+        '\\ColinODell\\CommonMark\\CommonMarkConverter',
+      ];
+      foreach ($classes as $class) {
+        if (class_exists($class)) {
+          static::$converterClass = $class;
+        }
+      }
+    }
+    return static::$converterClass;
+  }
+
+  /**
+   * Retrieves the environment class to be used.
+   *
+   * @return string|\League\CommonMark\Environment\Environment|\League\CommonMark\Environment
+   *   The environment class.
+   */
+  public static function environmentClass() {
+    if (!isset(static::$environmentClass)) {
+      $classes = [
+        // 2.x.
+        '\\League\\CommonMark\\Environment\\Environment',
+
+        // 0.x, 1.x.
+        '\\League\\CommonMark\\Environment',
+      ];
+      foreach ($classes as $class) {
+        if (class_exists($class)) {
+          static::$environmentClass = $class;
+        }
+      }
+    }
+    return static::$environmentClass;
   }
 
   /**
@@ -153,6 +258,7 @@ class CommonMark extends BaseExtensibleParser {
       '#title' => $this->t('Soft Break'),
       '#description' => $this->t('String to use for rendering soft breaks.'),
     ], $rendererSubformState, '\Drupal\markdown\Plugin\Markdown\CommonMark\CommonMark::addcslashes');
+    $element['renderer']['#access'] = $element['renderer']['block_separator']['#access'];
 
     $element += $this->createSettingElement('use_asterisk', [
       '#type' => 'checkbox',
@@ -193,12 +299,24 @@ class CommonMark extends BaseExtensibleParser {
   /**
    * Retrieves a CommonMark converter instance.
    *
-   * @return \League\CommonMark\Converter
+   * @return \League\CommonMark\CommonMarkConverter|\ColinODell\CommonMark\CommonMarkConverter
    *   A CommonMark converter.
    */
   public function converter() {
     if (!$this->converter) {
-      $this->converter = new static::$converterClass($this->getSettings(TRUE), $this->getEnvironment());
+      $version = $this->getVersion();
+      switch (TRUE) {
+        case Semver::satisfies($version, '>=0.13.0'):
+          $this->converter = $this->getObject($this->getSettings(TRUE), $this->getEnvironment());
+          break;
+
+        case Semver::satisfies($version, '>=0.6.0 <0.13.0'):
+          $this->converter = $this->getObject($this->getSettings(TRUE));
+          break;
+
+        default:
+          $this->converter = $this->getObject();
+      }
     }
     return $this->converter;
   }
@@ -206,10 +324,23 @@ class CommonMark extends BaseExtensibleParser {
   /**
    * Creates an environment.
    *
-   * @return \League\CommonMark\ConfigurableEnvironmentInterface
+   * @return \League\CommonMark\ConfigurableEnvironmentInterface|\League\CommonMark\Environment
+   *   A CommonMark environment.
    */
   protected function createEnvironment() {
-    return Environment::createCommonMarkEnvironment();
+    $environment = static::environmentClass();
+    return $environment::createCommonMarkEnvironment();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function extensionInterfaces() {
+    // Some older versions of CommonMark didn't support external extensions.
+    if (!interface_exists('\\League\\CommonMark\\Extension\\ExtensionInterface')) {
+      return [];
+    }
+    return parent::extensionInterfaces();
   }
 
   /**
@@ -265,9 +396,6 @@ class CommonMark extends BaseExtensibleParser {
         $settings['html_input'] = 'allow';
       }
 
-      // Merge in parser settings.
-      $environment->setConfig(NestedArray::mergeDeep($environment->getConfig(), $settings));
-
       $extensions = $this->extensions();
       foreach ($extensions as $extension) {
         /* @var \Drupal\markdown\Plugin\Markdown\CommonMark\ExtensionInterface $extension */
@@ -276,6 +404,7 @@ class CommonMark extends BaseExtensibleParser {
         if (!$extension->isEnabled()) {
           continue;
         }
+
 
         // Add extension settings.
         if ($extension instanceof SettingsInterface) {
@@ -287,7 +416,7 @@ class CommonMark extends BaseExtensibleParser {
           // throw an exception and FALSE will ignore merging with the parsing
           // config altogether.
           $settingsKey = $extension->settingsKey();
-          if ($settingsKey === NULL) {
+          if ($settingsKey === NULL || $settingsKey === TRUE) {
             throw new InvalidPluginDefinitionException($extension->getPluginId(), sprintf('The "%s" markdown extension must also supply a value in %s. This is a requirement of the parser so it knows how extension settings should be merged.', $extension->getPluginId(), '\Drupal\markdown\Plugin\Markdown\SettingsInterface::settingsKey'));
           }
 
@@ -297,13 +426,20 @@ class CommonMark extends BaseExtensibleParser {
             if ($settingsKey) {
               $extensionSettings = [$settingsKey => $extensionSettings];
             }
-            $environment->setConfig(NestedArray::mergeDeep($environment->getConfig(), $extensionSettings));
+            $settings = NestedArray::mergeDeep($settings, $extensionSettings);
           }
         }
 
-        // Finally, add the extension to the environment.
-        $environment->addExtension($extension);
+        // Finally, let the extension register itself with the environment.
+        // Note: this is our own custom method, that is used throughout the
+        // commonmark based @ MarkdownExtension plugins so they can work
+        // across multiple API versions where entire interfaces have changed.
+        // @see \Drupal\markdown\Plugin\Markdown\CommonMark\ExtensionInterface::register()
+        $extension->register($environment);
       }
+
+      // Merge settings into config.
+      $environment->setConfig(NestedArray::mergeDeep($environment->getConfig(), $settings));
 
       $this->environment = $environment;
     }

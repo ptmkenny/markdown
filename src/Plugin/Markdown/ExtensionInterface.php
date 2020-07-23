@@ -2,18 +2,25 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
+use Drupal\markdown\Util\ParserAwareInterface;
+
 /**
  * Interface for extensions.
+ *
+ * @method \Drupal\markdown\Annotation\MarkdownExtension getPluginDefinition()
  */
-interface ExtensionInterface extends InstallablePluginInterface {
+interface ExtensionInterface extends EnabledPluginInterface, InstallablePluginInterface, ParserAwareInterface {
 
   /**
-   * Indicates whether the extension is enabled.
+   * Indicates whether the extension is automatically installed with the parser.
+   *
+   * Note: this does not indicate whether the extension is actually being used,
+   * just that it is available because it came with the parser.
    *
    * @return bool
    *   TRUE or FALSE
    */
-  public function isEnabled();
+  public function isBundled();
 
   /**
    * Retrieves identifiers of extensions that this extension requires.

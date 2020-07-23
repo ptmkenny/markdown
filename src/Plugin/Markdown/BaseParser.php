@@ -5,32 +5,78 @@ namespace Drupal\markdown\Plugin\Markdown;
 use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Cache\RefinableCacheableDependencyTrait;
+use Drupal\Core\Config\Schema\Mapping;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Plugin\PluginFormInterface;
-use Drupal\Core\Url;
 use Drupal\filter\Entity\FilterFormat;
 use Drupal\filter\Plugin\FilterInterface;
 use Drupal\markdown\Config\ImmutableMarkdownConfig;
+use Drupal\markdown\PluginManager\ParserManager;
 use Drupal\markdown\Render\ParsedMarkdown;
+use Drupal\markdown\Traits\EnabledPluginTrait;
 use Drupal\markdown\Traits\FilterAwareTrait;
 use Drupal\markdown\Traits\SettingsTrait;
 use Drupal\markdown\Util\FilterAwareInterface;
 use Drupal\markdown\Util\FilterFormatAwareInterface;
 use Drupal\markdown\Util\FilterHtml;
 use Drupal\markdown\Util\ParserAwareInterface;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 /**
  * Base class form Markdown Parser instances.
  *
  * @property \Drupal\markdown\Config\ImmutableMarkdownConfig $config
+ * @property \Drupal\markdown\Annotation\MarkdownParser $pluginDefinition
+ * @method \Drupal\markdown\Annotation\MarkdownParser getPluginDefinition()
  */
 abstract class BaseParser extends InstallablePluginBase implements FilterAwareInterface, ParserInterface, PluginFormInterface {
 
+  use EnabledPluginTrait;
   use FilterAwareTrait;
   use RefinableCacheableDependencyTrait;
-  use SettingsTrait {
-    getConfiguration as getConfigurationTrait;
+  use SettingsTrait;
+
+  /**
+   * {@inheritdoc}
+   */
+  protected $enabled = TRUE;
+
+  /**
+   * Validates parser settings.
+   *
+   * @param array $settings
+   *   The parser settings to validate.
+   * @param \Symfony\Component\Validator\Context\ExecutionContextInterface $context
+   *   The validation execution context.
+   */
+  public static function validateSettings(array $settings, ExecutionContextInterface $context) {
+    try {
+      $object = $context->getObject();
+      $parent = $object instanceof Mapping ? $object->getParent() : NULL;
+      $parserId = $parent instanceof Mapping && ($id = $parent->get('id')) ? $id->getValue() : NULL;
+      $parserManager = ParserManager::create();
+
+      if (!$parserId || !$parserManager->hasDefinition($parserId)) {
+        throw new \RuntimeException(sprintf('Unknown markdown parser: "%s"', $parserId));
+      }
+
+      $parser = $parserManager->createInstance($parserId);
+
+      // Immediately return if parser doesn't have any settings.
+      if (!($parser instanceof SettingsInterface)) {
+        return;
+      }
+
+      $defaultSettings = $parser::defaultSettings($parser->getPluginDefinition());
+      $unknownSettings = array_keys(array_diff_key($settings, $defaultSettings));
+      if ($unknownSettings) {
+        throw new \RuntimeException(sprintf('Unknown parser settings: %s', implode(', ', $unknownSettings)));
+      }
+    }
+    catch (\RuntimeException $exception) {
+      $context->addViolation($exception->getMessage());
+    }
   }
 
   /**
@@ -67,9 +113,13 @@ abstract class BaseParser extends InstallablePluginBase implements FilterAwareIn
 
   /**
    * {@inheritdoc}
+   *
+   * @deprecated in markdown:8.x-2.0 and is removed from markdown:3.0.0.
+   *   Use RenderStrategyInterface::getCustomAllowedHtml instead.
+   * @see https://www.drupal.org/project/markdown/issues/3142418
    */
   public function getAllowedHtml() {
-    return $this->config()->get('render_strategy.allowed_html');
+    return $this->getCustomAllowedHtml();
   }
 
   /**
@@ -97,15 +147,25 @@ abstract class BaseParser extends InstallablePluginBase implements FilterAwareIn
    * {@inheritdoc}
    */
   public function getConfiguration() {
-    $configuration = $this->getConfigurationTrait();
+    $configuration = parent::getConfiguration();
 
-    $renderStrategy = $this->getRenderStrategy();
-    $configuration['render_strategy'] = ['type' => $renderStrategy];
-    if ($renderStrategy === static::FILTER_OUTPUT) {
-      $configuration['render_strategy']['allowed_html'] = $this->getAllowedHtml();
-      $configuration['render_strategy']['plugins'] = $this->getAllowedHtmlPlugins();
-    }
+    $configuration['render_strategy'] = [
+      'type' => $this->getRenderStrategy(),
+      'custom_allowed_html' => $this->getCustomAllowedHtml(),
+      'plugins' => $this->getAllowedHtmlPlugins(),
+    ];
+    ksort($configuration['render_strategy']['plugins']);
+
     return $configuration;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function getConfigurationSortOrder() {
+    return [
+      'render_strategy' => -11,
+    ] + parent::getConfigurationSortOrder();
   }
 
   /**
@@ -161,6 +221,13 @@ abstract class BaseParser extends InstallablePluginBase implements FilterAwareIn
   /**
    * {@inheritdoc}
    */
+  public function getCustomAllowedHtml() {
+    return $this->config()->get('render_strategy.custom_allowed_html');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getRenderStrategy() {
     return $this->config()->get('render_strategy.type') ?: static::FILTER_OUTPUT;
   }
@@ -195,7 +262,7 @@ abstract class BaseParser extends InstallablePluginBase implements FilterAwareIn
       $html = (string) FilterHtml::fromParser($this)->process($html, $language ? $language->getId() : NULL);
     }
 
-    return ParsedMarkdown::create($markdown, $html, $language);
+    return ParsedMarkdown::create($markdown, $html, $language)->addCacheableDependency($this);
   }
 
   /**
@@ -227,7 +294,7 @@ abstract class BaseParser extends InstallablePluginBase implements FilterAwareIn
           ],
         ],
         [
-          '#markup' => $this->moreInfo($this->t('<strong>NOTE:</strong> This setting is disabled when a render strategy is being used.'), RenderStrategyInterface::MARKDOWN_XSS_URL),
+          '#markup' => $this->moreInfo($this->t('<strong>NOTE:</strong> This setting is disabled when a render strategy is being used.'), RenderStrategyInterface::DOCUMENTATION_URL),
         ],
       ], 'visible', $selector, ['!value' => static::NONE]),
       '@warning' => $form_state->conditionalElement([
@@ -240,7 +307,7 @@ abstract class BaseParser extends InstallablePluginBase implements FilterAwareIn
           ],
         ],
         [
-          '#markup' => $this->moreInfo($this->t('<strong>WARNING:</strong> This setting does not guarantee protection against malicious JavaScript from being injected. It is recommended to use the "Filter Output" render strategy.'), RenderStrategyInterface::MARKDOWN_XSS_URL),
+          '#markup' => $this->moreInfo($this->t('<strong>WARNING:</strong> This setting does not guarantee protection against malicious JavaScript from being injected. It is recommended to use the "Filter Output" render strategy.'), RenderStrategyInterface::DOCUMENTATION_URL),
         ],
       ], 'visible', $selector, ['value' => static::NONE]),
     ]);

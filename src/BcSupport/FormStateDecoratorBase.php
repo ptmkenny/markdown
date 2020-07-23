@@ -2,13 +2,6 @@
 
 namespace Drupal\markdown\BcSupport;
 
-if (!class_exists('\Drupal\Core\Form\FormStateDecoratorBase')) {
-  /* @noinspection PhpIgnoredClassAliasDeclaration */
-  class_alias('\Drupal\markdown\BcSupport\BcAliasedClass', '\Drupal\Core\Form\FormStateDecoratorBase');
-}
-
-use Drupal\Core\Form\FormStateDecoratorBase as CoreFormStateDecoratorBase;
-
 use Drupal\Core\Form\FormInterface;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
@@ -23,7 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * @see https://www.drupal.org/project/markdown/issues/3103679
  */
-abstract class FormStateDecoratorBase extends CoreFormStateDecoratorBase implements FormStateInterface {
+abstract class FormStateDecoratorBase implements FormStateInterface {
 
   /**
    * The decorated form state.

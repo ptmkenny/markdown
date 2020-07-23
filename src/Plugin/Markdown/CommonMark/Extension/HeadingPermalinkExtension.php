@@ -5,7 +5,6 @@ namespace Drupal\markdown\Plugin\Markdown\CommonMark\Extension;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\PluginFormInterface;
 use Drupal\Core\Theme\ActiveTheme;
-use Drupal\markdown\Annotation\MarkdownAllowedHtml;
 use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\ExtensibleParserInterface;
@@ -13,24 +12,29 @@ use Drupal\markdown\Plugin\Markdown\ParserInterface;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\SettingsTrait;
 use Drupal\markdown\Util\FilterHtml;
-use League\CommonMark\ConfigurableEnvironmentInterface;
-use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension as LeagueHeadingPermalinkExtension;
-use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkRenderer;
 
 /**
+ * @MarkdownAllowedHtml(
+ *   id = "commonmark-heading-permalink",
+ * )
  * @MarkdownExtension(
- *   id = "league/commonmark-ext-heading-permalink",
+ *   id = "commonmark-heading-permalink",
  *   label = @Translation("Heading Permalink"),
  *   description = @Translation("Makes all heading elements (&lt;h1&gt;, &lt;h2&gt;, etc) linkable so users can quickly grab a link to that specific part of the document."),
- *   installed = "\League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension",
- *   url = "https://commonmark.thephpleague.com/extensions/heading-permalinks/",
- * )
- * @MarkdownAllowedHtml(
- *   id = "league/commonmark-ext-heading-permalink",
- *   label = @Translation("Heading Permalink"),
- *   description = @Translation("Dynamically generated tags based on the contents of the 'Inner Contents' setting; updated each save."),
- *   installed = "\League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension",
- *   url = "https://commonmark.thephpleague.com/extensions/heading-permalinks/",
+ *   libraries = {
+ *     @ComposerPackage(
+ *       id = "league/commonmark",
+ *       object = "\League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension",
+ *       url = "https://commonmark.thephpleague.com/extensions/heading-permalinks/",
+ *       requirements = {
+ *          @InstallableRequirement(
+ *             id = "parser:commonmark",
+ *             callback = "::getVersion",
+ *             constraints = {"Version" = "^1.3 || ^2.0"},
+ *          ),
+ *       },
+ *     ),
+ *   },
  * )
  */
 class HeadingPermalinkExtension extends BaseExtension implements AllowedHtmlInterface, PluginFormInterface, SettingsInterface {
@@ -40,11 +44,19 @@ class HeadingPermalinkExtension extends BaseExtension implements AllowedHtmlInte
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings(array $pluginDefinition) {
+  public static function defaultSettings($pluginDefinition) {
+    /* @var \Drupal\markdown\Annotation\InstallablePlugin $pluginDefinition */
+
+    $innerContents = '';
+    if (defined('\\League\\CommonMark\\Extension\\HeadingPermalink\\HeadingPermalinkRenderer::DEFAULT_INNER_CONTENTS')) {
+      /* @noinspection PhpFullyQualifiedNameUsageInspection */
+      $innerContents = \League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkRenderer::DEFAULT_INNER_CONTENTS; // phpcs:ignore
+    }
+
     return [
       'html_class' => 'heading-permalink',
       'id_prefix' => 'user-content',
-      'inner_contents' => HeadingPermalinkRenderer::DEFAULT_INNER_CONTENTS,
+      'inner_contents' => $innerContents,
       'insert' => 'before',
       'title' => 'Permalink',
     ];
@@ -104,13 +116,6 @@ class HeadingPermalinkExtension extends BaseExtension implements AllowedHtmlInte
     ], $form_state);
 
     return $element;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function register(ConfigurableEnvironmentInterface $environment) {
-    $environment->addExtension(new LeagueHeadingPermalinkExtension());
   }
 
   /**

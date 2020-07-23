@@ -5,12 +5,13 @@ namespace Drupal\markdown\Render;
 use Drupal\Component\Render\MarkupInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\Language\LanguageInterface;
 
 /**
  * Interface parsed markdown instances.
  */
-interface ParsedMarkdownInterface extends MarkupInterface, \Countable, \Serializable {
+interface ParsedMarkdownInterface extends \Countable, \Serializable, MarkupInterface, RefinableCacheableDependencyInterface {
 
   /**
    * Indicates the item should never be removed unless explicitly deleted.

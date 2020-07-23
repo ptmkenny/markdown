@@ -2,28 +2,34 @@
 
 namespace Drupal\markdown\Plugin\Markdown\CommonMark;
 
-use League\CommonMark\Environment;
-
 /**
  * Support for CommonMark GFM by The League of Extraordinary Packages.
  *
  * @MarkdownParser(
- *   id = "league/commonmark-gfm",
+ *   id = "commonmark-gfm",
  *   label = @Translation("CommonMark GFM"),
  *   description = @Translation("A robust, highly-extensible Markdown parser for PHP based on the Github-Flavored Markdown specification."),
- *   installed = "\League\CommonMark\GithubFlavoredMarkdownConverter",
- *   version = "\League\CommonMark\GithubFlavoredMarkdownConverter::VERSION",
- *   versionConstraint = "^1.3 || ^2.0",
- *   url = "https://commonmark.thephpleague.com",
  *   extensionInterfaces = {
  *     "\Drupal\markdown\Plugin\Markdown\CommonMark\ExtensionInterface",
  *   },
  *   bundledExtensions = {
- *     "league/commonmark-ext-autolink",
- *     "league/commonmark-ext-disallowed-raw-html",
- *     "league/commonmark-ext-strikethrough",
- *     "league/commonmark-ext-table",
- *     "league/commonmark-ext-task-list",
+ *     "commonmark-autolink",
+ *     "commonmark-disallowed-raw-html",
+ *     "commonmark-strikethrough",
+ *     "commonmark-table",
+ *     "commonmark-task-list",
+ *   },
+ *   libraries = {
+ *     @ComposerPackage(
+ *       id = "league/commonmark",
+ *       object = "\League\CommonMark\GithubFlavoredMarkdownConverter",
+ *       url = "https://commonmark.thephpleague.com",
+ *       requirements = {
+ *         @InstallableRequirement(
+ *           constraints = {"Version" = "^1.3 || ^2.0"}
+ *         ),
+ *       },
+ *     ),
  *   },
  * )
  */
@@ -32,13 +38,20 @@ class CommonMarkGfm extends CommonMark {
   /**
    * {@inheritdoc}
    */
-  protected static $converterClass = '\\League\\CommonMark\\GithubFlavoredMarkdownConverter';
+  public static function converterClass() {
+    if (!isset(static::$converterClass)) {
+      static::$converterClass = '\\League\\CommonMark\\GithubFlavoredMarkdownConverter';
+    }
+    return static::$converterClass;
+  }
 
   /**
    * {@inheritdoc}
    */
   protected function createEnvironment() {
-    return Environment::createGFMEnvironment();
+    /** @var \League\CommonMark\Environment|\League\CommonMark\Environment\Environment $environment */
+    $environment = static::environmentClass();
+    return $environment::createGFMEnvironment();
   }
 
 }

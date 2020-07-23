@@ -2,51 +2,67 @@
 
 namespace Drupal\markdown\Plugin\Markdown\CommonMark\Extension;
 
+use Composer\Semver\Semver;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\PluginFormInterface;
 use Drupal\Core\Theme\ActiveTheme;
 use Drupal\Core\Url;
 use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
+use Drupal\markdown\Plugin\Markdown\CommonMark\CommonMark;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\SettingsTrait;
 use Drupal\markdown\Util\KeyValuePipeConverter;
-use League\CommonMark\ConfigurableEnvironmentInterface;
-use League\CommonMark\ElementRendererInterface;
-use League\CommonMark\HtmlElement;
-use League\CommonMark\Inline\Element\AbstractInline;
-use League\CommonMark\Inline\Element\Link;
-use League\CommonMark\Inline\Renderer\InlineRendererInterface;
-use League\CommonMark\Extension\ExternalLink\ExternalLinkExtension as LeagueExternalLinkExtension;
 
 /**
- * @MarkdownExtension(
- *   id = "league/commonmark-ext-external-links",
- *   label = @Translation("External Links"),
- *   installed = "\League\CommonMark\Extension\ExternalLink\ExternalLinkExtension",
- *   description = @Translation("Automatically detect links to external sites and adjust the markup accordingly."),
- *   url = "https://commonmark.thephpleague.com/extensions/external-links/",
- * )
  * @MarkdownAllowedHtml(
- *   id = "league/commonmark-ext-external-links",
+ *   id = "commonmark-external-links",
+ * )
+ * @MarkdownExtension(
+ *   id = "commonmark-external-links",
  *   label = @Translation("External Links"),
- *   installed = "\League\CommonMark\Extension\ExternalLink\ExternalLinkExtension",
  *   description = @Translation("Automatically detect links to external sites and adjust the markup accordingly."),
- *   url = "https://commonmark.thephpleague.com/extensions/external-links/",
+ *   libraries = {
+ *     @ComposerPackage(
+ *       id = "league/commonmark",
+ *       object = "\League\CommonMark\Extension\ExternalLink\ExternalLinkExtension",
+ *       url = "https://commonmark.thephpleague.com/extensions/external-links/",
+ *       requirements = {
+ *          @InstallableRequirement(
+ *             id = "parser:commonmark",
+ *             callback = "::getVersion",
+ *             constraints = {"Version" = "^1.3 || ^2.0"},
+ *          ),
+ *       },
+ *     ),
+ *     @ComposerPackage(
+ *       id = "league/commonmark-ext-external-link",
+ *       deprecated = @Translation("Support for this library was deprecated in markdown:8.x-2.0 and will be removed from markdown:3.0.0."),
+ *       object = "\League\CommonMark\Ext\ExternalLink\ExternalLinkExtension",
+ *       url = "https://github.com/thephpleague/commonmark-ext-external-link",
+ *       requirements = {
+ *          @InstallableRequirement(
+ *             id = "parser:commonmark",
+ *             callback = "::getVersion",
+ *             constraints = {"Version" = ">=0.19.2 <1.0.0 || ^1.0"},
+ *          ),
+ *       },
+ *     ),
+ *   },
  * )
  */
-class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterface, InlineRendererInterface, SettingsInterface, PluginFormInterface {
+class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterface, SettingsInterface, PluginFormInterface {
 
   use SettingsTrait {
-    getConfiguration as getConfigurationTrait;
     getSettings as getSettingsTrait;
   }
 
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings(array $pluginDefinition) {
+  public static function defaultSettings($pluginDefinition) {
+    /* @var \Drupal\markdown\Annotation\InstallablePlugin $pluginDefinition */
     return [
       'html_class' => '',
       'internal_hosts' => [
@@ -152,7 +168,7 @@ class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterfac
    * {@inheritdoc}
    */
   public function getConfiguration() {
-    $configuration = $this->getConfigurationTrait();
+    $configuration = parent::getConfiguration();
 
     // Normalize settings from a key|value string into an associative array.
     foreach (['internal_hosts'] as $name) {
@@ -167,8 +183,8 @@ class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterfac
   /**
    * {@inheritdoc}
    */
-  public function getSettings($runtime = FALSE) {
-    $settings = $this->getSettingsTrait($runtime);
+  public function getSettings($runtime = FALSE, $sorted = TRUE) {
+    $settings = $this->getSettingsTrait($runtime, $sorted);
 
     if (!$runtime) {
       return $settings;
@@ -186,42 +202,14 @@ class ExternalLinkExtension extends BaseExtension implements AllowedHtmlInterfac
   /**
    * {@inheritdoc}
    */
-  public function register(ConfigurableEnvironmentInterface $environment) {
-    $environment->addExtension(new LeagueExternalLinkExtension());
-    $environment->addInlineRenderer(Link::class, $this);
-  }
+  public function register($environment) {
+    parent::register($environment);
 
-  /**
-   * {@inheritdoc}
-   */
-  public function render(AbstractInline $inline, ElementRendererInterface $htmlRenderer) {
-    if (!($inline instanceof Link)) {
-      throw new \InvalidArgumentException('Incompatible inline type: ' . get_class($inline));
+    // For older versions of this extension, certain features didn't exist.
+    // Add an inline rendered to take care of those features.
+    if (Semver::satisfies($this->getParser()->getVersion(), '>=0.19.2 <1.5.0')) {
+      $environment->addInlineRenderer('\\League\\CommonMark\\Inline\\Element\\Link', new ExternalLinkRenderer($environment));
     }
-
-    $attributes = $inline->getData('attributes', []);
-    $external = $inline->getData('external');
-    $attributes['href'] = $inline->getUrl();
-
-    // Determine which rel attributes to set.
-    $rel = [];
-    foreach (['nofollow', 'noopener', 'noreferrer'] as $type) {
-      $value = $this->getSetting($type);
-      if ($value === 'all' || ($external && $value === 'external') || (!$external && $value === 'internal')) {
-        $rel[] = $type;
-      }
-    }
-
-    // Set the rel attribute.
-    if ($rel) {
-      $attributes['rel'] = implode(' ', $rel);
-    }
-    // Otherwise, unset whatever CommonMark set from the extension.
-    else {
-      unset($attributes['rel']);
-    }
-
-    return new HtmlElement('a', $attributes, $htmlRenderer->renderInlines($inline->children()));
   }
 
   /**

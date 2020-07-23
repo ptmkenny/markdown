@@ -9,26 +9,46 @@ use Drupal\markdown\Form\SubformState;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\SettingsTrait;
-use League\CommonMark\ConfigurableEnvironmentInterface;
-use League\CommonMark\Extension\Autolink\AutolinkExtension as LeagueAutolinkExtension;
-use League\CommonMark\Extension\Autolink\InlineMentionParser as LeagueInlineMentionParser;
 
 /**
  * Autolink extension.
  *
  * @MarkdownExtension(
- *   id = "league/commonmark-ext-autolink",
+ *   id = "commonmark-autolink",
  *   label = @Translation("Autolink"),
- *   installed = "\League\CommonMark\Extension\Autolink\AutolinkExtension",
  *   description = @Translation("Automatically links URLs and email addresses even when the CommonMark <code>&lt;...&gt;</code> autolink syntax is not used."),
- *   url = "https://commonmark.thephpleague.com/extensions/autolinks/",
+ *   libraries = {
+ *     @ComposerPackage(
+ *       id = "league/commonmark",
+ *       object = "\League\CommonMark\Extension\Autolink\AutolinkExtension",
+ *       url = "https://commonmark.thephpleague.com/extensions/autolinks/",
+ *       requirements = {
+ *          @InstallableRequirement(
+ *             id = "parser:commonmark",
+ *             callback = "::getVersion",
+ *             constraints = {"Version" = "^1.3 || ^2.0"},
+ *          ),
+ *       },
+ *     ),
+ *     @ComposerPackage(
+ *       id = "league/commonmark-ext-autolink",
+ *       deprecated = @Translation("Support for this library was deprecated in markdown:8.x-2.0 and will be removed from markdown:3.0.0."),
+ *       object = "\League\CommonMark\Ext\Autolink\AutolinkExtension",
+ *       url = "https://github.com/thephpleague/commonmark-ext-autolink",
+ *       requirements = {
+ *          @InstallableRequirement(
+ *             id = "parser:commonmark",
+ *             callback = "::getVersion",
+ *             constraints = {"Version" = ">=0.18.1 <1.0.0 || ^1.0"},
+ *          ),
+ *       },
+ *     ),
+ *   },
  * )
  */
 class AutolinkExtension extends BaseExtension implements SettingsInterface, PluginFormInterface {
 
-  use SettingsTrait {
-    getConfiguration as getConfigurationTrait;
-  }
+  use SettingsTrait;
 
   /**
    * Provides an alphanumeric id -> symbol map.
@@ -43,7 +63,8 @@ class AutolinkExtension extends BaseExtension implements SettingsInterface, Plug
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings(array $pluginDefinition) {
+  public static function defaultSettings($pluginDefinition) {
+    /* @var \Drupal\markdown\Annotation\InstallablePlugin $pluginDefinition */
     return [
       'at' => [
         'map' => '',
@@ -158,7 +179,7 @@ class AutolinkExtension extends BaseExtension implements SettingsInterface, Plug
   }
 
   public function getConfiguration() {
-    $configuration = $this->getConfigurationTrait();
+    $configuration = parent::getConfiguration();
     foreach (static::$symbols as $name => $symbol) {
       if (empty($configuration['settings'][$name]['map'])) {
         unset($configuration['settings'][$name]);
@@ -292,8 +313,10 @@ class AutolinkExtension extends BaseExtension implements SettingsInterface, Plug
   /**
    * {@inheritdoc}
    */
-  public function register(ConfigurableEnvironmentInterface $environment) {
-    $environment->addExtension(new LeagueAutolinkExtension());
+  public function register($environment) {
+    parent::register($environment);
+
+    // Now register any mention parsers.
     foreach (static::$symbols as $name => $symbol) {
       if ($map = $this->getSetting("$name.map")) {
         switch ($map) {
@@ -302,17 +325,15 @@ class AutolinkExtension extends BaseExtension implements SettingsInterface, Plug
             break;
 
           case 'github':
-            $environment->addInlineParser(LeagueInlineMentionParser::createGithubHandleParser());
+            $environment->addInlineParser(\League\CommonMark\Extension\Autolink\InlineMentionParser::createGithubHandleParser());
             break;
 
           case 'twitter':
-            $environment->addInlineParser(LeagueInlineMentionParser::createTwitterHandleParser());
+            $environment->addInlineParser(\League\CommonMark\Extension\Autolink\InlineMentionParser::createTwitterHandleParser());
             break;
 
           case 'url':
-            $environment->addInlineParser(InlineMentionParser::create($symbol, [$this,
-              'mapHandleToUrl'
-            ]));
+            $environment->addInlineParser(InlineMentionParser::create($symbol, [$this, 'mapHandleToUrl']));
             break;
         }
       }

@@ -10,11 +10,14 @@ use Drupal\Core\Theme\ActiveTheme;
 use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\filter\Entity\FilterFormat;
 use Drupal\filter\FilterPluginManager;
+use Drupal\markdown\Annotation\InstallablePlugin;
 use Drupal\markdown\Annotation\MarkdownAllowedHtml;
+use Drupal\markdown\Annotation\InstallableRequirement;
 use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\ExtensibleParserInterface;
 use Drupal\markdown\Plugin\Markdown\ExtensionInterface;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
+use Drupal\markdown\Util\Composer;
 use Drupal\markdown\Util\FilterAwareInterface;
 use Drupal\markdown\Util\FilterFormatAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -23,9 +26,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Markdown Allowed HTML Plugin Manager.
  *
  * @method \Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface createInstance($plugin_id, array $configuration = [])
+ * @method \Drupal\markdown\Annotation\MarkdownAllowedHtml getDefinition($plugin_id, $exception_on_invalid = TRUE)
+ * @method \Drupal\markdown\Annotation\MarkdownAllowedHtml|void getDefinitionByClassName($className)
+ * @method \Drupal\markdown\Annotation\MarkdownAllowedHtml[] getDefinitions($includeFallback = TRUE)
  * @noinspection PhpUnnecessaryFullyQualifiedNameInspection
  */
-class AllowedHtmlManager extends BasePluginManager {
+class AllowedHtmlManager extends InstallablePluginManager {
 
   /**
    * The Markdown Extension Plugin Manager service.
@@ -107,10 +113,18 @@ class AllowedHtmlManager extends BasePluginManager {
   /**
    * {@inheritdoc}
    */
-  protected function alterDefinitions(&$definitions) {
-    if ($this->alterHook) {
-      $this->moduleHandler->alter($this->alterHook, $definitions);
-      $this->themeManager->alter($this->alterHook, $definitions);
+  protected function alterDefinitions(&$definitions, $runtime = FALSE) {
+    foreach ($definitions as $definition) {
+      if ($definition instanceof InstallablePlugin) {
+        $this->alterDefinition($definition, $runtime);
+      }
+    }
+    if ($hook = $this->alterHook) {
+      if ($runtime) {
+        $hook = "_runtime";
+      }
+      $this->moduleHandler->alter($hook, $definitions);
+      $this->themeManager->alter($hook, $definitions);
     }
   }
 
@@ -208,9 +222,9 @@ class AllowedHtmlManager extends BasePluginManager {
 
     // Extension only applies to parser when it's supported by it.
     foreach ($definitions as $plugin_id => $definition) {
-      $class = $this->normalizeClassName($definition['class']);
+      $class = static::normalizeClassName($definition->getClass());
       foreach ($parser->extensionInterfaces() as $interface) {
-        if (is_subclass_of($class, $this->normalizeClassName($interface))) {
+        if (is_subclass_of($class, static::normalizeClassName($interface))) {
           continue 2;
         }
       }
@@ -240,7 +254,8 @@ class AllowedHtmlManager extends BasePluginManager {
     if (!$filterFormat) {
       return [];
     }
-    $definitions = isset($definitions) ? $definitions : $this->getType('filter');
+    /** @var \Drupal\markdown\Annotation\MarkdownAllowedHtml[] $definitions */
+    $definitions = isset($definitions) ? $definitions : $this->getType('filter', $definitions);
     $filters = $filterFormat->filters();
     foreach ($definitions as $plugin_id => $definition) {
       // Remove definitions if:
@@ -248,7 +263,7 @@ class AllowedHtmlManager extends BasePluginManager {
       // 2. Filter specified by "requiresFilter" doesn't exist.
       // 3. Filter specified by "requiresFilter" isn't actually being used
       //    (status/enabled) during time of render (ActiveTheme).
-      if (!isset($definition['requiresFilter']) || !$filters->has($definition['requiresFilter']) || ($activeTheme && !$filters->get($definition['requiresFilter'])->status)) {
+      if (!$definition->getRequirementsByType('filter', $plugin_id) || !$filters->has($plugin_id) || ($activeTheme && !$filters->get($plugin_id)->status)) {
         unset($definitions[$plugin_id]);
       }
     }
@@ -260,7 +275,7 @@ class AllowedHtmlManager extends BasePluginManager {
    */
   public function getGroupedDefinitions(array $definitions = NULL, $label_key = 'label') {
     $definitions = $this->getSortedDefinitions(isset($definitions) ? $definitions : $this->installedDefinitions(), $label_key);
-    $grouped_definitions = array();
+    $grouped_definitions = [];
     foreach ($definitions as $id => $definition) {
       $grouped_definitions[(string) $definition['type']][$id] = $definition;
     }
@@ -284,9 +299,9 @@ class AllowedHtmlManager extends BasePluginManager {
    */
   public function getParserDefinitions(ParserInterface $parser, array $definitions = NULL, ActiveTheme $activeTheme = NULL) {
     $definitions = isset($definitions) ? $definitions : $this->getType('parser');
-    $parserClass = $this->normalizeClassName(get_class($parser));
+    $parserClass = static::normalizeClassName(get_class($parser));
     foreach ($definitions as $plugin_id => $definition) {
-      $class = $this->normalizeClassName($definition['class']);
+      $class = static::normalizeClassName($definition->getClass());
       if ($parserClass !== $class && !is_subclass_of($parser, $class)) {
         unset($definitions[$plugin_id]);
       }
@@ -329,7 +344,7 @@ class AllowedHtmlManager extends BasePluginManager {
     if ($activeTheme) {
       $themeAncestry = array_merge(array_keys($activeTheme->getBaseThemes()), [$activeTheme->getName()]);
       foreach ($definitions as $plugin_id => $definition) {
-        if ($this->themeHandler->themeExists($definition['provider']) && !in_array($definition['provider'], $themeAncestry, TRUE)) {
+        if (($provider = $definition->getProvider()) && $this->themeHandler->themeExists($provider) && !in_array($provider, $themeAncestry, TRUE)) {
           unset($definitions[$plugin_id]);
         }
       }
@@ -371,75 +386,110 @@ class AllowedHtmlManager extends BasePluginManager {
   /**
    * {@inheritdoc}
    */
-  public function processDefinition(&$definition, $plugin_id) {
-    parent::processDefinition($definition, $plugin_id);
-    if (!is_array($definition)) {
+  protected function alterDefinition(InstallablePlugin $definition, $runtime = FALSE) {
+    // Immediately return if not altering the runtime definition.
+    if (!$runtime) {
       return;
     }
 
-    // Immediately return the plugin isn't installed.
-    if (!$definition['installed']) {
-      return;
-    }
-
-    $provider = $definition['provider'];
-
-    if (!isset($definition['type'])) {
-      $definition['type'] = 'other';
-
-      // If the plugin requires a filter, then set the "type" as a filter.
-      if (isset($definition['requiresFilter'])) {
-        if ($this->moduleHandler->moduleExists($provider) && !$this->filterManager->hasDefinition($definition['requiresFilter'])) {
-          throw new \RuntimeException(sprintf('The Markdown Allowed HTML plugin "%s" specifies that it requires the filter "%s", but no filter exists in any enabled modules.', $plugin_id, $definition['requiresFilter']));
+    /* @var \Drupal\markdown\Annotation\MarkdownAllowedHtml $definition */
+    switch ($definition->type) {
+      case 'extension':
+        if (($extensionRequirement = current($definition->getRequirementsByType('extension'))) && ($extensionDefinition = $this->extensionManager->getDefinition($extensionRequirement->getTypeId()))) {
+          $definition->merge($extensionDefinition, ['ui']);
         }
-        $definition['type'] = 'filter';
-      }
-      // Allow parsers to provide their own allowed HTML.
-      elseif (is_subclass_of($definition['class'], ParserInterface::class)) {
-        $parserDefinition = $this->parserManager->getDefinitionByClassName($definition['class']);
-        if ($parserDefinition) {
-          $definition['type'] = 'parser';
-          $definition['installed'] = $parserDefinition['installed'];
+        break;
+
+      case 'filter':
+        if (($filterRequirement = current($definition->getRequirementsByType('filter'))) && ($filterDefinition = $this->filterManager->getDefinition($filterRequirement->getTypeId()))) {
+          $definition->merge($filterDefinition, ['ui']);
+          if (empty($definition->label) && !empty($filterDefinition['title'])) {
+            $definition->label = $filterDefinition['title'];
+          }
         }
-      }
-      // Allow extensions to provide their own allowed HTML.
-      elseif (is_subclass_of($definition['class'], ExtensionInterface::class)) {
-        $extensionDefinition = $this->extensionManager->getDefinitionByClassName($definition['class']);
-        if ($extensionDefinition) {
-          $definition['type'] = 'extension';
-          $definition['installed'] = $extensionDefinition['installed'];
+        break;
+
+      case 'parser':
+        if (($parserRequirement = current($definition->getRequirementsByType('parser'))) && ($parserDefinition = $this->parserManager->getDefinition($parserRequirement->getTypeId()))) {
+          $definition->merge($parserDefinition, ['ui']);
         }
-      }
-      // Otherwise, determine the extension type and set it as the "type".
-      elseif ($this->moduleHandler->moduleExists($provider)) {
-        $definition['type'] = 'module';
-      }
-      elseif ($this->themeHandler->themeExists($plugin_id)) {
-        $definition['type'] = 'theme';
-      }
+        break;
     }
 
     // Provide a default label if none was provided.
-    if (empty($definition['label'])) {
-      // Use a filter title if necessary.
-      if ($definition['type'] === 'filter' && ($filterDefinition = $this->filterManager->getDefinition($definition['requiresFilter'])) && isset($filterDefinition['title'])) {
-        $definition['label'] = $filterDefinition['title'];
-      }
+    if (empty($definition->label)) {
       // Use the provider name if plugin identifier is the same.
-      elseif ($plugin_id === $provider) {
-        $definition['label'] = $this->getProviderName($provider);
+      if ($definition->id === $definition->provider) {
+        $definition['label'] = $this->getProviderName($definition->provider);
       }
       // Otherwise, create a human readable label from plugin identifier,
       // if not an extension.
-      elseif ($definition['type'] !== 'extension') {
-        $definition['label'] = ucwords(trim(str_replace('_', ' ', $plugin_id)));
+      elseif ($definition->type !== 'extension') {
+        $definition['label'] = ucwords(trim(str_replace(['_', '-'], ' ', $definition->id)));
       }
     }
 
     // Prefix label with provider (if not the same).
-    if (in_array($definition['type'], ['filter', 'module', 'theme']) && $plugin_id !== $provider) {
-      $definition['label'] = $this->getProviderName($provider) . ': ' . $definition['label'];
+    if (in_array($definition->type, ['filter', 'module', 'theme']) && $definition->id !== $definition->provider) {
+      $definition['label'] = $this->getProviderName($definition->provider) . ': ' . $definition['label'];
     }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function processDefinition(&$definition, $plugin_id) {
+    if (!($definition instanceof MarkdownAllowedHtml) || !($class = $definition->getClass()) || $definition->requirementViolations) {
+      return;
+    }
+
+    // Handle deprecated "requiresFilter" property.
+    // @todo Deprecated property, remove before 3.0.0.
+    if ($filter = $definition->requiresFilter) {
+      if (!$definition->getRequirementsByType('filter', $filter)) {
+        $requirement = InstallableRequirement::create();
+        $requirement->id = "filter:$filter";
+        $definition->requirements[] = $requirement;
+      }
+      unset($definition->requiresFilter);
+    }
+
+    // Certain types need to be determined prior to parent method processing.
+    if (!isset($definition->type)) {
+      $definition->type = 'other';
+
+      // Allow dependencies on filters.
+      if ($definition->getRequirementsByType('filter')) {
+        $definition->type = 'filter';
+      }
+      // Allow parsers to provide their own allowed HTML.
+      elseif (is_subclass_of($class, ParserInterface::class)) {
+        $definition->type = 'parser';
+        if ($parserDefinition = $this->parserManager->getDefinitionByClassName($class)) {
+          $requirement = InstallableRequirement::create();
+          $requirement->id = 'parser:' . $parserDefinition->id;
+          $definition->requirements[] = $requirement;
+        }
+      }
+      // Allow extensions to provide their own allowed HTML.
+      elseif (is_subclass_of($class, ExtensionInterface::class)) {
+        $definition->type = 'extension';
+        if ($extensionDefinition = $this->extensionManager->getDefinitionByClassName($class)) {
+          $requirement = InstallableRequirement::create();
+          $requirement->id = 'extension:' . $extensionDefinition->id;
+          $definition->requirements[] = $requirement;
+        }
+      }
+      // Otherwise, determine the extension type and set it as the "type".
+      elseif ($this->moduleHandler->moduleExists($definition->provider)) {
+        $definition->type = 'module';
+      }
+      elseif ($this->themeHandler->themeExists($plugin_id)) {
+        $definition->type = 'theme';
+      }
+    }
+
+    parent::processDefinition($definition, $plugin_id);
   }
 
   /**

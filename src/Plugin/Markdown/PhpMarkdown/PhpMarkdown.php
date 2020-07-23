@@ -4,24 +4,36 @@ namespace Drupal\markdown\Plugin\Markdown\PhpMarkdown;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\BaseParser;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
+use Drupal\markdown\Traits\ParserAllowedHtmlTrait;
 use Drupal\markdown\Util\KeyValuePipeConverter;
 
 /**
  * Support for PHP Markdown by Michel Fortin.
  *
+ * @MarkdownAllowedHtml(
+ *   id = "php-markdown",
+ * )
  * @MarkdownParser(
- *   id = "michelf/php-markdown",
+ *   id = "php-markdown",
  *   label = @Translation("PHP Markdown"),
  *   description = @Translation("Parser for Markdown."),
- *   installed = "\Michelf\Markdown",
- *   version = "\Michelf\Markdown::MARKDOWNLIB_VERSION",
- *   url = "https://michelf.ca/projects/php-markdown",
  *   weight = 31,
+ *   libraries = {
+ *     @ComposerPackage(
+ *       id = "michelf/php-markdown",
+ *       object = "\Michelf\Markdown",
+ *       url = "https://michelf.ca/projects/php-markdown",
+ *       version = "\Drupal\markdown\Plugin\Markdown\PhpMarkdown\PhpMarkdown::version",
+ *     ),
+ *   }
  * )
  */
-class PhpMarkdown extends BaseParser implements SettingsInterface {
+class PhpMarkdown extends BaseParser implements AllowedHtmlInterface, SettingsInterface {
+
+  use ParserAllowedHtmlTrait;
 
   /**
    * The PHP Markdown class to use.
@@ -40,7 +52,16 @@ class PhpMarkdown extends BaseParser implements SettingsInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings(array $pluginDefinition) {
+  public function __sleep() {
+    unset($this->phpMarkdown);
+    return parent::__sleep();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defaultSettings($pluginDefinition) {
+    /* @var \Drupal\markdown\Annotation\InstallablePlugin $pluginDefinition */
     return [
       'empty_element_suffix' => ' />',
       'enhanced_ordered_list' => FALSE,
@@ -51,6 +72,24 @@ class PhpMarkdown extends BaseParser implements SettingsInterface {
       'predef_urls' => [],
       'tab_width' => 4,
     ] + parent::defaultSettings($pluginDefinition);
+  }
+
+  /**
+   * Retrieves the version for the library.
+   *
+   * @return string
+   *   The version.
+   */
+  public static function version() {
+    if (defined('\\Michelf\\Markdown::MARKDOWNLIB_VERSION')) {
+      return \Michelf\Markdown::MARKDOWNLIB_VERSION;
+    }
+    if (defined('\\Michelf\\MARKDOWN_VERSION')) {
+      return \Michelf\MARKDOWN_VERSION;
+    }
+    if (defined('\\MARKDOWN_VERSION')) {
+      return \MARKDOWN_VERSION;
+    }
   }
 
   /**

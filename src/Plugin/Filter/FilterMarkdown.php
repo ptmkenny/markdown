@@ -184,8 +184,10 @@ class FilterMarkdown extends FilterBase implements FilterMarkdownInterface, Cont
 
     // Sanitize parser values.
     if (!empty($configuration['settings']['parser'])) {
-      $markdownSettingsForm = SettingsForm::create(NULL, $this->markdownSettings($configuration['settings']));
-      $configuration['settings'] = array_merge($configuration['settings'], $markdownSettingsForm->getConfigurationFromValues($configuration['settings']));
+      $settings = $this->markdownSettings($configuration['settings']);
+      $markdownSettingsForm = SettingsForm::create(NULL, $settings);
+      $config = $markdownSettingsForm->getConfigFromValues($settings->getName(), $configuration['settings']);
+      $configuration['settings'] = array_merge($configuration['settings'], $config->get());
     }
 
     // Remove dependencies, this is added above.

@@ -2,41 +2,45 @@
 
 namespace Drupal\markdown\Annotation;
 
-use Drupal\Component\Annotation\Plugin;
-
 /**
  * Markdown Allowed HTML Annotation.
  *
  * @Annotation
  */
-class MarkdownAllowedHtml extends Plugin {
+class MarkdownAllowedHtml extends InstallablePlugin {
 
   /**
-   * The parser identifier.
+   * A specific filter that is required for this plugin to work.
+   *
+   * @var string
+   *
+   * @deprecated in markdown:8.x-2.0 and is removed from markdown:3.0.0.
+   *   Use the "requirements" properties instead.
+   * @see https://www.drupal.org/project/markdown/issues/3142418
+   */
+  public $requiresFilter;
+
+  /**
+   * The provider of the annotated class.
    *
    * @var string
    */
-  protected $id;
+  public $provider;
 
   /**
-   * The plugin description.
+   * The type of object this allowed HTML is associated with.
+   *
+   * Can be one of: extension, filter, parser, module, theme.
    *
    * @var string
    */
-  protected $description;
+  public $type;
 
   /**
-   * The plugin label.
-   *
-   * @var string
+   * {@inheritdoc}
    */
-  protected $label;
-
-  /**
-   * Flag indicating whether plugin requires a filter association.
-   *
-   * @var string
-   */
-  protected $requiresFilter;
+  protected function protectedProperties() {
+    return array_merge(parent::protectedProperties(), ['type']);
+  }
 
 }

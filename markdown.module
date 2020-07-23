@@ -5,11 +5,23 @@
  * Markdown module.
  */
 
+use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\BubbleableMetadata;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\markdown\Markdown;
 use Drupal\markdown\Util\FilterFormatAwareInterface;
+
+/**
+ * Implements hook_config_schema_info_alter().
+ */
+function markdown_config_schema_info_alter(&$definitions) {
+  $definitions['filter']['mapping']['filterFormat'] = [
+    'type' => 'string',
+    'label' => 'Format',
+  ];
+}
 
 /**
  * Implements hook_element_info_alter().
@@ -140,7 +152,29 @@ function markdown_modules_installed($modules) {
 }
 
 /**
+ * Implements hook_preprocess_HOOK().
+ */
+function markdown_preprocess_installable_library(&$variables) {
+  /** @var \Drupal\markdown\Plugin\Markdown\InstallablePluginInterface $plugin */
+  $plugin = $variables['plugin'];
+  $variables['installedLibrary'] = $installedLibrary = $plugin->getInstalledLibrary();
+  $variables['preferredLibrary'] = $preferredLibrary = $plugin->getPreferredLibrary();
+}
+
+/**
+ * Implements hook_theme().
+ */
+function markdown_theme($existing, $type, $theme, $path) {
+  $hooks['installable_library'] = [
+    'variables' => ['plugin' => NULL, 'library' => NULL, 'installed_library' => NULL, 'preferred_library' => NULL],
+  ];
+  return $hooks;
+}
+
+/**
  * Implements hook_token_info_alter().
+ * @noinspection PhpUnused
+ * @noinspection PhpDocSignatureInspection
  */
 function markdown_token_info_alter(&$data) {
   // Supply the various "current-request" based tokens.
@@ -199,8 +233,10 @@ function markdown_token_info_alter(&$data) {
 
 /**
  * Implements hook_tokens().
+ * @noinspection PhpUnused
+ * @noinspection PhpDocSignatureInspection
  */
-function markdown_tokens($type, $tokens, array $data, array $options, \Drupal\Core\Render\BubbleableMetadata $bubbleable_metadata) {
+function markdown_tokens($type, $tokens, array $data, array $options, BubbleableMetadata $bubbleable_metadata) {
   $replacements = [];
 
   // Supply the various "current-request" based tokens.

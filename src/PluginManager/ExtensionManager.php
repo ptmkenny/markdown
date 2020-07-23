@@ -6,20 +6,24 @@ use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\markdown\Annotation\InstallablePlugin;
 use Drupal\markdown\Annotation\MarkdownExtension;
+use Drupal\markdown\Annotation\InstallableRequirement;
 use Drupal\markdown\Plugin\Markdown\ExtensionInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Markdown Extension Plugin Manager.
  *
- * @method mixed[] getDefinitions($includeBroken = TRUE)
- * @method \Drupal\markdown\Plugin\Markdown\ExtensionInterface[] all(array $configuration = [], $includeBroken = FALSE) : array
- * @method \Drupal\markdown\Plugin\Markdown\ExtensionInterface[] installed(array $configuration = []) : array
+ * @method \Drupal\markdown\Plugin\Markdown\ExtensionInterface[] all(array $configuration = [], $includeFallback = FALSE) : array
  * @method \Drupal\markdown\Plugin\Markdown\ExtensionInterface createInstance($plugin_id, array $configuration = [])
+ * @method \Drupal\markdown\Annotation\MarkdownExtension getDefinition($plugin_id, $exception_on_invalid = TRUE)
+ * @method \Drupal\markdown\Annotation\MarkdownExtension|void getDefinitionByClassName($className)
+ * @method \Drupal\markdown\Annotation\MarkdownExtension[] getDefinitions($includeFallback = TRUE)
+ * @method \Drupal\markdown\Plugin\Markdown\ExtensionInterface[] installed(array $configuration = []) : array
  * @noinspection PhpUnnecessaryFullyQualifiedNameInspection
  */
-class ExtensionManager extends BasePluginManager implements ExtensionManagerInterface {
+class ExtensionManager extends InstallablePluginManager implements ExtensionManagerInterface {
 
   /**
    * {@inheritdoc}
@@ -33,7 +37,10 @@ class ExtensionManager extends BasePluginManager implements ExtensionManagerInte
   /**
    * {@inheritdoc}
    */
-  public static function create(ContainerInterface $container) {
+  public static function create(ContainerInterface $container = NULL) {
+    if (!$container) {
+      $container = \Drupal::getContainer();
+    }
     $instance = new static(
       $container->get('container.namespaces'),
       $container->get('cache.discovery'),
@@ -46,39 +53,77 @@ class ExtensionManager extends BasePluginManager implements ExtensionManagerInte
   /**
    * {@inheritdoc}
    */
-  protected function alterDefinitions(&$definitions) {
+  protected function alterDefinitions(&$definitions, $runtime = FALSE) {
+    /** @var \Drupal\markdown\Annotation\MarkdownExtension[] $definitions */
+
     // Create dependency relationships between extensions.
-    foreach (array_keys($definitions) as $plugin_id) {
-      if (!isset($definitions[$plugin_id]['requiredBy'])) {
-        $definitions[$plugin_id]['requiredBy'] = [];
+    // @todo Figure out a better way to handle this.
+    foreach ($definitions as $definition) {
+      if (!isset($definition['_requiredBy'])) {
+        $definition['_requiredBy'] = [];
       }
-      if (!empty($definitions[$plugin_id]['requires'])) {
-        foreach ($definitions[$plugin_id]['requires'] as $key => $requirement) {
-          // Check that the plugin exists.
-          if (!isset($definitions[$requirement])) {
-            throw new PluginNotFoundException($requirement);
-          }
-          // Extensions cannot require themselves.
-          if ($requirement === $plugin_id) {
-            throw new InvalidPluginDefinitionException($plugin_id, 'Extensions cannot require themselves.');
-          }
-          if (!isset($definitions[$requirement]['requiredBy'])) {
-            $definitions[$requirement]['requiredBy'] = [];
-          }
-          if (!in_array($requirement, $definitions[$requirement]['requiredBy'])) {
-            $definitions[$requirement]['requiredBy'][] = $plugin_id;
-          }
+      $extensionRequirements = $definition->getRequirementsByType('extension');
+      foreach ($extensionRequirements as $requirement) {
+        $id = $requirement->getTypeId();
+
+        // Check that the plugin exists.
+        if (!isset($definitions[$id])) {
+          throw new PluginNotFoundException($id);
+        }
+
+        // Extensions cannot require themselves.
+        if ($id === $definition->id) {
+          throw new InvalidPluginDefinitionException($definition->id, 'Extensions cannot require themselves.');
+        }
+        if (!isset($definitions[$id]['_requiredBy'])) {
+          $definitions[$id]['_requiredBy'] = [];
+        }
+        if (!in_array($definition->id, $definitions[$id]['_requiredBy'])) {
+          $definitions[$id]['_requiredBy'][] = $definition->id;
         }
       }
     }
-    parent::alterDefinitions($definitions);
+    parent::alterDefinitions($definitions, $runtime);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function alterDefinition(InstallablePlugin $definition, $runtime = FALSE) {
+    // Immediately return if not altering the runtime definition.
+    if (!$runtime) {
+      parent::alterDefinition($definition, $runtime);
+      return;
+    }
+
+    parent::alterDefinition($definition, $runtime);
   }
 
   /**
    * {@inheritdoc}
    */
   public function getFallbackPluginId($plugin_id = NULL, array $configuration = []) {
-    return '_missing_parser';
+    return '_missing_extension';
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function processDefinition(&$definition, $pluginId) {
+    if (!($definition instanceof MarkdownExtension)) {
+      return;
+    }
+
+    if ($requires = $definition->requires) {
+      foreach ($requires as $key => $extensionId) {
+        $requirement = new InstallableRequirement();
+        $requirement->id = "extension:$extensionId";
+        $definition->runtimeRequirements[] = $requirement;
+      }
+      unset($definition->requires);
+    }
+
+    parent::processDefinition($definition, $pluginId);
   }
 
 }

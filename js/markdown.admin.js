@@ -1,6 +1,31 @@
 (function ($, Drupal) {
   var $document = $(document);
 
+  var overviewForm = document.querySelector('form[data-drupal-selector="markdown-overview"]');
+  if (overviewForm && !overviewForm.jsProcessed) {
+    overviewForm.jsProcessed = true;
+    var submit = overviewForm.querySelector('input[name="op"],button[name="op"]');
+    var weights = overviewForm.querySelectorAll('input.parser-weight');
+    if (submit && weights.length) {
+      submit.originalDisplay = submit.style.display;
+      submit.style.display = 'none';
+      var resetSubmit = function () {
+        submit.style.display = submit.originalDisplay;
+      }
+      weights.forEach(function (weight) {
+        weight.addEventListener('change', resetSubmit);
+      });
+      if (Drupal.tableDrag) {
+        var onDrop = Drupal.tableDrag.prototype.onDrop;
+        Drupal.tableDrag.prototype.onDrop = function () {
+          onDrop.apply(this);
+          if (this.changed) {
+            resetSubmit();
+          }
+        }
+      }
+    }
+  }
 
   // @todo Extract input history/dependents into its own library.
   var savePreviousInput = function (input) {
@@ -99,11 +124,20 @@
               var summary = [];
               switch (summaryType) {
                 case 'parser':
-                  summary.push($input.children(':selected').text())
+                  var $selected = $input.find(':selected:first');
+                  if ($selected[0]) {
+                    var parser = $selected.text();
+                    if (/^site:/.test($selected.val())) {
+                      summary.push(Drupal.t('Site-wide') + ' ' + parser);
+                    }
+                    else {
+                      summary.push(parser);
+                    }
+                  }
                   break;
 
                 case 'render_strategy':
-                  var $selected = $input.children(':selected:first');
+                  var $selected = $input.find(':selected:first');
                   var renderStrategy = $selected.text();
                   if ($selected.val() === 'filter') {
                     var $allowedHtml = $item.find('[data-markdown-element="allowed_html"]');

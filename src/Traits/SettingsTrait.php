@@ -2,12 +2,15 @@
 
 namespace Drupal\markdown\Traits;
 
+use Drupal\Component\Utility\DiffArray;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\markdown\Util\SortArray;
 
 /**
- * Trait for markdown plugins that implement settings.
+ * Trait for installable plugins that implement settings.
+ *
+ * @todo Move upstream to https://www.drupal.org/project/installable_plugins.
  */
 trait SettingsTrait {
 
@@ -42,7 +45,8 @@ trait SettingsTrait {
 
     // Create placeholder title so it can be replaced with a proper translation.
     if (!isset($element['#title'])) {
-      $element['#title'] = "@TODO: $name";
+      @trigger_error('Deprecated in markdown:8.x-2.0 and is removed from markdown:3.0.0. No replacement for automatically populating. The #title property must be explicitly specified for locale tools to extract the correct value. See https://www.drupal.org/project/markdown/issues/3142418.', E_USER_DEPRECATED);
+      $element['#title'] = $this->t(ucwords(str_replace(['-', '_'], ' ', $name))); // phpcs:ignore
     }
 
     // Handle initial setting value (Drupal names this #default_value).
@@ -75,39 +79,9 @@ trait SettingsTrait {
   /**
    * {@inheritdoc}
    */
-  public function defaultConfiguration() {
-    $pluginDefinition = $this->getPluginDefinition();
-    $settings = isset($pluginDefinition['settings']) ? $pluginDefinition['settings'] : [];
-    return [
-      'settings' => NestedArray::mergeDeep($settings, static::defaultSettings($pluginDefinition)),
-    ] + parent::defaultConfiguration();
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function defaultSettings(array $pluginDefinition) {
+  public static function defaultSettings($pluginDefinition) {
+    /* @var \Drupal\markdown\Annotation\InstallablePlugin $pluginDefinition */
     return [];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getConfiguration() {
-    $configuration = parent::getConfiguration();
-
-    // Settings can change over time. Ensure only supported settings are saved.
-    $settings = array_intersect_key($this->getSettings(), static::defaultSettings($this->getPluginDefinition()));
-
-    // Sort settings (in case configuration was provided by form values).
-    if ($settings) {
-      SortArray::recursiveKeySort($settings);
-    }
-
-    // Only return settings that have changed from the default values.
-    $configuration['settings'] = $settings;
-
-    return $configuration;
   }
 
   /**
@@ -134,15 +108,39 @@ trait SettingsTrait {
   /**
    * {@inheritdoc}
    */
-  public function getSettings($runtime = FALSE) {
-    return $this->config()->get('settings') ?: [];
+  public function getSettings($runtime = FALSE, $sorted = TRUE) {
+    $settings = $this->config()->get('settings') ?: [];
+
+    // Sort settings (in case configuration was provided by form values).
+    if ($sorted && $settings) {
+      SortArray::recursiveKeySort($settings);
+    }
+
+    return $settings;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getSettingOverrides($runtime = FALSE, $sorted = TRUE, array $settings = NULL) {
+    if (!isset($settings)) {
+      $settings = $this->getSettings($runtime, FALSE);
+    }
+
+    $overridden = DiffArray::diffAssocRecursive($settings, static::defaultSettings($this->getPluginDefinition()));
+
+    if ($sorted && $overridden) {
+      SortArray::recursiveKeySort($overridden);
+    }
+
+    return $overridden;
   }
 
   /**
    * {@inheritdoc}
    */
   public function settingExists($name) {
-    return TRUE;
+    return array_key_exists($name, static::defaultSettings($this->pluginDefinition));
   }
 
   /**

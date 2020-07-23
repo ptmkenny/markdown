@@ -4,6 +4,9 @@ namespace Drupal\markdown\Exception;
 
 /**
  * Exception thrown when a file is expected to exist but does not.
+ *
+ * @todo Extend from \RuntimeException and implement MarkdownExceptionInterface
+ *   in 3.0.0.
  */
 class MarkdownFileNotExistsException extends MarkdownException {
 

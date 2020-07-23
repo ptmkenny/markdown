@@ -9,27 +9,35 @@ use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\BaseParser;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
+use Drupal\markdown\Traits\ParserAllowedHtmlTrait;
+use Drupal\markdown\Util\Composer;
+use Drupal\markdown\Util\FilterHtml;
 
 /**
  * Support for Parsedown by Emanuil Rusev.
  *
+ * @MarkdownAllowedHtml(
+ *   id = "parsedown",
+ * )
  * @MarkdownParser(
- *   id = "erusev/parsedown",
+ *   id = "parsedown",
  *   label = @Translation("Parsedown"),
  *   description = @Translation("Parser for Markdown."),
- *   url = "https://parsedown.org",
- *   installed = "\Parsedown",
- *   version = "\Parsedown::version",
  *   weight = 21,
- * )
- * @MarkdownAllowedHtml(
- *   id = "erusev/parsedown",
- *   label = @Translation("Parsedown"),
- *   installed = "\Parsedown",
- *   url = "https://parsedown.org",
+ *   libraries = {
+ *     @ComposerPackage(
+ *       id = "erusev/parsedown",
+ *       object = "\Parsedown",
+ *       url = "https://parsedown.org",
+ *     ),
+ *   }
  * )
  */
 class Parsedown extends BaseParser implements AllowedHtmlInterface, SettingsInterface {
+
+  use ParserAllowedHtmlTrait {
+    allowedHtmlTags as allowedHtmlTagsTrait;
+  }
 
   /**
    * The Parsedown class to use.
@@ -37,6 +45,13 @@ class Parsedown extends BaseParser implements AllowedHtmlInterface, SettingsInte
    * @var string
    */
   protected static $parsedownClass = '\\Parsedown';
+
+  /**
+   * The parser version.
+   *
+   * @var string
+   */
+  protected static $version;
 
   /**
    * The Parsedown instance.
@@ -48,7 +63,16 @@ class Parsedown extends BaseParser implements AllowedHtmlInterface, SettingsInte
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings(array $pluginDefinition) {
+  public function __sleep() {
+    unset($this->parsedown);
+    return parent::__sleep();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defaultSettings($pluginDefinition) {
+    /* @var \Drupal\markdown\Annotation\InstallablePlugin $pluginDefinition */
     return [
       'breaks_enabled' => FALSE,
       'markup_escaped' => FALSE,
@@ -62,7 +86,7 @@ class Parsedown extends BaseParser implements AllowedHtmlInterface, SettingsInte
    * {@inheritdoc}
    */
   public function allowedHtmlTags(ParserInterface $parser, ActiveTheme $activeTheme = NULL) {
-    return [
+    return FilterHtml::mergeAllowedTags($this->allowedHtmlTagsTrait($parser, $activeTheme), [
       'caption' => [],
       'col' => [
         'span' => TRUE,
@@ -88,7 +112,7 @@ class Parsedown extends BaseParser implements AllowedHtmlInterface, SettingsInte
       ],
       'thead' => [],
       'tr' => [],
-    ];
+    ]);
   }
 
   /**

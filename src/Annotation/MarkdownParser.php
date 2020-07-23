@@ -6,19 +6,24 @@ namespace Drupal\markdown\Annotation;
  * Markdown Parser Annotation.
  *
  * @Annotation
- *
- * @Attributes({
- *   @Attribute("id", required = true, type = "string"),
- *   @Attribute("bundledExtensions", type = "string[]"),
- * })
  */
-class MarkdownParser extends BaseMarkdownAnnotation {
+class MarkdownParser extends InstallablePlugin {
 
   /**
    * List of markdown extension plugin identifiers, bundled with the parser.
    *
    * @var string[]
    */
-  protected $bundledExtensions = [];
+  public $bundledExtensions = [];
+
+  /**
+   * A list of extension interface class names.
+   *
+   * This allows a parser to indicate which extensions belong to it by
+   * requiring the extension to implement at least one of these interfaces.
+   *
+   * @var string[]
+   */
+  public $extensionInterfaces = [];
 
 }

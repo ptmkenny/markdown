@@ -6,9 +6,13 @@ services:
     tags:
       - { name: cache.bin, default_backend: cache.backend.chainedfast }
 
+  logger.channel.markdown:
+    parent: logger.channel_base
+    arguments: ['markdown']
+
   markdown:
     class: Drupal\markdown\Markdown
-    arguments: ['@cache.markdown', '@file_system', '@http_client', '@plugin.manager.markdown.parser', '@markdown.settings']
+    arguments: ['@cache.markdown', '@config.factory', '@file_system', '@http_client', '@logger.channel.markdown', '@plugin.manager.markdown.parser', '@markdown.settings']
 
   markdown.settings:
     class: Drupal\markdown\Config\ImmutableMarkdownConfig
@@ -16,6 +20,12 @@ services:
     arguments: [markdown.settings]
     calls:
       - [setKeyPrefix, ['parser']]
+
+  markdown.param_converter:
+    class: Drupal\markdown\Routing\MarkdownParamConverter
+    arguments: ['@plugin.manager.markdown.parser', '@plugin.manager.markdown.extension', '@plugin.manager.markdown.allowed_html']
+    tags:
+      - { name: paramconverter, priority: 10 }
 
   markdown_plugin_manager:
     abstract: true

@@ -6,24 +6,44 @@ use Drupal\Core\Theme\ActiveTheme;
 use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
-use League\CommonMark\ConfigurableEnvironmentInterface;
-use League\CommonMark\Extension\TaskList\TaskListExtension as LeagueTaskListExtension;
 
 /**
  * Task List extension.
  *
- * @MarkdownExtension(
- *   id = "league/commonmark-ext-task-list",
- *   label = @Translation("Task List"),
- *   installed = "\League\CommonMark\Extension\TaskList\TaskListExtension",
- *   description = @Translation("Adds support for GFM-style task lists."),
- *   url = "https://commonmark.thephpleague.com/extensions/task-lists/",
- * )
  * @MarkdownAllowedHtml(
- *   id = "league/commonmark-ext-task-list",
+ *   id = "commonmark-task-list",
+ * )
+ * @MarkdownExtension(
+ *   id = "commonmark-task-list",
  *   label = @Translation("Task List"),
- *   installed = "\League\CommonMark\Extension\TaskList\TaskListExtension",
- *   url = "https://commonmark.thephpleague.com/extensions/task-lists/",
+ *   description = @Translation("Adds support for GFM-style task lists."),
+ *   libraries = {
+ *     @ComposerPackage(
+ *       id = "league/commonmark",
+ *       object = "\League\CommonMark\Extension\TaskList\TaskListExtension",
+ *       url = "https://commonmark.thephpleague.com/extensions/task-lists/",
+ *       requirements = {
+ *          @InstallableRequirement(
+ *             id = "parser:commonmark",
+ *             callback = "::getVersion",
+ *             constraints = {"Version" = "^1.3 || ^2.0"},
+ *          ),
+ *       },
+ *     ),
+ *     @ComposerPackage(
+ *       id = "league/commonmark-ext-task-list",
+ *       deprecated = @Translation("Support for this library was deprecated in markdown:8.x-2.0 and will be removed from markdown:3.0.0."),
+ *       object = "\League\CommonMark\Ext\TaskList\TaskListExtension",
+ *       url = "https://github.com/thephpleague/commonmark-ext-task-list",
+ *       requirements = {
+ *          @InstallableRequirement(
+ *             id = "parser:commonmark",
+ *             callback = "::getVersion",
+ *             constraints = {"Version" = ">=0.19 <1.0.0 || ^1.0"},
+ *          ),
+ *       },
+ *     ),
+ *   },
  * )
  */
 class TaskListExtension extends BaseExtension implements AllowedHtmlInterface {
@@ -39,13 +59,6 @@ class TaskListExtension extends BaseExtension implements AllowedHtmlInterface {
         'type' => 'checkbox',
       ],
     ];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function register(ConfigurableEnvironmentInterface $environment) {
-    $environment->addExtension(new LeagueTaskListExtension());
   }
 
 }

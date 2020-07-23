@@ -4,6 +4,8 @@ namespace Drupal\markdown\Traits;
 
 /**
  * Trait for utilizing the Renderer service.
+ *
+ * @todo Move upstream to https://www.drupal.org/project/installable_plugins.
  */
 trait RendererTrait {
 

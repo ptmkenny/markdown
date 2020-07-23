@@ -14,7 +14,11 @@ use Drupal\markdown\Plugin\Markdown\ParserInterface;
  *   id = "media_embed",
  *   description = @Translation("Adds support for the <code>&lt;drupal-media&gt;</code> tag."),
  *   provider = "media",
- *   requiresFilter = "media_embed",
+ *   requirements = {
+ *     @InstallableRequirement(
+ *       id = "filter:media_embed",
+ *     ),
+ *   },
  * )
  */
 class MediaEmbed extends PluginBase implements AllowedHtmlInterface {

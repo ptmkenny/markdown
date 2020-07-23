@@ -1,21 +1,14 @@
 <?php
 
-namespace Drupal\markdown\Plugin\Markdown\AllowedHtml;
+namespace Drupal\markdown\Traits;
 
-use Drupal\Core\Plugin\PluginBase;
 use Drupal\Core\Theme\ActiveTheme;
-use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
 
 /**
- * Global allowed HTML support.
- *
- * @MarkdownAllowedHtml(
- *   id = "markdown",
- *   description = @Translation("Provide common global attributes that are useful when dealing with Markdown generated output."),
- * )
+ * Trait intended to be used by parsers for default allowed HTML.
  */
-class Markdown extends PluginBase implements AllowedHtmlInterface {
+trait ParserAllowedHtmlTrait {
 
   /**
    * {@inheritdoc}
@@ -42,7 +35,6 @@ class Markdown extends PluginBase implements AllowedHtmlInterface {
       ],
       'b' => [],
       'br' => [],
-      'cite' => [],
       'code' => [],
       'div' => [],
       'em' => [],

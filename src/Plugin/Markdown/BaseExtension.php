@@ -2,17 +2,71 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
+use Drupal\Core\Config\Schema\Mapping;
+use Drupal\markdown\PluginManager\ExtensionManager;
+use Drupal\markdown\Traits\EnabledPluginTrait;
+use Drupal\markdown\Util\ParserAwareInterface;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
+
 /**
  * Base class for markdown extensions.
+ *
+ * @property \Drupal\markdown\Annotation\MarkdownExtension $pluginDefinition
+ * @method \Drupal\markdown\Annotation\MarkdownExtension getPluginDefinition()
  */
 abstract class BaseExtension extends InstallablePluginBase implements ExtensionInterface {
+
+  use EnabledPluginTrait;
+
+  /**
+   * {@inheritdoc}
+   */
+  public function enabledByDefault() {
+    return FALSE;
+  }
+
+  /**
+   * Validates extension settings.
+   *
+   * @param array $settings
+   *   The extension settings to validate.
+   * @param \Symfony\Component\Validator\Context\ExecutionContextInterface $context
+   *   The validation execution context.
+   */
+  public static function validateSettings(array $settings, ExecutionContextInterface $context) {
+    try {
+      $object = $context->getObject();
+      $parent = $object instanceof Mapping ? $object->getParent() : NULL;
+      $extensionId = $parent instanceof Mapping && ($id = $parent->get('id')) ? $id->getValue() : NULL;
+      $extensionManager = ExtensionManager::create();
+
+      if (!$extensionId || !$extensionManager->hasDefinition($extensionId)) {
+        throw new \RuntimeException(sprintf('Unknown markdown extension: "%s"', $extensionId));
+      }
+
+      $extension = $extensionManager->createInstance($extensionId);
+
+      // Immediately return if extension doesn't have any settings.
+      if (!($extension instanceof SettingsInterface)) {
+        return;
+      }
+
+      $defaultSettings = $extension::defaultSettings($extension->getPluginDefinition());
+      $unknownSettings = array_keys(array_diff_key($settings, $defaultSettings));
+      if ($unknownSettings) {
+        throw new \RuntimeException(sprintf('Unknown extension settings: %s', implode(', ', $unknownSettings)));
+      }
+    }
+    catch (\RuntimeException $exception) {
+      $context->addViolation($exception->getMessage());
+    }
+  }
 
   /**
    * {@inheritdoc}
    */
   public function getConfiguration() {
     $configuration = parent::getConfiguration();
-    $configuration['enabled'] = $this->isEnabled();
 
     // Only provide settings if extension is enabled.
     if ($this instanceof SettingsInterface && !$this->isEnabled()) {
@@ -32,22 +86,31 @@ abstract class BaseExtension extends InstallablePluginBase implements ExtensionI
   /**
    * {@inheritdoc}
    */
-  public function isEnabled() {
-    return $this->isInstalled() && !empty($this->configuration['enabled']);
+  public function isBundled() {
+    if (!($this instanceof ParserAwareInterface) || !($parser = $this->getParser())) {
+      return FALSE;
+    }
+    $extensionId = $this->pluginDefinition->getInstalledId();
+    $parserId = $parser->getPluginDefinition()->getInstalledId();
+    return $extensionId === $parserId;
   }
 
   /**
    * {@inheritdoc}
    */
   public function requires() {
-    return isset($this->pluginDefinition['requires']) ? $this->pluginDefinition['requires'] : [];
+    $extensionRequirements = $this->pluginDefinition->getRequirementsByType('extension');
+    return array_map(function ($requirement) {
+      return $requirement->getTypeId();
+    }, $extensionRequirements);
   }
 
   /**
    * {@inheritdoc}
    */
   public function requiredBy() {
-    return isset($this->pluginDefinition['requiredBy']) ? $this->pluginDefinition['requiredBy'] : [];
+    // @todo Figure out a better way to handle this.
+    return isset($this->pluginDefinition['_requiredBy']) ? $this->pluginDefinition['_requiredBy'] : [];
   }
 
 }

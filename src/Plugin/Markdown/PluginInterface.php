@@ -10,6 +10,10 @@ use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 
 /**
  * Interface for markdown plugins.
+ *
+ * @deprecated in markdown:8.x-2.0 and is removed from markdown:3.0.0.
+ *   Use \Drupal\markdown\Plugin\Markdown\InstallablePluginInterface instead.
+ * @see https://www.drupal.org/project/markdown/issues/3142418
  */
 interface PluginInterface extends ConfigurableInterface, ContainerAwareInterface, ContainerFactoryPluginInterface, DependentPluginInterface, PluginInspectionInterface {
 

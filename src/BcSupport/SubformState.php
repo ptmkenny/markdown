@@ -5,13 +5,6 @@ namespace Drupal\markdown\BcSupport;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Form\FormStateInterface;
 
-if (!class_exists('\Drupal\Core\Form\SubformState')) {
-  /* @noinspection PhpIgnoredClassAliasDeclaration */
-  class_alias('\Drupal\markdown\BcSupport\FormStateDecoratorBase', '\Drupal\Core\Form\SubformState');
-}
-
-use Drupal\Core\Form\SubformState as CoreSubformState;
-
 /**
  * Stores information about the state of a subform.
  *
@@ -20,7 +13,7 @@ use Drupal\Core\Form\SubformState as CoreSubformState;
  *
  * @see https://www.drupal.org/project/markdown/issues/3103679
  */
-class SubformState extends CoreSubformState implements SubformStateInterface {
+class SubformState extends FormStateDecoratorBase implements SubformStateInterface {
 
   use FormStateValuesTrait;
 

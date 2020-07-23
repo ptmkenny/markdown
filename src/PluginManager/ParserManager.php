@@ -3,6 +3,7 @@
 namespace Drupal\markdown\PluginManager;
 
 use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\filter\Plugin\FilterInterface;
@@ -17,12 +18,14 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Markdown Parser Plugin Manager.
  *
- * @method \Drupal\markdown\Plugin\Markdown\ParserInterface[] all(array $configuration = [], $includeBroken = FALSE) : array
- * @method mixed[] getDefinitions($includeBroken = TRUE)
+ * @method \Drupal\markdown\Plugin\Markdown\ParserInterface[] all(array $configuration = [], $includeFallback = FALSE) : array
+ * @method \Drupal\markdown\Annotation\MarkdownParser getDefinition($plugin_id, $exception_on_invalid = TRUE)
+ * @method \Drupal\markdown\Annotation\MarkdownParser|void getDefinitionByClassName($className)
+ * @method \Drupal\markdown\Annotation\MarkdownParser[] getDefinitions($includeFallback = TRUE)
  * @method \Drupal\markdown\Plugin\Markdown\ParserInterface[] installed(array $configuration = []) : array
  * @noinspection PhpUnnecessaryFullyQualifiedNameInspection
  */
-class ParserManager extends BasePluginManager implements ParserManagerInterface {
+class ParserManager extends InstallablePluginManager implements ParserManagerInterface {
 
   /**
    * {@inheritdoc}
@@ -57,6 +60,11 @@ class ParserManager extends BasePluginManager implements ParserManagerInterface 
     $filter = isset($configuration['filter']) ? $configuration['filter'] : NULL;
     unset($configuration['filter']);
 
+    // Merge passed configuration onto any existing site-wide configuration.
+    if (!($filter instanceof FilterInterface)) {
+      $configuration = NestedArray::mergeDeep(\Drupal::config("markdown.parser.$plugin_id")->get(), $configuration);
+    }
+
     /** @var \Drupal\markdown\Plugin\Markdown\ParserInterface $parser */
     $parser = parent::createInstance($plugin_id, $configuration);
 
@@ -79,7 +87,7 @@ class ParserManager extends BasePluginManager implements ParserManagerInterface 
     }
     // Otherwise, add a default cache tag.
     else {
-      $parser->addCacheTags(["markdown.parser:$plugin_id"]);
+      $parser->addCacheTags(["markdown.parser.$plugin_id"]);
     }
 
     return $parser;
@@ -98,17 +106,16 @@ class ParserManager extends BasePluginManager implements ParserManagerInterface 
   public function processDefinition(&$definition, $plugin_id) {
     parent::processDefinition($definition, $plugin_id);
 
-    if (!is_array($definition) || empty($definition['installed']) || !($class = isset($definition['class']) ? $definition['class'] : NULL)) {
+    if (!($definition instanceof MarkdownParser) || !$definition->isInstalled() || !($class = $definition->getClass())) {
       return;
     }
 
     // Process extensible parser support.
-    $definition['extensionInterfaces'] = isset($definition['extensionInterfaces']) && is_array($definition['extensionInterfaces']) ? $definition['extensionInterfaces'] : [];
     if (is_subclass_of($class, ExtensibleParserInterface::class)) {
-      if (!$definition['extensionInterfaces']) {
+      if (!$definition->extensionInterfaces) {
         throw new InvalidPluginDefinitionException($plugin_id, sprintf('Markdown parser "%s" implements %s but is missing "extensionInterfaces" in the definition.', $plugin_id, ExtensibleParserInterface::class));
       }
-      foreach (array_map([$this, 'normalizeClassName'], $definition['extensionInterfaces']) as $interface) {
+      foreach (array_map('\Drupal\markdown\PluginManager\InstallablePluginManager::normalizeClassName', $definition->extensionInterfaces) as $interface) {
         if ($interface === ExtensionInterface::class) {
           throw new InvalidPluginDefinitionException($plugin_id, sprintf('Markdown parser "%s" cannot specify %s as the extension interface. It must create its own unique interface that extend from it.', $plugin_id, ExtensionInterface::class));
         }
@@ -120,6 +127,20 @@ class ParserManager extends BasePluginManager implements ParserManagerInterface 
         }
       }
     }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function providerExists($provider) {
+    // It's known that plugins provided by this module exist. Explicitly and
+    // always return TRUE for this case. This is needed during install when
+    // the module is not yet (officially) installed.
+    // @see markdown_requirements()
+    if ($provider === 'markdown') {
+      return TRUE;
+    }
+    return parent::providerExists($provider);
   }
 
 }

@@ -4,12 +4,15 @@ namespace Drupal\markdown\Render;
 
 use Drupal\Component\Utility\Crypt;
 use Drupal\Component\Utility\Unicode;
+use Drupal\Core\Cache\RefinableCacheableDependencyTrait;
 use Drupal\Core\Language\LanguageInterface;
 
 /**
  * The end result of parsing markdown into HTML.
  */
 class ParsedMarkdown implements ParsedMarkdownInterface {
+
+  use RefinableCacheableDependencyTrait;
 
   /**
    * A UNIX timestamp of when this object is to expire.

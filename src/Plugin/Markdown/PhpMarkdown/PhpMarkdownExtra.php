@@ -11,20 +11,22 @@ use Drupal\markdown\Util\KeyValuePipeConverter;
 /**
  * Support for PHP Markdown Extra by Michel Fortin.
  *
+ * @MarkdownAllowedHtml(
+ *   id = "php-markdown-extra",
+ * )
  * @MarkdownParser(
- *   id = "michelf/php-markdown-extra",
+ *   id = "php-markdown-extra",
  *   label = @Translation("PHP Markdown Extra"),
  *   description = @Translation("Parser for Markdown with extra functionality."),
- *   installed = "\Michelf\MarkdownExtra",
- *   version = "\Michelf\Markdown::MARKDOWNLIB_VERSION",
- *   url = "https://michelf.ca/projects/php-markdown/extra",
  *   weight = 30,
- * )
- * @MarkdownAllowedHtml(
- *   id = "michelf/php-markdown-extra",
- *   label = @Translation("PHP Markdown Extra"),
- *   installed = "\Michelf\MarkdownExtra",
- *   url = "https://michelf.ca/projects/php-markdown/extra",
+ *   libraries = {
+ *     @ComposerPackage(
+ *       id = "michelf/php-markdown",
+ *       object = "\Michelf\MarkdownExtra",
+ *       url = "https://michelf.ca/projects/php-markdown/extra",
+ *       version = "\Drupal\markdown\Plugin\Markdown\PhpMarkdown\PhpMarkdownExtra::version",
+ *     ),
+ *   }
  * )
  * @method \Michelf\MarkdownExtra getPhpMarkdown()
  * @noinspection PhpFullyQualifiedNameUsageInspection
@@ -39,7 +41,8 @@ class PhpMarkdownExtra extends PhpMarkdown implements AllowedHtmlInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings(array $pluginDefinition) {
+  public static function defaultSettings($pluginDefinition) {
+    /* @var \Drupal\markdown\Annotation\InstallablePlugin $pluginDefinition */
     return [
       'code_attr_on_pre' => FALSE,
       'code_class_prefix' => '',
@@ -56,6 +59,19 @@ class PhpMarkdownExtra extends PhpMarkdown implements AllowedHtmlInterface {
       'predef_abbr' => [],
       'table_align_class_tmpl' => '',
     ] + parent::defaultSettings($pluginDefinition);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function version() {
+    if (defined('\\Michelf\\MARKDOWNEXTRA_VERSION')) {
+      return \Michelf\MARKDOWNEXTRA_VERSION;
+    }
+    if (defined('\\MARKDOWNEXTRA_VERSION')) {
+      return \MARKDOWNEXTRA_VERSION;
+    }
+    return parent::version();
   }
 
   /**

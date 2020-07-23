@@ -8,20 +8,21 @@ use Drupal\markdown\Plugin\Markdown\ParserInterface;
 /**
  * Support for Parsedown Extra by Emanuil Rusev.
  *
+ * @MarkdownAllowedHtml(
+ *   id = "parsedown-extra",
+ * )
  * @MarkdownParser(
- *   id = "erusev/parsedown-extra",
+ *   id = "parsedown-extra",
  *   label = @Translation("Parsedown Extra"),
  *   description = @Translation("Parser for Markdown with extra functionality."),
- *   url = "https://github.com/erusev/parsedown-extra",
- *   installed = "\ParsedownExtra",
- *   version = "\ParsedownExtra::version",
  *   weight = 20,
- * )
- * @MarkdownAllowedHtml(
- *   id = "erusev/parsedown-extra",
- *   label = @Translation("Parsedown Extra"),
- *   installed = "\ParsedownExtra",
- *   url = "https://github.com/erusev/parsedown-extra",
+ *   libraries = {
+ *     @ComposerPackage(
+ *       id = "erusev/parsedown-extra",
+ *       object = "\ParsedownExtra",
+ *       url = "https://github.com/erusev/parsedown-extra",
+ *     ),
+ *   }
  * )
  * @method \ParsedownExtra getParsedown()
  */

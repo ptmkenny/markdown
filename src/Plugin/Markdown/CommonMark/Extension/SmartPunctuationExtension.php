@@ -6,29 +6,61 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\PluginFormInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
+use Drupal\markdown\Traits\FeatureDetectionTrait;
 use Drupal\markdown\Traits\SettingsTrait;
-use League\CommonMark\ConfigurableEnvironmentInterface;
-use League\CommonMark\Extension\SmartPunct\SmartPunctExtension as LeagueSmartPunctExtension;
 
 /**
  * Smart Punctuation extension.
  *
  * @MarkdownExtension(
- *   id = "league/commonmark-ext-smart-punctuation",
+ *   id = "commonmark-smart-punctuation",
  *   label = @Translation("Smart Punctuation"),
- *   installed = "\League\CommonMark\Extension\SmartPunct\SmartPunctExtension",
  *   description = @Translation("Intelligently converts ASCII quotes, dashes, and ellipses to their Unicode equivalents."),
- *   url = "https://commonmark.thephpleague.com/extensions/smart-punctuation/",
+ *   libraries = {
+ *     @ComposerPackage(
+ *       id = "league/commonmark",
+ *       object = "\League\CommonMark\Extension\SmartPunct\SmartPunctExtension",
+ *       url = "https://commonmark.thephpleague.com/extensions/smart-punctuation/",
+ *       requirements = {
+ *          @InstallableRequirement(
+ *             id = "parser:commonmark",
+ *             callback = "::getVersion",
+ *             constraints = {"Version" = "^1.3 || ^2.0"},
+ *          ),
+ *       },
+ *     ),
+ *     @ComposerPackage(
+ *       id = "league/commonmark-ext-smartpunct",
+ *       deprecated = @Translation("Support for this library was deprecated in markdown:8.x-2.0 and will be removed from markdown:3.0.0."),
+ *       object = "\League\CommonMark\Ext\SmartPunct\SmartPunctExtension",
+ *       url = "https://github.com/thephpleague/commonmark-ext-smartpunct",
+ *       requirements = {
+ *          @InstallableRequirement(
+ *             id = "parser:commonmark",
+ *             callback = "::getVersion",
+ *             constraints = {"Version" = ">=0.13 <1.0.0 || ^1.0"},
+ *          ),
+ *       },
+ *     ),
+ *   },
  * )
  */
 class SmartPunctuationExtension extends BaseExtension implements PluginFormInterface, SettingsInterface {
 
+  use FeatureDetectionTrait;
   use SettingsTrait;
 
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings(array $pluginDefinition) {
+  public static function defaultSettings($pluginDefinition) {
+    /* @var \Drupal\markdown\Annotation\InstallablePlugin $pluginDefinition */
+
+    // Older versions of the deprecated extension didn't have settings.
+    if (!static::featureExists('settings')) {
+      return [];
+    }
+
     return [
       'double_quote_opener' => '“',
       'double_quote_closer' => '”',
@@ -38,10 +70,25 @@ class SmartPunctuationExtension extends BaseExtension implements PluginFormInter
   }
 
   /**
+   * Feature detection for settings.
+   *
+   * @return bool
+   *   TRUE or FALSE
+   */
+  public static function featureSettings() {
+    return class_exists('\\League\\CommonMark\\Ext\\SmartPunct\\SmartPunctExtension') && defined('\\League\\CommonMark\\Ext\\SmartPunct\\Quote::DOUBLE_QUOTE_OPENER') || class_exists('\\League\\CommonMark\\Extension\\SmartPunct\\SmartPunctExtension');
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function buildConfigurationForm(array $element, FormStateInterface $form_state) {
     /** @var \Drupal\markdown\Form\SubformStateInterface $form_state */
+
+    // Immediately return if extension doesn't support settings.
+    if (!static::featureExists('settings')) {
+      return $element;
+    }
 
     $element += $this->createSettingElement('double_quote_opener', [
       '#type' => 'textfield',
@@ -69,15 +116,8 @@ class SmartPunctuationExtension extends BaseExtension implements PluginFormInter
   /**
    * {@inheritdoc}
    */
-  public function register(ConfigurableEnvironmentInterface $environment) {
-    $environment->addExtension(new LeagueSmartPunctExtension());
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function settingsKey() {
-    return 'smartpunct';
+    return static::featureExists('settings') ? 'smartpunct' : FALSE;
   }
 
 }

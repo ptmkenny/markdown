@@ -6,9 +6,10 @@ use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Link;
 use Drupal\Core\Plugin\PluginDependencyTrait;
 use Drupal\Core\Plugin\PluginFormInterface;
 use Drupal\Core\Render\Element;
@@ -16,6 +17,7 @@ use Drupal\Core\Render\ElementInfoManagerInterface;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
 use Drupal\markdown\Config\MarkdownConfig;
+use Drupal\markdown\Markdown;
 use Drupal\markdown\MarkdownInterface;
 use Drupal\markdown\Plugin\Markdown\ExtensibleParserInterface;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
@@ -30,6 +32,7 @@ use Drupal\markdown\Util\FilterAwareInterface;
 use Drupal\markdown\Util\FilterFormatAwareInterface;
 use Drupal\markdown\Util\FilterHtml;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Markdown Settings Form.
@@ -76,9 +79,20 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
    */
   protected $settings;
 
+  /***
+   * The typed config manager.
+   *
+   * @var \Drupal\Core\Config\TypedConfigManagerInterface
+   */
+  protected $typedConfigManager;
+
   /**
    * MarkdownSettingsForm constructor.
    *
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   *   The Config Factory service.
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface $typedConfigManager
+   *   The Typed Config Manager service.
    * @param \Drupal\Core\Cache\CacheTagsInvalidatorInterface $cacheTagsInvalidator
    *   The Cache Tags Invalidator service.
    * @param \Drupal\Core\Render\ElementInfoManagerInterface $elementInfo
@@ -90,12 +104,14 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
    * @param \Drupal\markdown\Config\MarkdownConfig $settings
    *   The markdown settings config.
    */
-  public function __construct(CacheTagsInvalidatorInterface $cacheTagsInvalidator, ElementInfoManagerInterface $elementInfo, MarkdownInterface $markdown, ParserManagerInterface $parserManager, MarkdownConfig $settings) {
+  public function __construct(ConfigFactoryInterface $configFactory, TypedConfigManagerInterface $typedConfigManager, CacheTagsInvalidatorInterface $cacheTagsInvalidator, ElementInfoManagerInterface $elementInfo, MarkdownInterface $markdown, ParserManagerInterface $parserManager, MarkdownConfig $settings) {
+    $this->configFactory = $configFactory;
     $this->cacheTagsInvalidator = $cacheTagsInvalidator;
     $this->elementInfo = $elementInfo;
     $this->markdown = $markdown;
     $this->parserManager = $parserManager;
     $this->settings = $settings;
+    $this->typedConfigManager = $typedConfigManager;
   }
 
   /**
@@ -106,6 +122,8 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
       $container = \Drupal::getContainer();
     }
     return new static(
+      $container->get('config.factory'),
+      $container->get('config.typed'),
       $container->get('cache_tags.invalidator'),
       $container->get('plugin.manager.element_info'),
       $container->get('markdown'),
@@ -119,6 +137,11 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
    *
    * @return bool
    *   TRUE or FALSE
+   *
+   * @deprecated in markdown:8.x-2.0 and is removed from markdown:3.0.0.
+   *   No direct replacement. Check route name yourself or if there is a parser
+   *   object set at $form_state->get('markdownParser').
+   * @see https://www.drupal.org/project/markdown/issues/3142418
    */
   public static function siteWideSettingsForm() {
     return \Drupal::routeMatch()->getRouteName() === 'markdown.settings';
@@ -134,10 +157,23 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state) {
+  public function buildForm(array $form, FormStateInterface $form_state, ParserInterface $parser = NULL) {
+    // Immediately redirect to the overview form if no parser was provided.
+    if (!$parser) {
+      return $this->redirect('markdown.overview');
+    }
+    // Otherwise, if there is a parser, ensure it's a valid one.
+    elseif ($parser->getPluginId() === $this->parserManager->getFallbackPluginId()) {
+      throw new NotFoundHttpException();
+    }
+
+    $form_state->set('markdownParser', $parser);
+
     $form += [
       '#parents' => [],
-      '#title' => $this->t('Markdown'),
+      '#title' => $this->t('Edit @parser', [
+        '@parser' => $parser->getLabel(FALSE),
+      ]),
     ];
 
     $form['actions']['#type'] = 'actions';
@@ -195,7 +231,7 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
    *   The processed element.
    */
   public function processSubform(array $element, FormStateInterface $form_state, array &$complete_form) {
-    $siteWideSettingsForm = static::siteWideSettingsForm();
+    $siteWideParser = $form_state->get('markdownParser');
 
     // Immediately return if there are no installed parsers.
     if (!$this->parserManager->getDefinitions(FALSE)) {
@@ -204,19 +240,19 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
         '#title' => $this->t('No markdown parsers installed.'),
       ];
 
-      $systemStatus = Url::fromRoute('system.status', [], ['fragment' => 'markdown']);
-      if ($systemStatus->access()) {
-        $element['missing']['#description'] = $this->t('Visit the <a href=":system.status" target="_blank">@system.status</a> page for more details.', [
-          '@system.status' => $this->t('Status report'),
-          ':system.status' => $systemStatus->toString(),
+      if (($markdownOverview = Url::fromRoute('markdown.overview')) && $markdownOverview->access()) {
+        $element['missing']['#description'] = $this->t('Visit the <a href=":markdown.overview" target="_blank">Markdown Overview</a> page for more details.', [
+          ':markdown.overview' => $markdownOverview->toString(),
         ]);
       }
       else {
-        $element['missing']['#description'] = $this->t('Ask your site administrator to install a supported markdown parser.');
+        $element['missing']['#description'] = $this->t('Ask your site administrator to install a <a href=":supported_parsers" target="_blank">supported markdown parser</a>.', [
+          ':supported_parsers' => Markdown::DOCUMENTATION_URL . '/parsers',
+        ]);
       }
 
       // Hide the actions on the site-wide settings form.
-      if ($siteWideSettingsForm) {
+      if ($siteWideParser) {
         $complete_form['actions']['#access'] = FALSE;
       }
 
@@ -239,7 +275,7 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
     $form_state->set('markdownSubformParents', ($parents = isset($element['#parents']) ? $element['#parents'] : []));
     $form_state->set('markdownSubformArrayParents', $element['#array_parents']);
 
-    // Add the markdown.admin library to update summaries in vertical tabs.
+    // Add the markdown/admin library to update summaries in vertical tabs.
     $complete_form['#attached']['library'][] = 'markdown/admin';
 
     // Build a wrapper for the ajax response.
@@ -263,7 +299,6 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
     // Determine the group that details should be referencing for vertical tabs.
     $form_state->set('markdownGroup', ($group = implode('][', array_merge($parents, ['vertical_tabs']))));
 
-
     // Create a subform state.
     $subform_state = SubformState::createForSubform($element, $complete_form, $form_state);
 
@@ -283,12 +318,14 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
    *   The $element passed, modified to include the parser element.
    */
   protected function buildParser(array $element, SubformStateInterface $form_state) {
+    /* @var \Drupal\markdown\Plugin\Markdown\ParserInterface $siteWideParser */
+    $siteWideParser = $form_state->get('markdownParser');
+
     // If the triggering element is the parser select element, clear out any
     // parser values other than the identifier. This is necessary since the
     // parser has switched and the previous parser settings may not translate
     // correctly to the new parser.
-    $trigger = $form_state->getTriggeringElement();
-    if ($trigger && isset($trigger['#ajax']['callback']) && $trigger['#ajax']['callback'] = '\Drupal\markdown\Form\SettingsForm::ajaxChangeParser' && ($parserId = $form_state->getValue(['parser', 'id']))) {
+    if (!$siteWideParser && ($trigger = $form_state->getTriggeringElement()) && isset($trigger['#ajax']['callback']) && $trigger['#ajax']['callback'] === '\Drupal\markdown\Form\SettingsForm::ajaxChangeParser' && ($parserId = $form_state->getValue(['parser', 'id']))) {
       $parents = $form_state->createParents();
       $input = &NestedArray::getValue($form_state->getUserInput(), $parents);
       $values = &NestedArray::getValue($form_state->getValues(), $parents);
@@ -300,16 +337,7 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
     $markdownGroup = $form_state->get('markdownGroup');
     $labels = $this->parserManager->labels();
 
-    // Include a "Site-wide parser" option if not on the global settings page.
-    if ($includeSiteWideOption = !static::siteWideSettingsForm()) {
-      $siteWideParser = $this->t('Site-wide parser (@parser)', [
-        '@parser' => $this->markdown->getParser()->getLabel(),
-      ]);
-      $labels = array_merge(['' => $siteWideParser], $labels);
-    }
-
     $parents = isset($element['#parents']) ? $element['#parents'] : [];
-    $configuration = NestedArray::mergeDeep($this->settings->get('parser') ?: [], $form_state->getValue('parser', []));
 
     $element['parser'] = [
       '#weight' => -20,
@@ -321,57 +349,86 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
     ];
     $parserElement = &$element['parser'];
     $parserSubform = SubformState::createForSubform($parserElement, $element, $form_state);
-    $parserId = $parserSubform->getValue('id', $this->settings->get('parser.id'));
 
-    $parserElement['id'] = static::createElement([
-      '#type' => 'select',
-      '#options' => $labels,
-      '#default_value' => $parserId,
-      '#attributes' => [
-        'data' => [
-          'markdownSummary' => 'parser',
-          'markdownId' => $parserId,
-        ],
-      ],
-      '#ajax' => [
-        'callback' => '\Drupal\markdown\Form\SettingsForm::ajaxChangeParser',
-        'event' => 'change',
-        'wrapper' => $markdownAjaxId,
-      ],
-    ]);
-
-    if ($includeSiteWideOption) {
-      if (($markdownSettingsUrl = Url::fromRoute('markdown.settings')) && $markdownSettingsUrl->access()) {
-        $parserElement['id']['#description'] = $this->t('Site-wide markdown settings can be adjusted by visiting the <a href=":markdown.settings" target="_blank">@markdown.settings</a> page.', [
-          '@markdown.settings' => $this->t('Markdown Settings'),
-          ':markdown.settings' => $markdownSettingsUrl->toString(),
-        ]);
-      }
-      else {
-        $parserElement['id']['#description'] = $this->t('Site-wide markdown settings can only be adjusted by administrators.');
-      }
+    // Because the "id" element isn't yet created (below), the new
+    // $parserSubform state cannot be used here.
+    if ($siteWideParser) {
+      $parserId = $siteWideParser->getPluginId();
+    }
+    else {
+      $parserId = $form_state->getValue(['parser', 'id'], $this->settings->get('parser.id'));
     }
 
-    // If there's no set parser identifier, then use the site-wide parser.
-    if (!$parserId) {
+    $sitePrefix = 'site:';
+    $parserIdHasSitePrefix = strpos($parserId, $sitePrefix) === 0;
+    $realParserId = $parserIdHasSitePrefix ? substr($parserId, 5) : $parserId;
+
+    // Include site-wide parser options if not on the site-wide settings page.
+    if (!$siteWideParser) {
+      $standaloneParsers = $labels;
+      $labels = [];
+
+      // Check if parser exists and, if not, prepend an option showing it missing.
+      if (!$this->parserManager->hasDefinition($realParserId)) {
+        $labels[(string) $this->t('Missing Parser')] = [$realParserId => $realParserId];
+      }
+
+      // Add each installed site-wide parser.
+      $siteWideParsers = [];
+      foreach ($this->parserManager->installed() as $name => $installedParser) {
+        $siteWideParsers["$sitePrefix$name"] = $installedParser->getLabel(TRUE);
+      }
+      $labels[(string) $this->t('Site-wide Parsers')] = $siteWideParsers;
+
+      // Restore the original options as the standalone parsers.
+      $labels[(string) $this->t('Standalone Parser')] = $standaloneParsers;
+    }
+
+    if ($siteWideParser) {
+      $parserElement['id'] = [
+        '#type' => 'hidden',
+        '#default_value' => $parserId,
+      ];
+    }
+    else {
+      $parserElement['id'] = static::createElement([
+        '#type' => 'select',
+        '#options' => $labels,
+        '#default_value' => $parserId,
+        '#attributes' => [
+          'data' => [
+            'markdownSummary' => 'parser',
+            'markdownId' => $parserId,
+          ],
+        ],
+        '#ajax' => [
+          'callback' => '\Drupal\markdown\Form\SettingsForm::ajaxChangeParser',
+          'event' => 'change',
+          'wrapper' => $markdownAjaxId,
+        ],
+      ]);
+    }
+
+
+
+    $configuration = NestedArray::mergeDeep($this->settings->get('parser') ?: [], $form_state->getValue('parser', []));
+    $config = $this->config("markdown.parser.$realParserId")->initWithData($configuration);
+
+    // If the parser identifier is prefixed with "site:", then it should
+    // be using the site-wide parser configuration.
+    if (!$siteWideParser && $parserIdHasSitePrefix) {
       // Load site-wide parser, ensuring that the filter's render strategy
       // settings override the site-wide parser's.
-      $parser = $this->markdown->getParser(NULL, [
+      $parser = $this->markdown->getParser($realParserId, [
         'render_strategy' => $this->settings->get('parser.render_strategy'),
       ]);
-
-      // Allow the parser to be filter aware.
-      if ($parser instanceof FilterAwareInterface && ($filter = $this->getFilter())) {
-        $parser->setFilter($filter);
-      }
-
-      // Build render strategy (which may allow filters).
-      $parserElement = $this->buildRenderStrategy($parser, $parserElement, $parserSubform, TRUE);
-      return $element;
+    }
+    // Retrieve the parser.
+    else {
+      $parser = $siteWideParser ?: $this->parserManager->createInstance($realParserId, $configuration);
     }
 
-    // Retrieve the parser.
-    $parser = $this->parserManager->createInstance($parserId, $configuration);
+    // Allow the parser to be filter aware.
     if ($parser instanceof FilterAwareInterface && ($filter = $this->getFilter())) {
       $parser->setFilter($filter);
     }
@@ -385,14 +442,44 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
       $parserElement['id']['#description'] = $this->moreInfo($parserElement['id']['#description'], $url);
     }
 
+    if ($parserIdHasSitePrefix) {
+      if (($markdownParserEditUrl = Url::fromRoute('markdown.parser.edit', ['parser' => $parser])) && $markdownParserEditUrl->access()) {
+        $parserElement['id']['#description'] = $this->t('Site-wide markdown settings can be adjusted by visiting the site-wide <a href=":markdown.parser.edit" target="_blank">@label</a> parser.', [
+          '@label' => $parser->getLabel(FALSE),
+          ':markdown.parser.edit' => $markdownParserEditUrl->toString(),
+        ]);
+      }
+      else {
+        $parserElement['id']['#description'] = $this->t('Site-wide markdown settings can only be adjusted by administrators.');
+      }
+    }
+
+    $build = $parser->buildStatus();
+    $parserElement['id']['#field_suffix'] = \Drupal::service('renderer')->renderPlain($build);
+
     // Build render strategy.
     $parserElement = $this->buildRenderStrategy($parser, $parserElement, $parserSubform);
 
-    // Build parser settings.
-    $parserElement = $this->buildParserSettings($parser, $parserElement, $parserSubform);
+    // Only build parser settings and extensions if it's not set to site-wide.
+    if (!$parserIdHasSitePrefix) {
+      // Build parser settings.
+      $parserElement = $this->buildParserSettings($parser, $parserElement, $parserSubform);
 
-    // Build parser extensions.
-    $parserElement = $this->buildParserExtensions($parser, $parserElement, $parserSubform);
+      // Build parser extensions.
+      $parserElement = $this->buildParserExtensions($parser, $parserElement, $parserSubform);
+    }
+
+    // Only show the parser if there are settings and/or extensions.
+    $children = array_diff(Element::getVisibleChildren($parserElement), ['render_strategy']);
+    if (!$children) {
+      $parserElement['#type'] = 'container';
+      unset($parserElement['#group']);
+    }
+    // Rename "Parser" vertical tab and remove details wrapper from settings.
+    elseif ($siteWideParser && in_array('settings', $children)) {
+      $parserElement['#title'] = $this->t('Settings');
+      $parserElement['settings']['#type'] = 'container';
+    }
 
     return $element;
   }
@@ -424,12 +511,8 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
     $parserSettingsSubform = SubformState::createForSubform($element['settings'], $element, $form_state);
     $element['settings'] = $parser->buildConfigurationForm($element['settings'], $parserSettingsSubform);
 
-    // Only show settings if there are settings (excluding render_strategy).
-    $children = Element::getVisibleChildren($element['settings']);
-    if ($children === ['render_strategy']) {
-      $element['settings']['#type'] = 'container';
-    }
-    $element['settings']['#access'] = !!$children;
+    // Only show settings if there are settings.
+    $element['settings']['#access'] = !!Element::getVisibleChildren($element['settings']);
 
     return $element;
 
@@ -463,16 +546,20 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
 
     $parents = $element['#parents'];
 
+    $element['extensions'] = ['#type' => 'container'];
+
     // Add any specific extension settings.
     foreach ($extensions as $extensionId => $extension) {
-      $label = $extension->getLabel();
-
+      $label = $extension->getLabel(FALSE);
       $element['extensions'][$extensionId] = [
         '#type' => 'details',
         '#title' => $label,
+        '#description' => $extension->getDescription(),
+        '#description_display' => 'before',
         '#group' => $markdownGroup,
         '#parents' => array_merge($parents, ['extensions', $extensionId]),
       ];
+
       $extensionElement = &$element['extensions'][$extensionId];
       $extensionSubform = SubformState::createForSubform($element['extensions'][$extensionId], $element, $form_state);
 
@@ -483,10 +570,10 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
 
       if ($installed) {
         $messages = [];
-        if (!$extension->isPreferredInstall()) {
-          if ($preferred = $extension->getPreferredInstallDefinition()) {
+        if (!$extension->isPreferredLibraryInstalled()) {
+          if ($preferredLibrary = $extension->getPreferredLibrary()) {
             $messages['status'][] = $this->t('Upgrade available: <a href=":url" target="_blank">:url</a>', [
-              ':url' => isset($preferred['url']) ? $preferred['url'] : $url->toString(),
+              ':url' => $preferredLibrary->url ?: $url->toString(),
             ]);
 
           }
@@ -496,6 +583,18 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
             ':url' => $url->toString(),
             '@deprecation' => $deprecation,
           ]);
+        }
+        if ($experimental = $extension->getExperimental()) {
+          $message = $this->t('The currently installed extension (<a href=":url" target="_blank">:url</a>) is considered experimental; its functionality cannot be guaranteed.', [
+            ':url' => $url->toString(),
+          ]);
+          if ($experimental !== TRUE) {
+            $message = new FormattableMarkup('@message @experimental', [
+              '@message' => $message,
+              '@experimental' => $experimental,
+            ]);
+          }
+          $messages['status'][] = $message;
         }
         if ($messages) {
           $extensionElement['message'] = [
@@ -528,24 +627,24 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
             'markdownRequiredBy' => $extension->requiredBy(),
           ],
         ],
-        '#description' => $extension->getDescription(),
         '#default_value' => $bundled || $enabled,
         '#disabled' => $bundled || !$installed,
       ]);
 
       if (!$installed) {
-        if (!$extension->hasMultipleInstalls() && $url) {
-          $extensionElement['enabled']['#description'] = $this->moreInfo($extensionElement['enabled']['#description'], $url);
+        $extensionElement['installation_instructions'] = [
+          '#type' => 'fieldset',
+          '#title' => $this->t('Installation Instructions'),
+        ];
+        if (!$extension->hasMultipleLibraries() && $url) {
+          $extensionElement['installation_instructions']['#description'] = $this->moreInfo(isset($extensionElement['enabled']['#description']) ? $extensionElement['enabled']['#description'] : NULL, $url);
         }
-        elseif ($instructions = $extension->getInstallationInstructions()) {
-          $extensionElement['enabled']['#description'] = new FormattableMarkup('@description @instructions', [
-            '@description' => $extensionElement['enabled']['#description'],
-            '@instructions' => $instructions,
-          ]);
+        if ($instructions = $extension->buildSupportedLibraries()) {
+          $extensionElement['installation_instructions'] = $instructions;
         }
       }
       elseif ($url) {
-        $extensionElement['enabled']['#description'] = $this->moreInfo($extensionElement['enabled']['#description'], $url);
+        $extensionElement['enabled']['#description'] = $this->moreInfo(isset($extensionElement['enabled']['#description']) ? $extensionElement['enabled']['#description'] : NULL, $url);
       }
 
       // Installed extension settings.
@@ -563,6 +662,9 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
         $extensionSettingsElement['#access'] = !!Element::getVisibleChildren($extensionSettingsElement);
       }
     }
+
+    // Only show extensions if there are extensions.
+    $element['extensions']['#access'] = !!Element::getVisibleChildren($element['extensions']);
 
     return $element;
   }
@@ -608,7 +710,7 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
         RenderStrategyInterface::NONE => $this->t('None'),
       ],
     ];
-    $renderStrategySubform['type']['#description'] = $this->moreInfo($renderStrategySubform['type']['#description'], RenderStrategyInterface::MARKDOWN_XSS_URL);
+    $renderStrategySubform['type']['#description'] = $this->moreInfo($renderStrategySubform['type']['#description'], RenderStrategyInterface::DOCUMENTATION_URL . '#xss');
 
     // Build allowed HTML plugins.
     $renderStrategySubform['plugins'] = [
@@ -617,8 +719,9 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
       '#input' => FALSE,
       '#title' => $this->t('Allowed HTML'),
       '#description_display' => 'before',
-      '#description' => $this->t('The following are registered <code>@MarkdownAllowedHtml</code> plugins provided by various filters, modules, themes, parser and their extensions (if supported) that allow additional HTML tags and attributes based on your current site configuration.<br><br>The goal here is to start of with a small list and and only allow HTML tags or attributes when they are actually needed.<br><br>It is likely that these are required to ensure continued functionality with various supported features, however you may turn them off if you feel they represent a security risk.<br><br>Each plugin displays the list of HTML tags that are allowed to be used. If a tag has not specified any attributes, then only the tag may be used and any attributes encountered will be stripped; each HTML tag must explicitly specify its allowed attributes. It may also specify a global HTML tag using an asterisk as the tag name (<code>&lt;*&gt;</code>) to provide additional global attributes. This means that these attributes will work on any tag and do not need to be specified explicitly for other tags.<br><br>If an attribute is by itself, then all values are allowed. If it specifies a space delimited list of values, then only those values are allowed. Attribute names or values may also be written as a prefix and wildcard like <code>jump-*</code>.<br><br>JavaScript event attributes (<code>on*</code>), JavaScript URLs (<code>javascript://</code>),and the CSS attributes (<code>style</code>) are always stripped.'),
+      '#description' => $this->t('The following are registered <code>@MarkdownAllowedHtml</code> plugins that allow HTML tags and attributes based on configuration. These are typically provided by the parser itself, any of its enabled extensions that convert additional HTML tag and potentially various Drupal filters, modules or themes (if supported).'),
     ];
+    $renderStrategySubform['plugins']['#description'] = $this->moreInfo($renderStrategySubform['plugins']['#description'], RenderStrategyInterface::DOCUMENTATION_URL);
     $renderStrategySubformState->addElementState($renderStrategySubform['plugins'], 'visible', 'type', ['value' => RenderStrategyInterface::FILTER_OUTPUT]);
 
     $allowedHtmlManager = AllowedHtmlManager::create();
@@ -647,7 +750,7 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
         }
         if ($type === 'extension') {
           $renderStrategySubform['plugins'][$type]['#weight'] = -7;
-          $renderStrategySubform['plugins'][$type]['#title'] = $this->t('Parser Extensions');
+          $renderStrategySubform['plugins'][$type]['#title'] = $this->t('Extensions');
           $renderStrategySubform['plugins'][$type]['#description'] = $this->t('NOTE: these will only be applied when the parser extension it represents is actually enabled.');
           $renderStrategySubform['plugins'][$type]['#description_display'] = 'before';
         }
@@ -747,18 +850,19 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
     }
     $renderStrategySubform['plugins']['#access'] = !!Element::getVisibleChildren($renderStrategySubform['plugins']);
 
-    $renderStrategySubform['allowed_html'] = [
+    $renderStrategySubform['custom_allowed_html'] = [
       '#weight' => -10,
       '#type' => 'textarea',
       '#title' => $this->t('Custom Allowed HTML'),
-      '#description' => $this->t('A list of custom HTML tags that can be used. This follows the same rules as above; use cautiously and sparingly. The only time you need to supply the same tags as above is if you intend to disable the plugin and instead manually provide it here. The goal is the same as above: only allow HTML tags and attributes when they are needed. For example: specifying wide reaching attributes like <code>&lt;* data-*&gt;</code> would allow any data attribute to be used on any HTML tag. This kind of "open ended" permission can make your site extremely vulnerable to potential attacks and future unknown exploits due to this attribute namespaces frequent interactions with JavaScript. Instead, it is highly recommended that you only allow specific, known, data attributes that are actively used by libraries on your site. For maximum and long term viability, it is recommended that you create your own custom <code>@MarkdownAllowedHtml</code> plugins as the needs arise.'),
-      '#default_value' => $renderStrategySubformState->getValue('allowed_html', $parser->getAllowedHtml()),
+      '#description' => $this->t('A list of additional custom allowed HTML tags that can be used. This follows the same rules as above; use cautiously and sparingly.'),
+      '#default_value' => $renderStrategySubformState->getValue('custom_allowed_html', $parser->getCustomAllowedHtml()),
       '#attributes' => [
-        'data-markdown-element' => 'allowed_html',
+        'data-markdown-element' => 'custom_allowed_html',
       ],
     ];
-    FormTrait::resetToDefault($renderStrategySubform['allowed_html'], 'allowed_html', '', $renderStrategySubformState);
-    $renderStrategySubformState->addElementState($renderStrategySubform['allowed_html'], 'visible', 'type', ['value' => RenderStrategyInterface::FILTER_OUTPUT]);
+    $renderStrategySubform['custom_allowed_html']['#description'] = $this->moreInfo($renderStrategySubform['custom_allowed_html']['#description'], RenderStrategyInterface::DOCUMENTATION_URL);
+    FormTrait::resetToDefault($renderStrategySubform['custom_allowed_html'], 'custom_allowed_html', '', $renderStrategySubformState);
+    $renderStrategySubformState->addElementState($renderStrategySubform['custom_allowed_html'], 'visible', 'type', ['value' => RenderStrategyInterface::FILTER_OUTPUT]);
 
     return $element;
   }
@@ -767,13 +871,54 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
    * The AJAX callback used to return the parser ajax wrapper.
    */
   public static function ajaxChangeParser(array $form, FormStateInterface $form_state) {
-    $form_state->setRebuild(TRUE);
     // Immediately return if subform parents aren't known.
     if (!($arrayParents = $form_state->get('markdownSubformArrayParents'))) {
       $arrayParents = array_slice($form_state->getTriggeringElement()['#array_parents'], 0, -2);
     }
     $subform = &NestedArray::getValue($form, $arrayParents);
     return $subform['ajax'];
+  }
+
+  /**
+   * Retrieves configuration from an array of values.
+   *
+   * @param string $name
+   *   The config name to use.
+   * @param array $values
+   *   An array of values.
+   *
+   * @return \Drupal\Core\Config\Config
+   *   A Config object.
+   *
+   * @deprecated in markdown:8.x-2.0 and is removed from markdown:3.0.0.
+   *   Use \Drupal\markdown\Form\SettingsForm::getConfigFromValues instead.
+   * @see https://www.drupal.org/project/markdown/issues/3142418
+   */
+  public function getConfigFromValues($name, array $values) {
+    $config = \Drupal::configFactory()->getEditable($name);
+
+    // Some older 8.x-2.x code used to have the parser value as a string.
+    // @todo Remove after 8.x-2.0 release.
+    if (isset($values['parser']) && is_string($values['parser'])) {
+      $values['id'] = $values['parser'];
+      unset($values['parser']);
+    }
+    // Some older 8.x-2.x code used to have the parser value as an array.
+    // @todo Remove after 8.x-2.0 release.
+    elseif (isset($values['parser']) && is_array($values['parser'])) {
+      $values += $values['parser'];
+    }
+
+    // Load the parser with the values so it can construct the proper config.
+    $parser = $this->parserManager->createInstance($values['id'], $values);
+
+    // Sort $configuration by using the $defaults keys. This ensures there
+    // is a consistent order when saving the config.
+    $configuration = $parser->getSortedConfiguration();
+
+    $config->setData($configuration);
+
+    return $config;
   }
 
   /**
@@ -784,37 +929,14 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
    *
    * @return array
    *   The configuration array.
+   *
+   * @deprecated in markdown:8.x-2.0 and is removed from markdown:3.0.0.
+   *   Use \Drupal\markdown\Form\SettingsForm::getConfigFromValues instead.
+   * @see https://www.drupal.org/project/markdown/issues/3142418
    */
   public function getConfigurationFromValues(array $values) {
-    $defaults = [
-      'id' => NULL,
-      'render_strategy' => [],
-      'settings' => [],
-      'extensions' => [],
-    ];
-
-    // Some older 8.x-2.x code used to have the parser value as a string.
-    // This needs to be converted to an "id" property inside an array.
-    // @todo Remove after 8.x-2.0 release.
-    if (isset($values['parser']) && is_string($values['parser'])) {
-      $values['parser'] = ['id' => $values['parser']];
-    }
-
-    $pluginConfiguration = (isset($values['parser']) ? $values['parser'] : $values) + $defaults;
-
-    $parser = $this->parserManager->createInstance($pluginConfiguration['id'], $pluginConfiguration);
-    $configuration = $parser->getConfiguration();
-
-    // Sort $configuration by using the $defaults keys. This ensures there
-    // is a consistent order when saving the config.
-    $configuration = array_replace(array_flip(array_keys(array_intersect_key($defaults, $configuration))), $configuration);
-
-    $this->calculatePluginDependencies($parser);
-
-    return [
-      'dependencies' => $this->dependencies,
-      'parser' => $configuration,
-    ];
+    $config = $this->getConfigFromValues($this->settings->getName(), $values);
+    return $config->get();
   }
 
   /**
@@ -824,14 +946,14 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
     $values = $form_state->cleanValues()->getValues();
 
     // Normalize parser values into config data.
-    $configuration = $this->getConfigurationFromValues($values);
+    $config = $this->getConfigFromValues($this->settings->getName(), $values);
 
-    $this->settings
-      ->setData($configuration)
-      ->save();
+    // Save the config.
+    $config->save();
 
-    if ($parserId = $this->settings->get('parser.id')) {
-      $this->cacheTagsInvalidator->invalidateTags(["markdown.parser:$parserId"]);
+    // Invalidate any tags associated with the site-wide parser.
+    if ($parserId = $config->get('id')) {
+      $this->cacheTagsInvalidator->invalidateTags(["markdown.parser.$parserId"]);
     }
 
     drupal_set_message($this->t('The configuration options have been saved.'));
@@ -866,6 +988,25 @@ class SettingsForm extends FormBase implements FilterAwareInterface {
         }
       }
     }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    parent::validateForm($form, $form_state);
+
+    $config = $this->getConfigFromValues($this->settings->getName(), $form_state->getValues());
+    $typed_config = $this->typedConfigManager->createFromNameAndData('markdown.settings', $config->get());
+
+    $violations = $typed_config->validate();
+    foreach ($violations as $violation) {
+      $form_state->setErrorByName(static::mapViolationPropertyPathsToFormNames($violation->getPropertyPath()), $violation->getMessage());
+    }
+  }
+
+  protected static function mapViolationPropertyPathsToFormNames($property_path) {
+    return str_replace('.', '][', $property_path);
   }
 
   /**

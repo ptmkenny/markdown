@@ -4,6 +4,7 @@ namespace Drupal\markdown\PluginManager;
 
 use Drupal\Core\Plugin\DefaultLazyPluginCollection;
 use Drupal\markdown\Plugin\Markdown\ExtensibleParserInterface;
+use Drupal\markdown\Util\ParserAwareInterface;
 
 /**
  * Collection of extension plugins based on relevant parser.
@@ -28,13 +29,14 @@ class ExtensionCollection extends DefaultLazyPluginCollection {
    *   A markdown parser instance.
    */
   public function __construct(ExtensionManagerInterface $manager, ExtensibleParserInterface $parser) {
+    $this->parser = $parser;
     $extensionInterfaces = $parser->extensionInterfaces();
 
     // Filter out extensions that the parser doesn't support.
     $definitions = array_filter($manager->getDefinitions(FALSE), function ($definition) use ($extensionInterfaces) {
       $supported = FALSE;
       foreach ($extensionInterfaces as $interface) {
-        if (is_subclass_of($definition['class'], $interface)) {
+        if (is_subclass_of($definition->getClass(), $interface)) {
           $supported = TRUE;
           break;
         }
@@ -84,6 +86,69 @@ class ExtensionCollection extends DefaultLazyPluginCollection {
     $configurations = array_replace(array_flip(array_keys(array_intersect_key($definitions, $configurations))), $configurations);
 
     parent::__construct($manager, $configurations);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function addInstanceId($id, $configuration = NULL) {
+    // Ensure instance identifier is a string.
+    parent::addInstanceId((string) $id, $configuration);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function &get($instance_id) {
+    // Ensure instance identifier is a string.
+    return parent::get((string) $instance_id);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function has($instance_id) {
+    // Ensure instance identifier is a string.
+    return parent::has((string) $instance_id);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function initializePlugin($instance_id) {
+    // Ensure instance identifier is a string.
+    $instance_id = (string) $instance_id;
+    parent::initializePlugin($instance_id);
+
+    // Associate the parser with the extension.
+    $extension = $this->get($instance_id);
+    if ($extension instanceof ParserAwareInterface) {
+      $extension->setParser($this->parser);
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function remove($instance_id) {
+    // Ensure instance identifier is a string.
+    parent::remove((string) $instance_id);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function removeInstanceId($instance_id) {
+    // Ensure instance identifier is a string.
+    parent::removeInstanceId((string) $instance_id);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function set($instance_id, $value) {
+    // Ensure instance identifier is a string.
+    parent::set((string) $instance_id, $value);
   }
 
   /**

@@ -7,43 +7,47 @@ use Drupal\Core\Plugin\PluginFormInterface;
 use Drupal\Core\Theme\ActiveTheme;
 use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
+use Drupal\markdown\Plugin\Markdown\ExtensibleParserInterface;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
 use Drupal\markdown\Traits\SettingsTrait;
-use League\CommonMark\ConfigurableEnvironmentInterface;
 
 /**
  * Footnotes extension.
  *
+ * @MarkdownAllowedHtml(
+ *   id = "commonmark-footnotes",
+ * )
  * @MarkdownExtension(
- *   id = "league/commonmark-ext-footnotes",
+ *   id = "commonmark-footnotes",
  *   label = @Translation("Footnotes"),
  *   description = @Translation("Adds the ability to create footnotes in markdown."),
- *   installed = {
- *     "\League\CommonMark\Extension\Footnote\FootnoteExtension" = {
- *       "url" = "https://commonmark.thephpleague.com/extensions/footnotes/",
- *       "version" = "\League\CommonMark\CommonMarkConverter::VERSION",
- *       "versionConstraint" = "^1.5 || ^2.0",
- *     },
- *     "\RZ\CommonMark\Ext\Footnote\FootnoteExtension" = {
- *       "deprecated" = @Translation("Support for this extension was deprecated in markdown:8.x-2.0 and will be removed from markdown:3.0.0."),
- *       "url" = "https://github.com/rezozero/commonmark-ext-footnotes",
- *     },
- *   },
- * )
- * @MarkdownAllowedHtml(
- *   id = "league/commonmark-ext-footnotes",
- *   label = @Translation("Footnotes"),
- *   installed = {
- *     "\League\CommonMark\Extension\Footnote\FootnoteExtension" = {
- *       "url" = "https://commonmark.thephpleague.com/extensions/footnotes/",
- *       "version" = "\League\CommonMark\CommonMarkConverter::VERSION",
- *       "versionConstraint" = "^1.5 || ^2.0",
- *     },
- *     "\RZ\CommonMark\Ext\Footnote\FootnoteExtension" = {
- *       "deprecated" = @Translation("in markdown:8.x-2.0 and is removed from markdown:3.0.0. Use https://commonmark.thephpleague.com/extensions/footnotes/ instead."),
- *       "url" = "https://github.com/rezozero/commonmark-ext-footnotes",
- *     },
+ *   libraries = {
+ *     @ComposerPackage(
+ *       id = "league/commonmark",
+ *       object = "\League\CommonMark\Extension\Footnote\FootnoteExtension",
+ *       url = "https://commonmark.thephpleague.com/extensions/footnotes/",
+ *       requirements = {
+ *          @InstallableRequirement(
+ *             id = "parser:commonmark",
+ *             callback = "::getVersion",
+ *             constraints = {"Version" = "^1.5 || ^2.0"},
+ *          ),
+ *       },
+ *     ),
+ *     @ComposerPackage(
+ *       id = "rezozero/commonmark-ext-footnotes",
+ *       deprecated = @Translation("Support for this library was deprecated in markdown:8.x-2.0 and will be removed from markdown:3.0.0."),
+ *       object = "\RZ\CommonMark\Ext\Footnote\FootnoteExtension",
+ *       url = "https://github.com/rezozero/commonmark-ext-footnotes",
+ *       requirements = {
+ *          @InstallableRequirement(
+ *             id = "parser:commonmark",
+ *             callback = "::getVersion",
+ *             constraints = {"Version" = "^1.1 || ^2.0"},
+ *          ),
+ *       },
+ *     ),
  *   },
  * )
  */
@@ -77,7 +81,7 @@ class FootnoteExtension extends BaseExtension implements AllowedHtmlInterface, P
       ],
     ];
 
-    if (!$this->isPreferredInstall() || $parser->extension($this->pluginId)->getSetting('container_add_hr')) {
+    if (!$this->isPreferredLibraryInstalled() || ($parser instanceof ExtensibleParserInterface && ($extension = $parser->extension($this->pluginId)) && $extension instanceof SettingsInterface && $extension->getSetting('container_add_hr'))) {
       $tags['hr'] = [];
     }
 
@@ -87,11 +91,14 @@ class FootnoteExtension extends BaseExtension implements AllowedHtmlInterface, P
   /**
    * {@inheritdoc}
    */
-  public static function defaultSettings(array $pluginDefinition) {
+  public static function defaultSettings($pluginDefinition) {
+    /* @var \Drupal\markdown\Annotation\InstallablePlugin $pluginDefinition */
+
     // Immediately return if not using the newer bundled extension.
-    if ($pluginDefinition['installedClass'] === 'RZ\\CommonMark\\Ext\\Footnote\\FootnoteExtension') {
+    if ($pluginDefinition->object === 'RZ\\CommonMark\\Ext\\Footnote\\FootnoteExtension') {
       return [];
     }
+
     return [
       'backref_class'      => 'footnote-backref',
       'container_add_hr'   => TRUE,
@@ -120,7 +127,7 @@ class FootnoteExtension extends BaseExtension implements AllowedHtmlInterface, P
     // Add a note about core's aggressive XSS and how it affects footnotes.
     // @todo Remove note about core XSS bug/workaround.
     // @see https://www.drupal.org/project/markdown/issues/3136378
-    if (!$this->isPreferredInstall()) {
+    if (!$this->isPreferredLibraryInstalled()) {
       $parent = &$form_state->getParentForm();
       $parent['xss_bug'] = [
         '#weight' => -9,
@@ -185,15 +192,8 @@ class FootnoteExtension extends BaseExtension implements AllowedHtmlInterface, P
   /**
    * {@inheritdoc}
    */
-  public function register(ConfigurableEnvironmentInterface $environment) {
-    $environment->addExtension($this->instantiateInstalledClass());
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function settingsKey() {
-    return $this->isPreferredInstall() ? 'footnote' : FALSE;
+    return $this->isPreferredLibraryInstalled() ? 'footnote' : FALSE;
   }
 
   /**

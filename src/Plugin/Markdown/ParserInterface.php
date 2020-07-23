@@ -7,8 +7,10 @@ use Drupal\Core\Language\LanguageInterface;
 
 /**
  * Interface for defining markdown parsers.
+ *
+ * @method \Drupal\markdown\Annotation\MarkdownParser getPluginDefinition()
  */
-interface ParserInterface extends InstallablePluginInterface, RefinableCacheableDependencyInterface, RenderStrategyInterface, SettingsInterface {
+interface ParserInterface extends EnabledPluginInterface, InstallablePluginInterface, RefinableCacheableDependencyInterface, RenderStrategyInterface, SettingsInterface {
 
   /**
    * Parses markdown into HTML.
