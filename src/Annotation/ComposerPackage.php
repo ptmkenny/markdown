@@ -8,7 +8,7 @@ use Drupal\Core\Url;
 use Drupal\markdown\Util\Composer;
 
 /**
- * PhpExtension Annotation.
+ * ComposerPackage Annotation.
  *
  * @Annotation
  * @Target("ANNOTATION")

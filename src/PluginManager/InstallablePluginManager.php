@@ -431,8 +431,8 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
       $definition->merge($library, ['ui', 'weight']);
 
       // Set default URL for plugin based on the installed/preferred library.
-      if (!$definition->url && $library->url) {
-        $definition->url = $library->url;
+      if (!$definition->url && ($url = $library->getUrl())) {
+        $definition->url = $url->toString();
       }
     }
   }

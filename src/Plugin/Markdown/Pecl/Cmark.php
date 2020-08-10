@@ -17,10 +17,9 @@ use Drupal\markdown\Traits\ParserAllowedHtmlTrait;
  *   description = @Translation("CommonMark PECL extension using libcmark."),
  *   weight = 10,
  *   libraries = {
- *     @PhpExtension(
+ *     @PeclExtension(
  *       id = "ext-cmark",
  *       object = "\CommonMark\Parser",
- *       url = "https://pecl.php.net/package/cmark",
  *     ),
  *   }
  * )

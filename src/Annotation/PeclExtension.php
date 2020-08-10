@@ -3,18 +3,17 @@
 namespace Drupal\markdown\Annotation;
 
 use Doctrine\Common\Annotations\AnnotationException;
-use Drupal\Core\Link;
 use Drupal\Core\Url;
 
 /**
- * PhpExtension Annotation.
+ * PeclExtension Annotation.
  *
  * @Annotation
  * @Target("ANNOTATION")
  *
  * @todo Move upstream to https://www.drupal.org/project/installable_plugins.
  */
-class PhpExtension extends InstallableLibrary {
+class PeclExtension extends InstallableLibrary {
 
   /**
    * An associative array of package information, keyed by version.
@@ -92,15 +91,32 @@ class PhpExtension extends InstallableLibrary {
     return $this->id->removeLeft('ext-');
   }
 
+  /**
+   * Retrieves the package information for the PECL package.
+   *
+   * @param string|null $version
+   *   A specific version of package information to retrieve. If not specified,
+   *   it will default to the currently installed version or the latest version
+   *   available if not installed.
+   *
+   * @return array
+   *   An associative array of PECL package information.
+   */
   public function getPackageInfo($version = NULL) {
-    if (!$version) {
-      if ($this->version) {
-        $version = $this->version;
-      }
-      elseif ($latestVersion = $this->getLatestVersion()) {
-        $version = $latestVersion->version;
-      }
+    // Attempt to use installed version if none was explicitly specified.
+    if (!$version && $this->version) {
+      $version = $this->version;
     }
+    // Attempt to use latest version if none was explicitly specified.
+    elseif (!$version && ($latestVersion = $this->getLatestVersion())) {
+      $version = $latestVersion;
+    }
+
+    // Immediately return if version couldn't be determined.
+    if (!$version) {
+      return [];
+    }
+
     if (!isset($this->packageInfo[$version])) {
       $this->packageInfo[$version] = [];
       // @see https://github.com/php/web-pecl/blob/e98cb34ebcb26b75b4001d1b3458afdad6ba6f83/src/Rest.php#L519-L520
@@ -109,6 +125,17 @@ class PhpExtension extends InstallableLibrary {
       }
     }
     return $this->packageInfo[$version];
+  }
+
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getUrl(array $options = []) {
+    if (!$this->url && ($name = $this->getName())) {
+      $this->url = sprintf('https://pecl.php.net/package/%s', $name);
+    }
+    return parent::getUrl($options);
   }
 
   /**
@@ -135,7 +162,7 @@ class PhpExtension extends InstallableLibrary {
    */
   protected function validateIdentifier(Identifier $id) {
     if (!$id->startsWith('ext-')) {
-      throw AnnotationException::semanticalError('A PhpExtension definition must prefix its identifier with "ext-".');
+      throw AnnotationException::semanticalError('A PeclExtension definition must prefix its identifier with "ext-".');
     }
   }
 
