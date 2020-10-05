@@ -21,6 +21,7 @@ use Drupal\markdown\Plugin\Markdown\ParserInterface;
  *     @ComposerPackage(
  *       id = "league/commonmark",
  *       object = "\League\CommonMark\Extension\Strikethrough\StrikethroughExtension",
+ *       customLabel = "commonmark-strikethrough",
  *       url = "https://commonmark.thephpleague.com/extensions/strikethrough/",
  *       requirements = {
  *          @InstallableRequirement(

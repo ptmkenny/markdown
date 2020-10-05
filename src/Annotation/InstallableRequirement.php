@@ -74,6 +74,16 @@ class InstallableRequirement extends AnnotationObject {
   public $constraints = [];
 
   /**
+   * The name of the constraint, if any.
+   *
+   * Note: this will automatically be determined if using a typed identifier
+   * and not already provided.
+   *
+   * @var string
+   */
+  public $name;
+
+  /**
    * The value used for constraints.
    *
    * Note: If this value is explicitly provided, then any callback set will
@@ -98,12 +108,24 @@ class InstallableRequirement extends AnnotationObject {
       switch ($type) {
         case 'parser':
           if (($parserManager = ParserManager::create($container)) && $parserManager->hasDefinition($id)) {
+            if (!isset($this->name)) {
+              $definition = $parserManager->getDefinition($id);
+              if ($library = $definition->getInstalledLibrary() ?: $definition->getPreferredLibrary()) {
+                $this->name = $library->getLink();
+              }
+            }
             return $parserManager->createInstance($id);
           }
           break;
 
         case 'extension':
           if (($extensionManager = ExtensionManager::create($container)) && $extensionManager->hasDefinition($id)) {
+            if (!isset($this->name)) {
+              $definition = $extensionManager->getDefinition($id);
+              if ($library = $definition->getInstalledLibrary() ?: $definition->getPreferredLibrary()) {
+                $this->name = $library->getLink();
+              }
+            }
             return $extensionManager->createInstance($id);
           }
           break;
@@ -111,6 +133,9 @@ class InstallableRequirement extends AnnotationObject {
         case 'filter':
           /** @var \Drupal\filter\FilterPluginManager $filterManager */
           if (($filterManager = $container->get('plugin.manager.filter')) && $filterManager->hasDefinition($id)) {
+            if (!isset($this->name)) {
+              $this->name = t('Filter "@id"', ['@id' => $id]);
+            }
             /* @noinspection PhpUnhandledExceptionInspection */
             return $filterManager->createInstance($id);
           }
@@ -118,6 +143,9 @@ class InstallableRequirement extends AnnotationObject {
 
         case 'service':
           if ($container->has($id)) {
+            if (!isset($this->name)) {
+              $this->name = t('Service "@id"', ['@id' => $id]);
+            }
             return $container->get($id);
           }
           break;
@@ -182,14 +210,27 @@ class InstallableRequirement extends AnnotationObject {
   public function validate() {
     $object = $this->getObject();
 
+    if (isset($this->name)) {
+      foreach ($this->constraints as $name => &$constraint) {
+        if ($name !== 'Version') {
+          continue;
+        }
+
+        if (!is_array($constraint)) {
+          $constraint = ['value' => $constraint];
+        }
+
+        if (!isset($constraint['name'])) {
+          $constraint['name'] = $this->name;
+        }
+      }
+    }
+
     if (!isset($this->value)) {
       if ($this->callback) {
         if ($object) {
-          $method = ltrim($this->callback, ':');
-          $this->value = call_user_func_array([
-            $object,
-            $method,
-          ], $this->arguments);
+          $callback = [$object, ltrim($this->callback, ':')];
+          $this->value = call_user_func_array($callback, $this->arguments);
         }
         else {
           $this->value = call_user_func_array($this->callback, $this->arguments);

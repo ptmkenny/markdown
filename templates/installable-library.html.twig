@@ -16,89 +16,75 @@
 #}
 {% set version = library.getVersionLink ?: (library.versionExtra ?: library.version) %}
 {% set latestVersion = library.getLatestVersion %}
-
 {% set lib = library ?: preferredLibrary %}
 
-{# Determine the library status. #}
-{% set status = 'Not Installed'|t %}
-{% if lib and not lib.requirementViolations %}
-  {% if lib.hasRequestFailure %}
-    {% set status = 'Request Failure'|t %}
-  {% elseif lib.getNewerVersions %}
-    {% if lib.deprecated %}
-      {% set status = 'Deprecated'|t %}
-    {% elseif lib.preferred %}
-      {% set status = 'Update Available'|t %}
-    {% else %}
-      {% set status = 'Upgrade Available'|t %}
-    {% endif %}
-  {% elseif lib.isKnownVersion %}
-    {% if lib.isPrerelease %}
-      {% set status = 'Prerelease'|t %}
-    {% elseif lib.isDev %}
-      {% set status = 'Development Release'|t %}
-    {% else %}
-      {% set status = 'Up to date'|t %}
-    {% endif %}
-  {% else %}
-    {% set status = 'Unknown'|t %}
-  {% endif %}
-{% endif %}
+{#
+  Older versions of core couldn't handle objects being passed to
+  \Drupal\Component\Utility\Html::getClass(), cast to strings here.
+#}
+{% set id = '' ~ library.id ? library.id.getId : '' %}
+{% set status = '' ~ (lib ? lib.getStatus : '') %}
+
+{% set statusTitle = lib ? lib.getStatus(true) : null %}
+{% set multiple = plugin and plugin.pluginDefinition.libraries|length > 1 %}
+{% set preferred = multiple and library.preferred %}
 
 {% set classes = [
   'installable-library',
-  library.id ? 'installable-library--' ~ library.id|clean_class,
-  'installable-library--' ~ status|clean_class,
+  id ? 'installable-library--' ~ id|clean_class,
+  status ?'installable-library--' ~ status|clean_class,
+  multiple ? 'installable-library--multiple',
+  preferred ? 'installable-library--preferred',
 ] %}
-<span class="installable-library-wrapper">
-  <span{{ attributes.addClass(classes) }}>
-    <span class="installed-library-status{{ library.isInstalled ? ' installed-library-status--installed' : '' }}" title="{{ status }}"></span>
-    {% if version %}
-      <span>
-        <strong>
-          {% if library.deprecated %}
-            [{{ 'Deprecated'|t|upper }}]
-          {% endif %}
+<span{{ attributes.addClass(classes) }}>
+  <span class="installable-library-status{{ library.isInstalled ? ' installable-library-status--installed' : '' }}" title="{{ statusTitle }}"></span>
+  <span class="installable-library-content">
+    <span>
+      <strong>
+        {% if library.version %}
+          {{ library.getVersionLink(library.version, (library.label ?: library.id) ~ ':' ~ (library.versionExtra ?: library.version)) }}
+        {% else %}
           {{ library.label ?: library.id }}
-        </strong>
-      </span>
-      <span>
-        <em>
-          {{ 'Version'|t }}: {{ version }}
-          {% if latestVersion and latestVersion != library.version %}
-            {% if preferredLibrary and library.id != preferredLibrary.id %}
-              , {{ 'Replaced with'|t }}:
-              {{ library.getVersionLink(latestVersion, preferredLibrary.label ?: preferredLibrary.id ~ ':' ~ latestVersion) ?: latestVersion }}
-            {% else %}
-              , {{ 'Latest'|t }}:
-              {{ library.getVersionLink(latestVersion) ?: latestVersion }}
-            {% endif %}
-            {% trans %}
-              ({{ count }} release behind)
-            {% plural library.getNewerVersions|length %}
-              ({{ count }} releases behind)
-            {% endtrans %}
+        {% endif %}
+        {% if preferred %}
+          ({{ 'preferred'|t }})
+        {% endif %}
+        {% if plugin and plugin.isBundled(library) and library.isInstalled %}
+          ({{ 'bundled'|t }})
+        {% endif %}
+      </strong>
+    </span>
+    {% if library.version %}
+      {% if preferredLibrary and library.id != preferredLibrary.id %}
+        {% set preferredLatestVersion = preferredLibrary.getLatestVersion %}
+        <span><em>
+          {{ 'Replaced with'|t }}:
+          {{ preferredLibrary.getVersionLink(preferredLatestVersion, (preferredLibrary.label ?: preferredLibrary.id) ~ ':' ~ preferredLatestVersion) }}
+        </em></span>
+      {% elseif latestVersion and latestVersion != library.version %}
+        <span><em>
+          {{ 'Latest'|t }}:
+          {{ library.getVersionLink(latestVersion) ?: latestVersion }}
+          {% if library.getNewerVersions|length == 1 %}
+              (1 release behind)
+          {% else %}
+              ({{ library.getNewerVersions|length }} releases behind)
           {% endif %}
-        </em>
+        </em></span>
+      {% endif %}
+    {% elseif library.getInstallCommand %}
+      <span>
+        <kbd class="installable-library-command">
+          {{ library.getInstallCommand }}
+        </kbd>
       </span>
-      {% if library.requirementViolations %}
-        <ul class="installable-library-violations">
+    {% endif %}
+    {% if library.requirementViolations %}
+      <ul class="installable-library-violations">
           {% for violation in library.requirementViolations %}
             <li>{{ violation }}</li>
           {% endfor %}
         </ul>
-    {% endif %}
-    {% else %}
-      <span>
-        <em> {{ 'Not Installed'|t }}</em>
-      </span>
-      {% if library.getInstallCommand %}
-        <span>
-          <kbd class="installable-library-command">
-            {{ library.getInstallCommand }}
-          </kbd>
-        </span>
-      {% endif %}
     {% endif %}
     {% if libary and preferredLibrary and preferredLibrary.id != library.id %}
       <span>

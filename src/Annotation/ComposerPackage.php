@@ -92,7 +92,8 @@ class ComposerPackage extends InstallableLibrary {
     }
     if (!isset($this->versionUrls[$version])) {
       $this->versionUrls[$version] = FALSE;
-      if ($this->isKnownVersion($version) && !$this->isDev($version) && ($json = $this->requestPackage()) && !empty($repository = $json['repository'])) {
+      if ($this->isKnownVersion($version) && !$this->isDev($version) && ($json = $this->requestPackage())) {
+        $repository = !empty($json['repository']) ? $json['repository'] : sprintf('https://packagist.org/packages/%s', $this->getId());
         if (!isset($json['versions'][$version])) {
           $version = "v$version";
           $this->versionUrls[$version] = FALSE;
@@ -101,7 +102,19 @@ class ComposerPackage extends InstallableLibrary {
           if (!isset($options['attributes']['target'])) {
             $options['attributes']['target'] = '_blank';
           }
-          $this->versionUrls[$version] = Url::fromUri(sprintf('%s/releases/%s', $repository, $version), $options);
+          switch (parse_url($repository, PHP_URL_HOST)) {
+            case 'github.com':
+              $uri = sprintf('%s/releases/%s', $repository, $version);
+              break;
+
+            case 'packagist.org':
+              $uri = sprintf('%s#%s', $repository, $version);
+              break;
+
+            default:
+              $uri = $repository;
+          }
+          $this->versionUrls[$version] = Url::fromUri($uri, $options);
         }
       }
     }

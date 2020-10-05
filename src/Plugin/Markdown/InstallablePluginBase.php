@@ -3,22 +3,20 @@
 namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Component\Plugin\PluginInspectionInterface;
-use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Component\Utility\DiffArray;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Component\Utility\UrlHelper;
+use Drupal\Core\Config\Config;
+use Drupal\Core\Config\ImmutableConfig;
 use Drupal\Core\Plugin\PluginBase as CoreBasePlugin;
-use Drupal\Core\Plugin\PluginDependencyTrait;
-use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
 use Drupal\markdown\Annotation\InstallableLibrary;
 use Drupal\markdown\BcSupport\ObjectWithPluginCollectionInterface;
-use Drupal\markdown\Config\ImmutableMarkdownConfig;
+use Drupal\markdown\BcSupport\PluginDependencyTrait;
 use Drupal\markdown\Traits\MoreInfoTrait;
 use Drupal\markdown\Util\FilterAwareInterface;
 use Drupal\markdown\Util\FilterFormatAwareInterface;
 use Drupal\markdown\Util\ParserAwareInterface;
-use Drupal\markdown\Util\SortArray;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -41,15 +39,24 @@ abstract class InstallablePluginBase extends CoreBasePlugin implements Installab
   /**
    * The config for this plugin.
    *
-   * @var \Drupal\markdown\Config\ImmutableMarkdownConfig
+   * @var \Drupal\Core\Config\ImmutableConfig
    */
   protected $config;
+
+
+  /**
+   * The original plugin_id that was called, not a fallback identifier.
+   *
+   * @var string
+   */
+  protected $originalPluginId;
 
   /**
    * {@inheritdoc}
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
+    $this->originalPluginId = isset($configuration['original_plugin_id']) ? $configuration['original_plugin_id'] : $plugin_id;
     $this->setConfiguration($configuration);
   }
 
@@ -76,124 +83,22 @@ abstract class InstallablePluginBase extends CoreBasePlugin implements Installab
   /**
    * {@inheritdoc}
    */
-  public function buildStatus() {
+  public function buildStatus($all = FALSE) {
     $build = [
-      '#type' => 'html_tag',
-      '#tag' => 'span',
+      '#theme_wrappers' => ['container__installable_libraries'],
       '#attributes' => [
         'class' => [
           'installable-libraries',
         ],
       ],
     ];
-    $build['library'] = [
-      '#theme' => 'installable_library',
-      '#plugin' => $this,
-      '#library' => $this->getInstalledLibrary() ?: $this->getPreferredLibrary(),
-    ];
-    return $build;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function buildSupportedLibraries() {
-    $build = [];
-
-    $libraries = $this->pluginDefinition->libraries;
-    if ($libraryCount = count($libraries)) {
-      $build = [
-        '#type' => 'fieldset',
-        '#open' => TRUE,
-        '#title' => $this->t('Supported Libraries'),
+    $libraries = $all ? $this->pluginDefinition->libraries : [$this->getInstalledLibrary() ?: $this->getPreferredLibrary()];
+    foreach ($libraries as $library) {
+      $build[] = [
+        '#theme' => 'installable_library',
+        '#plugin' => $this,
+        '#library' => $library,
       ];
-      $build['libraries'] = [
-        '#theme' => 'item_list__markdown__supported_libraries',
-        '#attributes' => [
-          'class' => ['markdown', 'list-unstyled'],
-        ],
-        '#items' => [],
-      ];
-      foreach ($libraries as $library) {
-        // Skip libraries that shouldn't be displayed in the UI.
-        if (!$library->ui) {
-          continue;
-        }
-        $suffix = [];
-        if ($libraryCount > 1 && $library->preferred) {
-          $suffix[] = $this->t('preferred');
-        }
-
-        $requirements = [];
-        foreach ($library->requirements as $requirement) {
-          $buildRequirement = '';
-          switch ($requirement->getType()) {
-            case 'extension':
-            case 'parser':
-              $object = $requirement->getObject();
-              $buildRequirement = $object && $object instanceof InstallablePluginInterface ? $object->getLabel(FALSE) : $requirement->getId();
-              $constraints = [];
-              foreach ($requirement->constraints as $name => $value) {
-                if ($value) {
-                  $constraints[] .= "$name: " . (is_array($value) ? implode(', ', $value) : $value);
-                }
-                else {
-                  $constraints[] = $name;
-                }
-              }
-              if ($constraints) {
-                $buildRequirement .= ' ' . implode(', ', $constraints);
-              }
-              break;
-          }
-          if ($buildRequirement) {
-            $requirements[] = $buildRequirement;
-          }
-        }
-
-        if ($url = $this->pluginDefinition->url) {
-          if (UrlHelper::isExternal($url)) {
-            $options['attributes']['target'] = '_blank';
-            $url = Url::fromUri($url)->setOptions($options);
-          }
-          else {
-            $url = Url::fromUserInput($url);
-          }
-        }
-
-        if ($installCommand = $library->getInstallCommand()) {
-          $item = [
-            '#type' => 'html_tag',
-            '#tag' => 'kbd',
-            '#attributes' => ['class' => ['markdown']],
-            '#value' => $installCommand,
-            '#url' => $url,
-            '#suffix' => $this->moreInfo(NULL, $url),
-          ];
-        }
-        else {
-          $item = [
-            '#type' => 'link',
-            '#title' => $library->label ?: $url->toString(),
-            '#url' => $url,
-          ];
-        }
-
-        $item['#suffix'] = new FormattableMarkup('<small class="markdown-description markdown-no-select">@existing @suffix</small>', [
-          '@existing' => !empty($item['#suffix']) ? $item['#suffix'] : '',
-          '@suffix' => $suffix ? Markup::create(' (' . implode(', ', $suffix) . ')') : '',
-        ]);
-
-        $build['libraries']['#items'][] = ['data' => $item];
-
-        $build['requirements'] = [
-          '#theme' => 'item_list__markdown__supported_libraries__requirements',
-          '#attributes' => [
-            'class' => ['markdown'],
-          ],
-          '#items' => $requirements,
-        ];
-      }
     }
     return $build;
   }
@@ -264,22 +169,14 @@ abstract class InstallablePluginBase extends CoreBasePlugin implements Installab
   }
 
   /**
-   * Retrieves the config class used to construct settings.
+   * Returns the configuration name for the plugin.
    *
    * @return string
-   *   The config class to use.
+   *   The configuration name.
    */
-  protected function getConfigClass() {
-    return ImmutableMarkdownConfig::class;
+  protected function getConfigurationName() {
+    return sprintf('installable.plugin.%s_%s', $this->getProvider(), $this->getPluginId());
   }
-
-  /**
-   * Retrieves the config type used to construct settings.
-   *
-   * @return string
-   *   The config type to use.
-   */
-  abstract protected function getConfigType();
 
   /**
    * {@inheritdoc}
@@ -391,6 +288,13 @@ abstract class InstallablePluginBase extends CoreBasePlugin implements Installab
    */
   public function getObjectClass() {
     return $this->pluginDefinition->object;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getOriginalPluginId() {
+    return $this->originalPluginId;
   }
 
   /**
@@ -518,10 +422,6 @@ abstract class InstallablePluginBase extends CoreBasePlugin implements Installab
    * {@inheritdoc}
    */
   public function setConfiguration(array $configuration) {
-    if (($class = $this->getConfigClass()) && ltrim($class, '\\') !== ImmutableMarkdownConfig::class && !is_subclass_of($class, ImmutableMarkdownConfig::class)) {
-      throw new \RuntimeException(sprintf('The class %s must be an instance of %s.', $class, ImmutableMarkdownConfig::class));
-    }
-
     // Filter out NULL values, they will be provided by default configuration.
     $configuration = array_filter($configuration, function ($value) {
       return $value !== NULL;
@@ -530,17 +430,15 @@ abstract class InstallablePluginBase extends CoreBasePlugin implements Installab
     // Determine the default configuration for the plugin.
     $defaultConfiguration = $this->defaultConfiguration();
 
-    // Merge defaults using union into passed configuration. This ensures that
-    // the difference in overrides detected below are not different if they
-    // weren't explicitly passed.
-    // @todo This should be a nested union merge.
-    $configuration += $defaultConfiguration;
-
     // Generate a new Config object.
-    $this->config = $class::create($this->getContainer(), $this->getConfigType(), $defaultConfiguration);
+    $this->config = static::createConfig($this->getConfigurationName(), $defaultConfiguration, TRUE, $this->getContainer());
 
-    // Determine if there any configuration overrides.
-    if ($overrides = $this->getConfigurationOverrides($configuration)) {
+    // Determine if there any configuration overrides. Merge defaults using
+    // a union with passed configuration. This ensures that the difference in
+    // overrides detected below are not different if they weren't explicitly
+    // passed.
+    // @todo This should be a nested union merge.
+    if ($overrides = $this->getConfigurationOverrides($configuration + $defaultConfiguration)) {
       $this->config->setModuleOverride($overrides);
     }
 
@@ -548,6 +446,20 @@ abstract class InstallablePluginBase extends CoreBasePlugin implements Installab
     $this->configuration = $this->config->get();
 
     return $this;
+  }
+
+  protected static function createConfig($name, array $data = [], $immutable = TRUE, ContainerInterface $container = NULL) {
+    $class = $immutable ? ImmutableConfig::class : Config::class;
+    if (!$container) {
+      $container = \Drupal::getContainer();
+    }
+    $config = new $class($name,
+      $container->get('config.storage'),
+      $container->get('event_dispatcher'),
+      $container->get('config.typed')
+    );
+    $config->initWithData($data);
+    return $config;
   }
 
   /**

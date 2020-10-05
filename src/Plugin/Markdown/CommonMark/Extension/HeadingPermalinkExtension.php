@@ -25,6 +25,7 @@ use Drupal\markdown\Util\FilterHtml;
  *     @ComposerPackage(
  *       id = "league/commonmark",
  *       object = "\League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension",
+ *       customLabel = "commonmark-heading-permalink",
  *       url = "https://commonmark.thephpleague.com/extensions/heading-permalinks/",
  *       requirements = {
  *          @InstallableRequirement(

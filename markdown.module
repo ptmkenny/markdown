@@ -101,7 +101,7 @@ function markdown_form_alter(&$form, FormStateInterface $form_state, $formId) {
 function markdown_help($route_name, RouteMatchInterface $route_match) {
   switch ($route_name) {
     case 'help.page.markdown':
-      return Markdown::create()->loadPath(__DIR__ . '/README.md');
+      return Markdown::create()->loadFile(__DIR__ . '/README.md');
   }
 }
 
@@ -146,8 +146,8 @@ function markdown_modules_installed($modules) {
   // Save the first found parser as the default global parser.
   /** @var \Drupal\markdown\PluginManager\ParserManagerInterface $parserManager */
   $parserManager = \Drupal::service('plugin.manager.markdown.parser');
-  if ($parser = current(array_keys($parserManager->installedDefinitions()))) {
-    \Drupal::configFactory()->getEditable('markdown.settings')->set('parser.id', $parser)->save();
+  if ($parserId = current(array_keys($parserManager->installedDefinitions()))) {
+    \Drupal::configFactory()->getEditable('markdown.settings')->set('default_parser', $parserId)->save();
   }
 }
 

@@ -2,6 +2,8 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
+use Drupal\markdown\Annotation\InstallableLibrary;
+use Drupal\markdown\Traits\EnabledPluginTrait;
 use Drupal\markdown\Traits\ParserAwareTrait;
 
 /**
@@ -18,14 +20,8 @@ use Drupal\markdown\Traits\ParserAwareTrait;
  */
 class MissingExtension extends InstallablePluginBase implements ExtensionInterface {
 
+  use EnabledPluginTrait;
   use ParserAwareTrait;
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function getConfigType() {
-    return 'markdown_extension';
-  }
 
   /**
    * {@inheritdoc}
@@ -37,7 +33,7 @@ class MissingExtension extends InstallablePluginBase implements ExtensionInterfa
   /**
    * {@inheritdoc}
    */
-  public function isBundled() {
+  public function isBundled(InstallableLibrary $library) {
     return FALSE;
   }
 

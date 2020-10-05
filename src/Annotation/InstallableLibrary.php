@@ -20,6 +20,18 @@ class InstallableLibrary extends AnnotationObject {
   use InstallablePluginTrait;
 
   /**
+   * Optional. A customized human-readable label for the library.
+   *
+   * Note: this may be necessary if there is already a plugin or library using
+   * the same name and it needs to differentiate itself further. An example of
+   * this is checking a object requirement that is bundled as an extension
+   * inside the main library.
+   *
+   * @var string|null
+   */
+  public $customLabel;
+
+  /**
    * The version with extra metadata.
    *
    * @var string
@@ -82,9 +94,9 @@ class InstallableLibrary extends AnnotationObject {
 
   public function createObjectRequirement(InstallablePlugin $definition = NULL) {
     if ($this->object) {
-      $name = $this->label ?: $this->getId();
+      $name = $this->getLink($this->customLabel) ?: $this->getId();
       if (!$name && $definition) {
-        $name = $definition->label ?: $definition->getId();
+        $name = $definition->getLink($this->customLabel) ?: $definition->getId();
       }
       return InstallableRequirement::create([
         'value' => $this->object,
@@ -164,6 +176,84 @@ class InstallableLibrary extends AnnotationObject {
       $this->newerVersions[$version] = Semver::sort($this->version ? Semver::satisfiedBy($availableVersions, ">$version") : $availableVersions);
     }
     return $this->newerVersions[$version];
+  }
+
+  /**
+   * Retrieves the current status of the library.
+   *
+   * @param bool $long
+   *   Flag indicating whether to use longer explanations as indicated by
+   *   the individual property values.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The human readable status.
+   */
+  public function getStatus($long = FALSE) {
+    // Immediately return if there are requirement violations (not installed).
+    if ($this->requirementViolations) {
+      return t('Not Installed');
+    }
+
+    // Determine the library status.
+    if ($this->hasRequestFailure()) {
+      if ($long) {
+        return t('Request Failure. @explanation', [
+          '@explanation' => $this->requestException->getMessage(),
+        ]);
+      }
+      return t('Request Failure');
+    }
+
+    if ($this->getNewerVersions()) {
+      if ($this->deprecated) {
+        return t('Deprecated');
+      }
+      if ($this->preferred) {
+        return t('Update Available');
+      }
+      return t('Upgrade Available');
+    }
+
+    if ($this->isKnownVersion()) {
+      if ($this->deprecated && !$this->preferred) {
+        if ($long && $this->deprecated !== TRUE) {
+          return t('Upgrade Available. @explanation', [
+            '@explanation' => $this->deprecated,
+          ]);
+        }
+        return t('Upgrade Available');
+      }
+
+      if ($this->deprecated && $this->preferred) {
+        if ($long && $this->deprecated !== TRUE) {
+          return t('Deprecated. @explanation', [
+            '@explanation' => $this->deprecated,
+          ]);
+        }
+        return t('Deprecated');
+      }
+
+      if ($this->experimental) {
+        if ($long && $this->experimental !== TRUE) {
+          return t('Experimental. @explanation', [
+            '@explanation' => $this->experimental,
+          ]);
+        }
+        return t('Experimental');
+      }
+
+      if ($this->isPrerelease()) {
+        return t('Prerelease');
+      }
+
+      if ($this->isDev()) {
+        return t('Development Release');
+      }
+
+      return t('Up to date');
+    }
+
+    return t('Unknown');
   }
 
   /**

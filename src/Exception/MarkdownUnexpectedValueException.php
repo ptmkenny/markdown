@@ -45,7 +45,7 @@ class MarkdownUnexpectedValueException extends \UnexpectedValueException impleme
    *     is the unexpected value and the second is the full path in dot'
    *     notation, constructed from passed $key and $parents.
    */
-  public function __construct($value, $key = NULL, array $parents = [], \Throwable $previous = NULL, array $templates = []) {
+  public function __construct($value, $key = NULL, array $parents = [], $previous = NULL, array $templates = []) {
     $this->value = $value;
     $this->key = $key;
     $this->parents = $parents;

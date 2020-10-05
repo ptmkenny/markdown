@@ -21,6 +21,7 @@ use Drupal\markdown\Plugin\Markdown\ParserInterface;
  *     @ComposerPackage(
  *       id = "league/commonmark",
  *       object = "\League\CommonMark\Extension\TaskList\TaskListExtension",
+ *       customLabel = "commonmark-task-list",
  *       url = "https://commonmark.thephpleague.com/extensions/task-lists/",
  *       requirements = {
  *          @InstallableRequirement(

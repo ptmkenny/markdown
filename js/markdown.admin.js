@@ -124,15 +124,21 @@
               var summary = [];
               switch (summaryType) {
                 case 'parser':
-                  var $selected = $input.find(':selected:first');
-                  if ($selected[0]) {
-                    var parser = $selected.text();
-                    if (/^site:/.test($selected.val())) {
-                      summary.push(Drupal.t('Site-wide') + ' ' + parser);
+                  if ($input[0].nodeName === 'SELECT') {
+                    var $selected = $input.find(':selected:first');
+                    if ($selected[0]) {
+                      var parser = $selected.text();
+                      if (/^site:/.test($selected.val())) {
+                        summary.push(Drupal.t('Site-wide') + ' ' + parser);
+                      }
+                      else {
+                        summary.push(parser);
+                      }
                     }
-                    else {
-                      summary.push(parser);
-                    }
+                  }
+                  else {
+                    var parser = $input.data('markdownSummaryValue') || $input.val();
+                    summary.push(parser)
                   }
                   break;
 
@@ -163,8 +169,12 @@
                   if (!$input.data('markdownInstalled')) {
                     $label.html(Drupal.t('@label (not installed)', variables))
                     summary.push(Drupal.t('Not Installed'))
+                    if (verticalTab.item && verticalTab.item[0]) {
+                      verticalTab.item[0].classList.add('installable-library-not-installed')
+                    }
                   }
                   else {
+                    var enabled = false;
                     var bundle = $input.data('markdownBundle');
                     var requiredBy = [].concat($input.data('markdownRequiredBy')).map(function (id) {
                       var $dependent = $inputs.filter('[data-markdown-element="extension"][data-markdown-id="' + id + '"]');
@@ -177,6 +187,7 @@
                       $label.html(Drupal.t('@label (required by: @extensions)', variables))
                       summary.push(Drupal.t('Required by: @extensions', variables));
                       savePreviousInput($input);
+                      enabled = true;
                       $input.prop('checked', true);
                       $input.prop('disabled', true);
                     }
@@ -185,13 +196,20 @@
                       $label.html(Drupal.t('@label (required by: @bundle)', variables))
                       summary.push(Drupal.t('Required by: @bundle', variables));
                       savePreviousInput($input);
+                      enabled = true;
                       $input.prop('checked', true);
                       $input.prop('disabled', true);
                     }
                     else {
                       $label.html(originalLabel);
                       restorePreviousInput($input);
-                      summary.push($input.is(':checked') ? Drupal.t('Enabled') : Drupal.t('Disabled'));
+                      enabled = $input.is(':checked');
+                      summary.push(enabled ? Drupal.t('Enabled') : Drupal.t('Disabled'));
+                    }
+
+                    if (verticalTab.item && verticalTab.item[0]) {
+                      verticalTab.item[0].classList.remove('installable-library-enabled', 'installable-library-disabled')
+                      verticalTab.item[0].classList.add(enabled ? 'installable-library-enabled' : 'installable-library-disabled')
                     }
 
                     // Trigger requirement summary updates.

@@ -4,6 +4,7 @@ namespace Drupal\markdown\PluginManager;
 
 use Drupal\Component\Plugin\Exception\PluginException;
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Extension\ThemeHandlerInterface;
 use Drupal\Core\Theme\ActiveTheme;
@@ -17,9 +18,9 @@ use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
 use Drupal\markdown\Plugin\Markdown\ExtensibleParserInterface;
 use Drupal\markdown\Plugin\Markdown\ExtensionInterface;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
-use Drupal\markdown\Util\Composer;
 use Drupal\markdown\Util\FilterAwareInterface;
 use Drupal\markdown\Util\FilterFormatAwareInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -71,7 +72,7 @@ class AllowedHtmlManager extends InstallablePluginManager {
   /**
    * {@inheritdoc}
    */
-  public function __construct(\Traversable $namespaces, CacheBackendInterface $cache_backend, ModuleHandlerInterface $module_handler, FilterPluginManager $filterManager, ThemeHandlerInterface $themeHandler, ThemeManagerInterface $themeManager, ParserManagerInterface $parserManager, ExtensionManagerInterface $extensionManager) {
+  public function __construct(\Traversable $namespaces, CacheBackendInterface $cache_backend, ConfigFactoryInterface $configFactory, LoggerInterface $logger, ModuleHandlerInterface $module_handler, FilterPluginManager $filterManager, ThemeHandlerInterface $themeHandler, ThemeManagerInterface $themeManager, ParserManagerInterface $parserManager, ExtensionManagerInterface $extensionManager) {
     // Add in theme namespaces.
     // @todo Fix when theme namespaces are properly registered.
     // @see https://www.drupal.org/project/drupal/issues/2941757
@@ -79,7 +80,7 @@ class AllowedHtmlManager extends InstallablePluginManager {
     foreach ($themeHandler->listInfo() as $extension) {
       $namespaces['Drupal\\' . $extension->getName()] = [DRUPAL_ROOT . '/' . $extension->getPath() . '/src'];
     }
-    parent::__construct('Plugin/Markdown', new \ArrayObject($namespaces), $module_handler, AllowedHtmlInterface::class, MarkdownAllowedHtml::class);
+    parent::__construct('Plugin/Markdown', new \ArrayObject($namespaces), $configFactory, $logger, $module_handler, AllowedHtmlInterface::class, MarkdownAllowedHtml::class);
     $this->setCacheBackend($cache_backend, 'markdown_allowed_html_info');
     $this->alterInfo($this->cacheKey);
     $this->filterManager = $filterManager;
@@ -99,6 +100,8 @@ class AllowedHtmlManager extends InstallablePluginManager {
     $instance = new static(
       $container->get('container.namespaces'),
       $container->get('cache.discovery'),
+      $container->get('config.factory'),
+      $container->get('logger.channel.markdown'),
       $container->get('module_handler'),
       $container->get('plugin.manager.filter'),
       $container->get('theme_handler'),

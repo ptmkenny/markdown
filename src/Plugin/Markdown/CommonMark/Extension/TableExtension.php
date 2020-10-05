@@ -21,6 +21,7 @@ use Drupal\markdown\Plugin\Markdown\ParserInterface;
  *     @ComposerPackage(
  *       id = "league/commonmark",
  *       object = "\League\CommonMark\Extension\Table\TableExtension",
+ *       customLabel = "commonmark-table",
  *       url = "https://commonmark.thephpleague.com/extensions/tables/",
  *       requirements = {
  *          @InstallableRequirement(

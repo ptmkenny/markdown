@@ -76,9 +76,21 @@ interface InstallablePluginManagerInterface extends CacheableDependencyInterface
    *   The class name to match.
    *
    * @return \Drupal\markdown\Annotation\InstallablePlugin|void
-   *   The plugin definition matching the class name or NULL if not found.
+   *   The first plugin definition matching the class name or NULL if not found.
    */
   public function getDefinitionByClassName($className);
+
+  /**
+   * Retrieves a definition by library identifier.
+   *
+   * @param string $libraryId
+   *   The library identifier to match.
+   *
+   * @return \Drupal\markdown\Annotation\InstallablePlugin|void
+   *   The first plugin definition matching the first library identifier or
+   *   NULL if not found.
+   */
+  public function getDefinitionByLibraryId($libraryId);
 
   /**
    * Gets the definition of all plugins for this type.
@@ -110,18 +122,5 @@ interface InstallablePluginManagerInterface extends CacheableDependencyInterface
    *   An array of plugin definitions, keyed by identifier.
    */
   public function installedDefinitions();
-
-  /**
-   * Retrieves the labels for plugins.
-   *
-   * @param bool $installed
-   *   Flag indicating whether to return just the installed plugins.
-   * @param bool $version
-   *   Flag indicating whether to include the version with the label.
-   *
-   * @return \Drupal\Core\StringTranslation\TranslatableMarkup[]
-   *   An array of labels, keyed by plugin identifier.
-   */
-  public function labels($installed = TRUE, $version = TRUE);
 
 }

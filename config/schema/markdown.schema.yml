@@ -1,6 +1,10 @@
 # Filter settings.
 filter_settings.markdown:
   type: markdown.parser
+  mapping:
+    override:
+      type: boolean
+      label: 'Override'
 
 # Parser Settings: CommonMark.
 markdown.parser_settings.commonmark:

@@ -11,7 +11,6 @@ use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Plugin\PluginFormInterface;
 use Drupal\filter\Entity\FilterFormat;
 use Drupal\filter\Plugin\FilterInterface;
-use Drupal\markdown\Config\ImmutableMarkdownConfig;
 use Drupal\markdown\PluginManager\ParserManager;
 use Drupal\markdown\Render\ParsedMarkdown;
 use Drupal\markdown\Traits\EnabledPluginTrait;
@@ -26,7 +25,6 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
 /**
  * Base class form Markdown Parser instances.
  *
- * @property \Drupal\markdown\Config\ImmutableMarkdownConfig $config
  * @property \Drupal\markdown\Annotation\MarkdownParser $pluginDefinition
  * @method \Drupal\markdown\Annotation\MarkdownParser getPluginDefinition()
  */
@@ -127,20 +125,6 @@ abstract class BaseParser extends InstallablePluginBase implements FilterAwareIn
    */
   public function getAllowedHtmlPlugins() {
     return $this->config()->get('render_strategy.plugins') ?: [];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function getConfigClass() {
-    return ImmutableMarkdownConfig::class;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function getConfigType() {
-    return 'markdown_parser';
   }
 
   /**
@@ -276,11 +260,8 @@ abstract class BaseParser extends InstallablePluginBase implements FilterAwareIn
    */
   protected function renderStrategyDisabledSetting(FormStateInterface $form_state) {
     /** @var \Drupal\markdown\Form\SubformStateInterface $form_state */
-    $parents = $form_state->getAllParents();
-    while (end($parents) !== 'parser') {
-      array_pop($parents);
-    }
-    $parents = array_merge($parents, ['render_strategy', 'type']);
+    $markdownParents = $form_state->get('markdownSubformParents');
+    $parents = array_merge($markdownParents, ['render_strategy', 'type']);
     $selector = ':input[name="' . array_shift($parents) . '[' . implode('][', $parents) . ']"]';
 
     /** @var \Drupal\markdown\Form\SubformStateInterface $form_state */
@@ -328,11 +309,8 @@ abstract class BaseParser extends InstallablePluginBase implements FilterAwareIn
    */
   protected function renderStrategyDisabledSettingState(FormStateInterface $form_state, array &$element, $state = 'disabled', array $conditions = ['!value' => self::NONE]) {
     /** @var \Drupal\markdown\Form\SubformStateInterface $form_state */
-    $parents = $form_state->getAllParents();
-    while (end($parents) !== 'parser') {
-      array_pop($parents);
-    }
-    $parents = array_merge($parents, ['render_strategy', 'type']);
+    $markdownParents = $form_state->get('markdownSubformParents');
+    $parents = array_merge($markdownParents, ['render_strategy', 'type']);
     $selector = ':input[name="' . array_shift($parents) . '[' . implode('][', $parents) . ']"]';
 
     $states = (array) $state;

@@ -12,24 +12,17 @@ services:
 
   markdown:
     class: Drupal\markdown\Markdown
-    arguments: ['@cache.markdown', '@config.factory', '@file_system', '@http_client', '@logger.channel.markdown', '@plugin.manager.markdown.parser', '@markdown.settings']
-
-  markdown.settings:
-    class: Drupal\markdown\Config\ImmutableMarkdownConfig
-    factory: Drupal\markdown\Config\ImmutableMarkdownConfig::load
-    arguments: [markdown.settings]
-    calls:
-      - [setKeyPrefix, ['parser']]
+    arguments: ['@cache.markdown', '@config.factory', '@file_system', '@http_client', '@plugin.manager.markdown.parser']
 
   markdown.param_converter:
     class: Drupal\markdown\Routing\MarkdownParamConverter
-    arguments: ['@plugin.manager.markdown.parser', '@plugin.manager.markdown.extension', '@plugin.manager.markdown.allowed_html']
+    arguments: ['@config.factory', '@plugin.manager.markdown.parser', '@plugin.manager.markdown.extension', '@plugin.manager.markdown.allowed_html']
     tags:
       - { name: paramconverter, priority: 10 }
 
   markdown_plugin_manager:
     abstract: true
-    arguments: ['@container.namespaces', '@cache.discovery', '@module_handler']
+    arguments: ['@container.namespaces', '@cache.discovery', '@config.factory', '@logger.channel.markdown', '@module_handler']
     calls:
       - [setContainer, ['@service_container']]
     tags:

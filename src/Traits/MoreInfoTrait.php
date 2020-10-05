@@ -17,19 +17,19 @@ trait MoreInfoTrait {
   use RendererTrait;
 
   /**
-   * Appends existing content with a "[More Info]" link.
+   * Appends existing content with a "More Info" link.
    *
    * @param mixed $existing
    *   The existing content to append to.
    * @param string|\Drupal\Core\Url $url
    *   The URL to use.
    * @param string $label
-   *   Optional. The "[More Info]" label to use for the link.
+   *   Optional. The "More Info" label to use for the link.
    *
    * @return \Drupal\Component\Render\MarkupInterface
    *   The new joined content.
    */
-  protected function moreInfo($existing, $url, $label = '[More Info]') {
+  protected function moreInfo($existing, $url, $label = 'More Info') {
     if (!$url) {
       return $existing;
     }
@@ -37,11 +37,13 @@ trait MoreInfoTrait {
       $url = UrlHelper::isExternal($url) ? Url::fromUri($url)->setOption('attributes', ['target' => '_blank']) : Url::fromUserInput($url);
     }
     if (!($label instanceof MarkupInterface)) {
-      $label = $this->t($label); // phpcs:ignore;
+      $label = $this->t($label); // phpcs:ignore
     }
     $build = [
       '#type' => 'link',
-      '#title' => $label,
+      '#title' => new FormattableMarkup('[@label]', [
+        '@label' => $label,
+      ]),
       '#url' => $url,
       '#options' => [
         'attributes' => [

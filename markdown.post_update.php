@@ -200,6 +200,6 @@ function _markdown_update_config($save = TRUE, array $defaultData = NULL, callab
 /**
  * Update configuration (run config export after).
  */
-function markdown_post_update_8926() {
+function markdown_post_update_8930() {
   _markdown_update_config();
 }

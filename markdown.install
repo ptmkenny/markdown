@@ -8,7 +8,7 @@
 use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Core\Link;
 use Drupal\Core\Render\Markup;
-use Drupal\markdown\Annotation\InstallableLibrary;
+use Drupal\Core\Url;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
 use Drupal\markdown\PluginManager\ParserManager;
 
@@ -29,6 +29,8 @@ function markdown_requirements($phase) {
   // yet installed.
   global $_markdown_requirements;
   $_markdown_requirements = $phase;
+
+  $translation = \Drupal::translation();
 
   $requirements = [];
 
@@ -66,17 +68,20 @@ function markdown_requirements($phase) {
   // Retrieve all installed parsers.
   $installed = $parserManager->installed();
 
+  // Retrieve all enabled parsers.
+  $enabled = $parserManager->enabled();
+
   // Install.
   if ($phase === 'install') {
     if (!$installed) {
       $cli = php_sapi_name() === 'cli';
-      $items = array_map(function (ParserInterface $parser)  use ($cli) {
+      $items = array_map(function (ParserInterface $parser) use ($cli, $translation) {
         $definition = $parser->getPluginDefinition();
         if ($definition->requirementViolations) {
           $reason = implode(', ', $definition->requirementViolations);
         }
         else {
-          $reason = t('Not Installed');
+          $reason = $translation->translate('Not Installed');
         }
         $url = $parser->getUrl();
         $urlString = $url ? $url->toString() : NULL;
@@ -100,7 +105,7 @@ function markdown_requirements($phase) {
         $items = $renderer->renderPlain($list);
       }
       $requirements['markdown'] = [
-        'description' => t("Markdown cannot be installed because there are no parsers currently installed. Please install at least one parser via Composer to enable this module:\n@parsers", [
+        'description' => $translation->translate("Markdown cannot be installed because there are no parsers currently installed. Please install at least one parser via Composer to enable this module:\n@parsers", [
           '@parsers' => $items,
         ]),
         'severity' => REQUIREMENT_ERROR,
@@ -109,68 +114,36 @@ function markdown_requirements($phase) {
   }
   // Runtime.
   elseif ($phase === 'runtime') {
-    $build = [
-      '#theme' => 'table__markdown_parser_requirements',
-      '#header' => [
-        t('Supported Parsers'),
-        t('Status'),
-      ],
-      '#rows' => [],
-    ];
-    $build['#attached']['library'][] = 'markdown/admin';
-
-    $severity = REQUIREMENT_OK;
-    foreach ($parsers as $name => $parser) {
+    $severities = array_map(function (ParserInterface $parser) {
       $library = $parser->getInstalledLibrary();
-      $librarySeverity = REQUIREMENT_OK;
-
-      $class = '';
-      if ($library) {
-        $class = 'color-success';
-        if ($library->deprecated) {
-          $class = 'color-error';
-          $librarySeverity = REQUIREMENT_ERROR;
-        }
-        elseif ($library->getNewerVersions()) {
-          $class = $parser->isPreferredLibraryInstalled() ? 'color-info' : 'color-warning';
-          $librarySeverity = REQUIREMENT_WARNING;
-        }
+      if (!$library) {
+        return REQUIREMENT_ERROR;
       }
 
-      $row = [];
-      if ($url = $parser->getUrl()) {
-        $row[] = Link::fromTextAndUrl($parser->getLabel(FALSE), $url);
+      if ($library->deprecated) {
+        return REQUIREMENT_WARNING;
       }
-      else {
-        $row[] = $parser->getLabel(FALSE);
-      }
-      $row[] = [
-        'data' => $parser->buildLibrary($library),
-      ];
-      $build['#rows'][] = [
-        'class' => $class,
-        'data' => $row,
-      ];
 
-      if ($librarySeverity > $severity) {
-        $severity = $librarySeverity;
+      if ($library->getNewerVersions()) {
+        return $parser->isPreferredLibraryInstalled() ? REQUIREMENT_INFO : REQUIREMENT_WARNING;
       }
-    }
+
+      return REQUIREMENT_OK;
+    }, $enabled);
 
     $requirements['markdown'] = [
       'title' => Markup::create('Markdown<a id="markdown"></a>'),
-      'severity' => $severity,
-      'value' => ($count = count($installed)) === 1 ? t('1 parser installed') : t('@count parsers installed', [
-        '@count' => $count,
+      'severity' => max(REQUIREMENT_OK, $severities),
+      'value' => new FormattableMarkup('@enabled - Visit the <a href=":markdown_overview" target="_blank">Markdown Overview</a> page for more details.', [
+        '@enabled' => $translation->formatPlural(count($enabled), '1 parser installed and enabled', '@count parsers installed and enabled'),
+        ':markdown_overview' => Url::fromRoute('markdown.overview')->toString(),
       ]),
     ];
 
     if (!$installed) {
       $requirements['markdown']['severity'] = REQUIREMENT_ERROR;
-      $requirements['markdown']['value'] .= '. ' . t('You must install at least one parser via Composer for the Markdown module to function properly.');
+      $requirements['markdown']['description'] = $translation->translate('You must install at least one parser via Composer for the Markdown module to function properly.');
     }
-
-    $requirements['markdown']['description'] = $renderer->render($build);
   }
 
   return $requirements;

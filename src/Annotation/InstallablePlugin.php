@@ -75,6 +75,9 @@ abstract class InstallablePlugin extends AnnotationObject {
   public function getRequirementsByType($type, $id = NULL) {
     $requirements = [];
     foreach (array_merge($this->requirements, $this->runtimeRequirements) as $requirement) {
+      if (! $requirement instanceof InstallableRequirement) {
+        continue;
+      }
       list($t, $i) = $requirement->listTypeId();
       if ($type === $t) {
         if (isset($id) && $id !== $i) {
@@ -100,6 +103,9 @@ abstract class InstallablePlugin extends AnnotationObject {
   public function getRequirementsByConstraint($name, $value = NULL) {
     $requirements = [];
     foreach (array_merge($this->requirements, $this->runtimeRequirements) as $requirement) {
+      if (! $requirement instanceof InstallableRequirement) {
+        continue;
+      }
       foreach ($requirement->constraints as $k => $v) {
         if ($k === $name) {
           if (isset($value) && $value !== $v) {

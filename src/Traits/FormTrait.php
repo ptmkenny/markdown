@@ -92,6 +92,34 @@ trait FormTrait {
   }
 
   /**
+   * Creates an inline status message to be used in a render array.
+   *
+   * @param array $messages
+   *   An array of messages, grouped by message type (i.e.
+   *   ['status' => ['message']]).
+   *
+   * @return array
+   *   The messages converted into a render array to be used inline.
+   */
+  public static function createInlineMessage(array $messages) {
+    static $headings;
+    if (!$headings) {
+      $headings = [
+        'error' => t('Error message'),
+        'info' => t('Info message'),
+        'status' => t('Status message'),
+        'warning' => t('Warning message'),
+      ];
+    }
+    return [
+      '#weight' => -10,
+      '#theme' => 'status_messages',
+      '#message_list' => $messages,
+      '#status_headings' => $headings,
+    ];
+  }
+
+  /**
    * Retrieves the selector for an element.
    *
    * @param string $name

@@ -11,6 +11,44 @@ use Drupal\markdown\Exception\MarkdownUnexpectedValueException;
  */
 trait NormalizeTrait {
 
+  public static function isCallable(&$value, &$callable = FALSE) {
+    if (is_callable($value)) {
+      return $value;
+    }
+
+    if (
+      // Value isn't in a callable array format.
+      !is_array($value) || count($value) !== 2 || !isset($value[0]) || !isset($value[1]) ||
+      // Array was associative.
+      $value !== array_values($value) ||
+      // First item isn't a valid object or class name.
+      !(is_object($value[0]) || (is_string($value[0]) && strpos($value[0], '\\') !== FALSE)) ||
+      // Second item isn't a valid method name.
+      !is_string($value[1]) || !preg_match('/[a-zA-Z][a-zA-Z0-9-_]+/', $value[1])
+    ) {
+      return FALSE;
+    }
+
+    list($class, $method) = $value;
+    if (is_object($class)) {
+      $class = get_class($class);
+    }
+    try {
+      $ref = new \ReflectionMethod($class, $method);
+      $callable = $ref->isPublic() && $ref->isStatic();
+      if ($callable) {
+        $value = "$class::$method";
+      }
+    }
+    catch (\ReflectionException $e) {
+      // If a reflection couldn't be made, it's wasn't attempting to be
+      // a callback.
+      return FALSE;
+    }
+
+    return TRUE;
+  }
+
   /**
    * Indicates whether a value is traversable.
    *
@@ -45,21 +83,7 @@ trait NormalizeTrait {
     }
     foreach ($iterable as $key => $value) {
       // Determine if the value is callable.
-      if (($callable = is_callable($value)) || (is_array($value) && count($value) === 2 && isset($value[0]) && isset($value[1]) && (is_object($value[0]) || (is_string($value[0]) && strpos($value[0], '\\') !== FALSE)) && is_string($value[1]))) {
-        if (is_array($value)) {
-          list($class, $method) = $value;
-          if (is_object($class)) {
-            $class = get_class($class);
-          }
-          try {
-            $value = "$class::$method";
-            $ref = new \ReflectionMethod($class, $method);
-            $callable = $ref->isPublic() && $ref->isStatic();
-          }
-          catch (\ReflectionException $e) {
-            // Intentionally do nothing.
-          }
-        }
+      if (static::isCallable($value, $callable)) {
         if (!$callable) {
           throw new MarkdownUnexpectedValueException($value, $key, $parents, isset($e) ? $e : NULL, [
             'The callback "%s" is not publicly accessible.',

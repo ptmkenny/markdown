@@ -11,8 +11,8 @@ markdown.overview:
 markdown.parser.edit:
   path: '/admin/config/content/markdown/{parser}'
   defaults:
-    _form: Drupal\markdown\Form\SettingsForm
-    _title: 'Edit'
+    _form: Drupal\markdown\Form\ParserConfigurationForm
+    _title: 'Configure'
   options:
     _admin_route: TRUE
     parameters:

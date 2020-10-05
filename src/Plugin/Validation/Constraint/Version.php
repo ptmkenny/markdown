@@ -19,6 +19,10 @@ class Version extends Constraint {
 
   public $message = 'Version "@version" does not satisfy the following semantic version constraints "@constraints".';
 
+  public $namedMessage = 'Requires @name:@constraints';
+
+  public $name;
+
   public $value;
 
 }

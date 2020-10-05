@@ -21,6 +21,7 @@ use Drupal\markdown\Traits\SettingsTrait;
  *     @ComposerPackage(
  *       id = "league/commonmark",
  *       object = "\League\CommonMark\Extension\Autolink\AutolinkExtension",
+ *       customLabel = "commonmark-autolink",
  *       url = "https://commonmark.thephpleague.com/extensions/autolinks/",
  *       requirements = {
  *          @InstallableRequirement(

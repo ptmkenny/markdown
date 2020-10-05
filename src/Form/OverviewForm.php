@@ -103,7 +103,7 @@ class OverviewForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $form = parent::buildForm($form, $form_state);
 
-    $defaultParser = $this->markdown->getDefaultParser();
+    $defaultParser = $this->parserManager->getDefaultParser();
 
     $form['#attached']['library'][] = 'markdown/admin';
 
@@ -174,8 +174,13 @@ class OverviewForm extends ConfigFormBase {
     ];
     $unavailableParsers = &$form['unavailable']['table']['#rows'];
 
+    $configurations = [];
+    foreach (array_keys($this->parserManager->getDefinitions(FALSE)) as $parser_id) {
+      $configurations[$parser_id] = $this->config("markdown.parser.$parser_id")->get() ?: [];
+    }
+
     // Iterate over the parsers.
-    foreach ($this->parserManager->all() as $name => $parser) {
+    foreach ($this->parserManager->all($configurations) as $name => $parser) {
       $isDefault = $defaultParser->getPluginId() === $name;
       $installed = FALSE;
       $enabled = $parser->isEnabled();
@@ -208,7 +213,7 @@ class OverviewForm extends ConfigFormBase {
         'data' => [
           '#type' => 'item',
           '#title' => $parser->getLink($isDefault ? new FormattableMarkup('@link (default)', [
-            '@link' => $link
+            '@link' => $link,
           ]) : $label),
           '#description' => $parser->getDescription(),
           '#description_display' => 'after',
@@ -231,12 +236,16 @@ class OverviewForm extends ConfigFormBase {
           'data-dialog-options' => Json::encode(['width' => 700]),
         ],
       ];
+      $options = [
+        'query' => \Drupal::destination()->getAsArray(),
+      ];
       if ($installed && $enabled) {
         $ops['edit'] = [
           'title' => $this->t('Edit'),
           'url' => Url::fromRoute(
             'markdown.parser.edit',
-            ['parser' => $parser]
+            ['parser' => $parser],
+            $options
           ),
         ];
 
@@ -373,4 +382,5 @@ class OverviewForm extends ConfigFormBase {
 
     parent::submitForm($form, $form_state);
   }
+
 }

@@ -27,6 +27,7 @@ use Drupal\markdown\Util\KeyValuePipeConverter;
  *     @ComposerPackage(
  *       id = "league/commonmark",
  *       object = "\League\CommonMark\Extension\ExternalLink\ExternalLinkExtension",
+ *       customLabel = "commonmark-external-links",
  *       url = "https://commonmark.thephpleague.com/extensions/external-links/",
  *       requirements = {
  *          @InstallableRequirement(

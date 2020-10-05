@@ -3,21 +3,28 @@
 namespace Drupal\markdown\Plugin\Filter;
 
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
+use Drupal\Component\Render\FormattableMarkup;
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Entity\EntityFormInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Link;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\Render\ElementInfoManagerInterface;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
 use Drupal\filter\Entity\FilterFormat;
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
-use Drupal\markdown\Config\ImmutableMarkdownConfig;
-use Drupal\markdown\Form\SettingsForm;
-use Drupal\markdown\Markdown as MarkdownService;
+use Drupal\markdown\Form\ParserConfigurationForm;
+use Drupal\markdown\Form\SubformState;
+use Drupal\markdown\Plugin\Markdown\ParserInterface;
 use Drupal\markdown\PluginManager\ParserManagerInterface;
 use Drupal\markdown\Traits\FilterFormatAwareTrait;
+use Drupal\markdown\Traits\FormTrait;
 use Drupal\markdown\Traits\MoreInfoTrait;
+use Drupal\markdown\Traits\ParserAwareTrait;
+use Drupal\markdown\Util\FilterAwareInterface;
+use Drupal\markdown\Util\FilterFormatAwareInterface;
+use Drupal\markdown\Util\ParserAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -31,24 +38,21 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   weight = -15,
  * )
  */
-class FilterMarkdown extends FilterBase implements FilterMarkdownInterface, ContainerFactoryPluginInterface {
+class FilterMarkdown extends FilterBase implements ContainerFactoryPluginInterface, FilterMarkdownInterface, ParserAwareInterface {
 
   use FilterFormatAwareTrait;
+  use FormTrait;
   use MoreInfoTrait;
+  use ParserAwareTrait {
+    setParser as setParserTrait;
+  }
 
   /**
-   * The Markdown Settings for this filter.
+   * The Element Info Manager service.
    *
-   * @var \Drupal\markdown\Config\MarkdownConfig
+   * @var \Drupal\Core\Render\ElementInfoManagerInterface
    */
-  protected $markdownSettings;
-
-  /**
-   * The Markdown parser as set by the filter.
-   *
-   * @var \Drupal\markdown\Plugin\Markdown\ParserInterface
-   */
-  protected $parser;
+  protected $elementInfo;
 
   /**
    * The Markdown Parser Plugin Manager service.
@@ -60,9 +64,10 @@ class FilterMarkdown extends FilterBase implements FilterMarkdownInterface, Cont
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, ParserManagerInterface $parserManager) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition);
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, ElementInfoManagerInterface $elementInfo, ParserManagerInterface $parserManager) {
+    $this->elementInfo = $elementInfo;
     $this->parserManager = $parserManager;
+    parent::__construct($configuration, $plugin_id, $plugin_definition);
   }
 
   /**
@@ -73,6 +78,7 @@ class FilterMarkdown extends FilterBase implements FilterMarkdownInterface, Cont
       $configuration,
       $plugin_id,
       $plugin_definition,
+      $container->get('plugin.manager.element_info'),
       $container->get('plugin.manager.markdown.parser')
     );
   }
@@ -87,7 +93,30 @@ class FilterMarkdown extends FilterBase implements FilterMarkdownInterface, Cont
   /**
    * {@inheritdoc}
    */
+  public function defaultConfiguration() {
+    $configuration = parent::defaultConfiguration();
+
+    // Ensure any filter format set is added to the configuration. This is
+    // needed in the event the filters configuration is cached in the database.
+    // @see filter_formats()
+    // @see markdown_filter_format_load()
+    $filterFormat = $this->getFilterFormat();
+    $configuration['filterFormat'] = $filterFormat ? $filterFormat->id() : NULL;
+
+    return $configuration;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getConfiguration() {
+    // Immediately return the default configuration if filter isn't enabled.
+    if (!$this->status) {
+      $configuration['id'] = $this->getPluginId();
+      $configuration += $this->defaultConfiguration();
+      return $configuration;
+    }
+
     $configuration = parent::getConfiguration();
 
     // Ensure any filter format set is added to the configuration. This is
@@ -104,19 +133,6 @@ class FilterMarkdown extends FilterBase implements FilterMarkdownInterface, Cont
    * {@inheritdoc}
    */
   public function getParser() {
-    if (!isset($this->parser)) {
-      // Filter is using a specific parser/configuration.
-      $configuration = $this->markdownSettings()->get('parser') ?: [];
-      $configuration['filter'] = $this;
-      // Filter using specific parser.
-      if (!empty($configuration['id'])) {
-        $this->parser = $this->parserManager->createInstance($configuration['id'], $configuration);
-      }
-      // Filter using global parser.
-      else {
-        $this->parser = MarkdownService::create()->getParser(NULL, $configuration);
-      }
-    }
     return $this->parser;
   }
 
@@ -125,18 +141,6 @@ class FilterMarkdown extends FilterBase implements FilterMarkdownInterface, Cont
    */
   public function isEnabled() {
     return !!$this->status;
-  }
-
-  /**
-   * Retrieves the Markdown Settings object.
-   *
-   * @return \Drupal\markdown\Config\ImmutableMarkdownConfig
-   */
-  protected function markdownSettings(array $settings = NULL) {
-    if (!$this->markdownSettings) {
-      $this->markdownSettings = ImmutableMarkdownConfig::load("filter_settings.{$this->pluginId}", isset($settings) ? $settings : $this->settings)->setKeyPrefix('parser');
-    }
-    return $this->markdownSettings;
   }
 
   /**
@@ -179,23 +183,53 @@ class FilterMarkdown extends FilterBase implements FilterMarkdownInterface, Cont
       }
     }
 
-    // Remove any vertical tabs value populated by form submission.
-    unset($configuration['settings']['vertical_tabs']);
+    // The passed configuration is for the filter plugin.
+    $configuration += ['settings' => []];
 
-    // Sanitize parser values.
-    if (!empty($configuration['settings']['parser'])) {
-      $settings = $this->markdownSettings($configuration['settings']);
-      $markdownSettingsForm = SettingsForm::create(NULL, $settings);
-      $config = $markdownSettingsForm->getConfigFromValues($settings->getName(), $configuration['settings']);
-      $configuration['settings'] = array_merge($configuration['settings'], $config->get());
+    // The settings of the filter plugin are the parser configuration.
+    $parserConfiguration = $configuration['settings'];
+
+    $parserId = !empty($parserConfiguration['id']) ? $parserConfiguration['id'] : $this->parserManager->getDefaultParser()->getPluginId();
+
+    // If the "override" setting for the filter isn't flagged, then it should
+    // be using the site-wide parser configuration. Replace the configuration
+    // so it only passes the render_strategy configuration to override any
+    // site-wide configuration as that is still relevant to the filter.
+    $override = !empty($parserConfiguration['override']);
+    if (!$override) {
+      $render_strategy = isset($parserConfiguration['render_strategy']) ? $parserConfiguration['render_strategy'] : [];
+      $parserConfiguration = \Drupal::config("markdown.parser.$parserId")->get() ?: [];
+      $parserConfiguration['render_strategy'] = $render_strategy;
     }
+
+    // Create a new parser based on the configuration being set.
+    $parser = $this->parserManager->createInstance($parserId, array_merge([
+      'enabled' => TRUE,
+    ], $parserConfiguration));
+
+    $this->setParser($parser);
+
+    // Normalize the configuration settings from the parser itself.
+    $parserConfiguration = array_merge(
+      ['override' => $override],
+      $parser->getConfiguration()
+    );
+
+    // Remove settings and extension settings if not overridden.
+    if (!($parserConfiguration['override'] = $override)) {
+      unset($parserConfiguration['settings']);
+      unset($parserConfiguration['extensions']);
+    }
+
+    // Remove any weight, not needed here.
+    unset($parserConfiguration['weight']);
 
     // Remove dependencies, this is added above.
     // @see \Drupal\markdown\Plugin\Filter\Markdown::calculateDependencies()
-    unset($configuration['settings']['dependencies']);
+    unset($parserConfiguration['dependencies']);
 
-    // Reset the markdown settings so it can be reconstructed.
-    $this->markdownSettings = NULL;
+    // Replace filter settings with normalized parser configuration.
+    $configuration['settings'] = $parserConfiguration;
 
     return parent::setConfiguration($configuration);
   }
@@ -203,21 +237,186 @@ class FilterMarkdown extends FilterBase implements FilterMarkdownInterface, Cont
   /**
    * {@inheritdoc}
    */
-  public function settingsForm(array $element, FormStateInterface $form_state) {
-    // Disable form cache as MarkdownSettingsForm uses sub-forms and AJAX and
-    // attempting to cache it causes a fatal due to the database getting
-    // serialized somewhere.
-    // @todo figure out what's going on here?
-    $form_state->disableCache();
+  public function setParser(ParserInterface $parser = NULL) {
+    if ($parser instanceof FilterAwareInterface) {
+      $parser->setFilter($this);
+    }
+
+    // Add a cacheable dependency on the filter format, if it exists.
+    if ($parser instanceof FilterFormatAwareInterface && ($filterFormat = $this->getFilterFormat())) {
+      $parser->setFilterFormat($filterFormat);
+      $parser->addCacheableDependency($filterFormat);
+    }
+
+    return $this->setParserTrait($parser);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function settingsForm(array $form, FormStateInterface $form_state) {
+    // Filter settings are nested inside "details". Due to the way the Form API
+    // works, any time a property is explicitly specified, the default property
+    // values are not included. It must be manually retrieved and set here.
+    $form['#process'] = $this->elementInfo->getInfoProperty('details', '#process', []);
+
+    // Now, add the process to build the subform.
+    $form['#process'][] = [$this, 'processSubform'];
 
     // If there's no filter format set, attempt to extract it from the form.
     if (!$this->filterFormat && ($formObject = $form_state->getFormObject()) && $formObject instanceof EntityFormInterface && ($entity = $formObject->getEntity()) && $entity instanceof FilterFormat) {
       $this->setFilterFormat($entity);
     }
 
-    $markdownSettingsForm = SettingsForm::create(NULL, $this->markdownSettings());
-    $markdownSettingsForm->setFilter($this);
-    return $markdownSettingsForm->buildSubform($element, $form_state);
+    return $form;
+  }
+
+  /**
+   * Process callback for constructing markdown settings for this filter.
+   *
+   * @param array $element
+   *   The element being processed.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current form state.
+   * @param array $complete_form
+   *   The complete form, passed by reference.
+   *
+   * @return array
+   *   The processed element.
+   */
+  public function processSubform(array $element, FormStateInterface $form_state, array &$complete_form) {
+    // Create a subform state.
+    $subform_state = SubformState::createForSubform($element, $complete_form, $form_state);
+
+    // If the triggering element is the parser select element, clear out any
+    // parser values other than the identifier. This is necessary since the
+    // parser has switched and the previous parser settings may not translate
+    // correctly to the new parser.
+    if (($trigger = $form_state->getTriggeringElement()) && isset($trigger['#ajax']['callback']) && $trigger['#ajax']['callback'] === '\Drupal\markdown\Plugin\Filter\FilterMarkdown::ajaxChangeParser' && ($parserId = $subform_state->getValue('id'))) {
+      $parents = $subform_state->createParents();
+      $input = &NestedArray::getValue($form_state->getUserInput(), $parents);
+      $values = &NestedArray::getValue($form_state->getValues(), $parents);
+      if ($trigger['#type'] === 'select') {
+        $input = ['id' => $parserId, 'override' => (int) !empty($input['override'])];
+        $values = ['id' => $parserId, 'override' => (int) !empty($values['override'])];
+      }
+      $configuration = $this->getConfiguration();
+      $configuration['settings'] = $values;
+      $this->setConfiguration($configuration);
+    }
+
+    $parser = $this->getParser();
+    $parserId = $parser->getPluginId();
+
+    // Attempt to build the parser form, catch any exceptions.
+    try {
+      $element = ParserConfigurationForm::create()
+        ->setFilter($this)
+        ->setParser($parser)
+        ->processSubform($element, $form_state, $complete_form);
+    }
+    catch (\Exception $exception) {
+      // Intentionally left blank.
+    }
+    catch (\Throwable $exception) {
+      // Intentionally left blank.
+    }
+
+    if (isset($exception)) {
+      $element['error'] = static::createInlineMessage([
+        'error' => [
+          Markup::create($exception->getMessage()),
+        ],
+      ]);
+    }
+
+    $markdownAjaxId = $form_state->get('markdownAjaxId');
+
+    // Add enabled parsers.
+    $labels = [];
+    foreach ($this->parserManager->enabled() as $name => $enabledParser) {
+      $labels[$name] = $enabledParser->getLabel(TRUE);
+    }
+
+    // Check if parser exists and, if not, append an option showing it missing.
+    if (!$this->parserManager->hasDefinition($parserId)) {
+      $labels[$parserId] = new FormattableMarkup('@label (missing)', [
+        '@label' => $parserId,
+      ]);
+    }
+
+    $parserElement = &$element['parser'];
+    $parserElement['status'] = $parser->buildStatus();
+    $parserElement['status']['#weight'] = -10;
+    $parserElement['id'] = static::createElement([
+      '#weight' => -9,
+      '#type' => 'select',
+      '#options' => $labels,
+      '#default_value' => $parserId,
+      '#description' => $parser->getDescription(),
+      '#attributes' => [
+        'data' => [
+          'markdownSummary' => 'parser',
+          'markdownId' => $parserId,
+          'markdownInstalled' => $parser->isInstalled(),
+        ],
+      ],
+      '#ajax' => [
+        'callback' => '\Drupal\markdown\Plugin\Filter\FilterMarkdown::ajaxChangeParser',
+        'event' => 'change',
+        'wrapper' => $markdownAjaxId,
+      ],
+    ]);
+
+    $override = !empty($this->getConfiguration()['settings']['override']);
+    $parserElement['override'] = static::createElement([
+      '#weight' => -8,
+      '#type' => 'radios',
+      '#options' => [
+        0 => $this->t('Inherit site-wide settings'),
+        1 => $this->t('Override site-wide settings'),
+      ],
+      '#default_value' => (int) $override,
+      '#ajax' => [
+        'callback' => '\Drupal\markdown\Plugin\Filter\FilterMarkdown::ajaxChangeParser',
+        'event' => 'change',
+        'wrapper' => $markdownAjaxId,
+      ],
+    ]);
+
+    if (($markdownParserEditUrl = Url::fromRoute('markdown.parser.edit', ['parser' => $parser])) && $markdownParserEditUrl->access()) {
+      $parserElement['override']['#description'] = $this->t('Site-wide markdown settings can be adjusted by visiting the site-wide <a href=":markdown.parser.edit" target="_blank">@label</a> parser.', [
+        '@label' => $parser->getLabel(FALSE),
+        ':markdown.parser.edit' => $markdownParserEditUrl->toString(),
+      ]);
+    }
+    else {
+      $parserElement['override']['#description'] = $this->t('Site-wide markdown settings can only be adjusted by administrators.');
+    }
+
+    if (!$override) {
+      $parserElement['settings']['#access'] = FALSE;
+      $parserElement['extensions']['#access'] = FALSE;
+    }
+
+    // Append a "more info" link to the parser in the description.
+    if ($url = $parser->getUrl()) {
+      $parserElement['id']['#description'] = $this->moreInfo($parserElement['id']['#description'], $url);
+    }
+
+    return $element;
+  }
+
+  /**
+   * The AJAX callback used to return the parser ajax wrapper.
+   */
+  public static function ajaxChangeParser(array $form, FormStateInterface $form_state) {
+    // Immediately return if subform parents aren't known.
+    if (!($arrayParents = $form_state->get('markdownSubformArrayParents'))) {
+      $arrayParents = array_slice($form_state->getTriggeringElement()['#array_parents'], 0, -2);
+    }
+    $subform = &NestedArray::getValue($form, $arrayParents);
+    return $subform['ajax'];
   }
 
   /**

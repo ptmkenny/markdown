@@ -24,7 +24,6 @@ use Drupal\markdown\Util\KeyValuePipeConverter;
  *       id = "michelf/php-markdown",
  *       object = "\Michelf\MarkdownExtra",
  *       url = "https://michelf.ca/projects/php-markdown/extra",
- *       version = "\Drupal\markdown\Plugin\Markdown\PhpMarkdown\PhpMarkdownExtra::version",
  *     ),
  *   }
  * )
@@ -59,19 +58,6 @@ class PhpMarkdownExtra extends PhpMarkdown implements AllowedHtmlInterface {
       'predef_abbr' => [],
       'table_align_class_tmpl' => '',
     ] + parent::defaultSettings($pluginDefinition);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function version() {
-    if (defined('\\Michelf\\MARKDOWNEXTRA_VERSION')) {
-      return \Michelf\MARKDOWNEXTRA_VERSION;
-    }
-    if (defined('\\MARKDOWNEXTRA_VERSION')) {
-      return \MARKDOWNEXTRA_VERSION;
-    }
-    return parent::version();
   }
 
   /**

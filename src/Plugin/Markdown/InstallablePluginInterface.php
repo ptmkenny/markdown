@@ -19,13 +19,6 @@ use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 interface InstallablePluginInterface extends ConfigurableInterface, ContainerAwareInterface, ContainerFactoryPluginInterface, DependentPluginInterface, PluginInspectionInterface {
 
   /**
-   * Builds a display list of supported libraries.
-   *
-   * @return \Drupal\Component\Render\MarkupInterface
-   */
-  public function buildSupportedLibraries();
-
-  /**
    * Builds a display for a library.
    *
    * @param \Drupal\markdown\Annotation\InstallableLibrary $library
@@ -38,15 +31,18 @@ interface InstallablePluginInterface extends ConfigurableInterface, ContainerAwa
   /**
    * Builds a display status based on the current state of the plugin.
    *
+   * @param bool $all
+   *   Flag indicating whether to build status for all potential libraries.
+   *
    * @return \Drupal\Component\Render\MarkupInterface
    */
-  public function buildStatus();
+  public function buildStatus($all = FALSE);
 
   /**
    * Retrieves the config instance for this plugin.
    *
-   * @return \Drupal\markdown\Config\ImmutableMarkdownConfig
-   *   An immutable markdown config instance for this plugin's configuration.
+   * @return \Drupal\Core\Config\ImmutableConfig
+   *   An immutable config instance for this plugin's configuration.
    */
   public function config();
 
@@ -153,6 +149,16 @@ interface InstallablePluginInterface extends ConfigurableInterface, ContainerAwa
    *   The object class name.
    */
   public function getObjectClass();
+
+  /**
+   * Retrieves the original plugin identifier.
+   *
+   * This is the identifier that was initially called, but may have changed
+   * to the fallback identifier because it didn't exist.
+   *
+   * @return string
+   */
+  public function getOriginalPluginId();
 
   /**
    * Retrieves the preferred library of the plugin.

@@ -15,7 +15,7 @@ namespace Drupal\markdown\Plugin\Validation\Constraint;
  */
 class Installed extends Exists {
 
-  public $message = '@name is not installed.';
+  public $message = 'Requires @name';
 
   public $name;
 

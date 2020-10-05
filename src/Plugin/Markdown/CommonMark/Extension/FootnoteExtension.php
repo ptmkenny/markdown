@@ -10,6 +10,7 @@ use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
 use Drupal\markdown\Plugin\Markdown\ExtensibleParserInterface;
 use Drupal\markdown\Plugin\Markdown\ParserInterface;
 use Drupal\markdown\Plugin\Markdown\SettingsInterface;
+use Drupal\markdown\Traits\FormTrait;
 use Drupal\markdown\Traits\SettingsTrait;
 
 /**
@@ -26,6 +27,7 @@ use Drupal\markdown\Traits\SettingsTrait;
  *     @ComposerPackage(
  *       id = "league/commonmark",
  *       object = "\League\CommonMark\Extension\Footnote\FootnoteExtension",
+ *       customLabel = "commonmark-footnotes",
  *       url = "https://commonmark.thephpleague.com/extensions/footnotes/",
  *       requirements = {
  *          @InstallableRequirement(
@@ -53,6 +55,7 @@ use Drupal\markdown\Traits\SettingsTrait;
  */
 class FootnoteExtension extends BaseExtension implements AllowedHtmlInterface, PluginFormInterface, SettingsInterface {
 
+  use FormTrait;
   use SettingsTrait;
 
   /**
@@ -129,18 +132,13 @@ class FootnoteExtension extends BaseExtension implements AllowedHtmlInterface, P
     // @see https://www.drupal.org/project/markdown/issues/3136378
     if (!$this->isPreferredLibraryInstalled()) {
       $parent = &$form_state->getParentForm();
-      $parent['xss_bug'] = [
-        '#weight' => -9,
-        '#theme' => 'status_messages',
-        '#message_list' => ['warning' => [
+      $parent['xss_bug'] = static::createInlineMessage([
+        'warning' => [
           $this->t('There is a known bug that prevents footnote identifiers from being rendered properly due to aggressive XSS filtering. There is a <a href=":issue" target="_blank">temporary workaround</a>, but you must manually implement it in a custom module. It is highly recommended that you instead upgrade to a newer version of CommonMark (1.5+) which includes a new bundled Footnotes extension where these settings are customizable.', [
             ':issue' => 'https://www.drupal.org/project/markdown/issues/3131224#comment-13613381',
           ]),
-        ]],
-        '#status_headings' => [
-          'warning' => $this->t('Warning message'),
-        ],
-      ];
+        ]
+      ]);
       return $element;
     }
 

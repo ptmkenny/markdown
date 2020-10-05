@@ -2,6 +2,7 @@
 
 namespace Drupal\markdown\Plugin\Markdown;
 
+use Drupal\markdown\Annotation\InstallableLibrary;
 use Drupal\markdown\Util\ParserAwareInterface;
 
 /**
@@ -9,7 +10,7 @@ use Drupal\markdown\Util\ParserAwareInterface;
  *
  * @method \Drupal\markdown\Annotation\MarkdownExtension getPluginDefinition()
  */
-interface ExtensionInterface extends EnabledPluginInterface, InstallablePluginInterface, ParserAwareInterface {
+interface ExtensionInterface extends EnabledPluginInterface, ParserAwareInterface {
 
   /**
    * Indicates whether the extension is automatically installed with the parser.
@@ -17,10 +18,13 @@ interface ExtensionInterface extends EnabledPluginInterface, InstallablePluginIn
    * Note: this does not indicate whether the extension is actually being used,
    * just that it is available because it came with the parser.
    *
+   * @param \Drupal\markdown\Annotation\InstallableLibrary $library
+   *   The library to check whether its bundled or not.
+   *
    * @return bool
    *   TRUE or FALSE
    */
-  public function isBundled();
+  public function isBundled(InstallableLibrary $library);
 
   /**
    * Retrieves identifiers of extensions that this extension requires.

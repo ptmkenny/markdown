@@ -15,6 +15,7 @@ use Drupal\markdown\Plugin\Markdown\CommonMark\BaseExtension;
  *     @ComposerPackage(
  *       id = "league/commonmark",
  *       object = "\League\CommonMark\Extension\Attributes\AttributesExtension",
+ *       customLabel = "commonmark-attributes",
  *       url = "https://commonmark.thephpleague.com/extensions/attributes/",
  *       requirements = {
  *          @InstallableRequirement(

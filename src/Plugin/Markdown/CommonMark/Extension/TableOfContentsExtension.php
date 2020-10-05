@@ -19,6 +19,7 @@ use Drupal\markdown\Traits\SettingsTrait;
  *     @ComposerPackage(
  *       id = "league/commonmark",
  *       object = "\League\CommonMark\Extension\TableOfContents\TableOfContentsExtension",
+ *       customLabel = "commonmark-table-of-contents",
  *       url = "https://commonmark.thephpleague.com/extensions/table-of-contents/",
  *       requirements = {
  *          @InstallableRequirement(

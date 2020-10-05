@@ -3,6 +3,7 @@
 namespace Drupal\markdown\Plugin\Markdown;
 
 use Drupal\Core\Config\Schema\Mapping;
+use Drupal\markdown\Annotation\InstallableLibrary;
 use Drupal\markdown\PluginManager\ExtensionManager;
 use Drupal\markdown\Traits\EnabledPluginTrait;
 use Drupal\markdown\Util\ParserAwareInterface;
@@ -79,18 +80,11 @@ abstract class BaseExtension extends InstallablePluginBase implements ExtensionI
   /**
    * {@inheritdoc}
    */
-  protected function getConfigType() {
-    return "markdown_extension_settings.{$this->getPluginId()}";
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function isBundled() {
+  public function isBundled(InstallableLibrary $library) {
     if (!($this instanceof ParserAwareInterface) || !($parser = $this->getParser())) {
       return FALSE;
     }
-    $extensionId = $this->pluginDefinition->getInstalledId();
+    $extensionId = $library ? $library->getId() : $this->getOriginalPluginId();
     $parserId = $parser->getPluginDefinition()->getInstalledId();
     return $extensionId === $parserId;
   }

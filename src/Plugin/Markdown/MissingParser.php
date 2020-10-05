@@ -63,13 +63,6 @@ class MissingParser extends InstallablePluginBase implements AllowedHtmlInterfac
   /**
    * {@inheritdoc}
    */
-  protected function getConfigType() {
-    return 'markdown_parser';
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function getConfiguration() {
     // Only add default values as existing configuration may have already
     // already been passed. This may be due to a plugin rename/config changes.

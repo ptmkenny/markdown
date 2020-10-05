@@ -2,6 +2,7 @@
 
 namespace Drupal\markdown\Plugin\Validation\Constraint;
 
+use Drupal\Core\Render\Markup;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 
@@ -20,9 +21,12 @@ class ExistsValidator extends ConstraintValidator {
    */
   public function validate($class, Constraint $constraint) {
     if (!is_string($class) || empty($class) || (!class_exists($class) && !interface_exists($class) && !trait_exists($class) && !function_exists($class) && !defined($class) && !is_callable($class))) {
-      $this->context->addViolation($constraint->message, [
-        '@name' => isset($constraint->name) ? $constraint->name : $class,
+      // Passing an already translated message allows markup to be preserved
+      // when it passes to the theme system.
+      $message = t($constraint->message, [
+        '@name' => isset($constraint->name) ? Markup::create($constraint->name) : $class,
       ]);
+      $this->context->addViolation($message);
     }
   }
 

@@ -23,7 +23,8 @@ namespace Drupal\markdown\Plugin\Markdown\CommonMark;
  *     @ComposerPackage(
  *       id = "league/commonmark",
  *       object = "\League\CommonMark\GithubFlavoredMarkdownConverter",
- *       url = "https://commonmark.thephpleague.com",
+ *       customLabel = "commonmark-gfm",
+ *       url = "https://commonmark.thephpleague.com/extensions/github-flavored-markdown/",
  *       requirements = {
  *         @InstallableRequirement(
  *           constraints = {"Version" = "^1.3 || ^2.0"}

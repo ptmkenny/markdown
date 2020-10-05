@@ -20,8 +20,8 @@ interface PluginInterface extends ConfigurableInterface, ContainerAwareInterface
   /**
    * Retrieves the config instance for this plugin.
    *
-   * @return \Drupal\markdown\Config\ImmutableMarkdownConfig
-   *   An immutable markdown config instance for this plugin's configuration.
+   * @return \Drupal\Core\Config\ImmutableConfig
+   *   An immutable config instance for this plugin's configuration.
    */
   public function config();
 

@@ -128,7 +128,7 @@ class ParserOperationForm extends ConfirmFormBase {
    */
   public function getSuccessMessage() {
     $variables = [
-      '@action' => $this->operation[-1] === 'e' ? $this->t($this->operation . 'd') : $this->operation . 'ed',
+      '@action' => substr($this->operation, -1, 1) === 'e' ? $this->t($this->operation . 'd') : $this->operation . 'ed',
       '@operation' => $this->operation,
       '%parser' => $this->parser->getLabel(FALSE),
       '@parser_id' => $this->parser->getPluginId(),
@@ -174,7 +174,7 @@ class ParserOperationForm extends ConfirmFormBase {
     $this->operation = $operation;
     $this->parser = $parser;
     $this->variables = [
-      '@action' => $this->operation[-1] === 'e' ? $this->t($this->operation . 'd') : $this->operation . 'ed',
+      '@action' => substr($this->operation, -1, 1) === 'e' ? $this->t($this->operation . 'd') : $this->operation . 'ed',
       '@operation' => $this->operation,
       '%parser' => $this->parser->getLabel(FALSE),
       '@parser_id' => $this->parser->getPluginId(),
@@ -193,7 +193,7 @@ class ParserOperationForm extends ConfirmFormBase {
    *
    * @param \Drupal\markdown\Plugin\Markdown\ParserInterface $parser
    *   The parser being operated on.
-   * @param $operation
+   * @param string $operation
    *   The operation to perform.
    *
    * @return array|\Symfony\Component\HttpFoundation\Response|void

@@ -5,6 +5,9 @@ namespace Drupal\markdown\PluginManager;
 use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Cache\RefinableCacheableDependencyTrait;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\markdown\Annotation\InstallablePlugin;
@@ -14,8 +17,10 @@ use Drupal\markdown\Exception\MarkdownUnexpectedValueException;
 use Drupal\markdown\Plugin\Markdown\InstallablePluginInterface;
 use Drupal\markdown\Traits\NormalizeTrait;
 use Drupal\markdown\Util\Composer;
+use Drupal\markdown\Util\Error;
 use Drupal\markdown\Util\Semver;
 use Drupal\markdown\Util\SortArray;
+use Psr\Log\LoggerInterface;
 use Symfony\Cmf\Component\Routing\RouteObjectInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
@@ -33,11 +38,48 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
   use StringTranslationTrait;
 
   /**
+   * Cache contexts.
+   *
+   * @var string[]
+   */
+  protected $cacheContexts = [];
+
+  /**
+   * Cache max-age.
+   *
+   * @var int
+   */
+  protected $cacheMaxAge = Cache::PERMANENT;
+
+  /**
    * The cached runtime definitions.
    *
    * @var array[]
    */
   protected static $runtimeDefinitions = [];
+
+  /**
+   * The Config Factory service.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  /**
+   * A Logger service.
+   *
+   * @var \Psr\Log\LoggerInterface
+   */
+  protected $logger;
+
+  /**
+   * {@inheritdoc}
+   */
+  public function __construct($subDirectory, \Traversable $namespaces, ConfigFactoryInterface $configFactory, LoggerInterface $logger, ModuleHandlerInterface $module_handler, $plugin_interface = NULL, $plugin_definition_annotation_name = 'Drupal\Component\Annotation\Plugin', array $additional_annotation_namespaces = []) {
+    parent::__construct($subDirectory, $namespaces, $module_handler, $plugin_interface, $plugin_definition_annotation_name, $additional_annotation_namespaces);
+    $this->configFactory = $configFactory;
+    $this->logger = $logger;
+  }
 
   /**
    * {@inheritdoc}
@@ -147,7 +189,10 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
     // Move/convert versionConstraint into a requirement on library.
     if ($versionConstraint = $plugin->versionConstraint) {
       $requirement = new InstallableRequirement();
-      $requirement->constraints['Version'] = $versionConstraint;
+      $requirement->constraints['Version'] = [
+        'name' => $plugin->id(),
+        'constraint' => $versionConstraint,
+      ];
       $library->requirements[] = $requirement;
       unset($plugin->versionConstraint);
     }
@@ -194,6 +239,13 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
    */
   public function firstInstalledPluginId() {
     return current(array_keys($this->installedDefinitions())) ?: $this->getFallbackPluginId();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getCacheContexts() {
+    return $this->cacheContexts;
   }
 
   /**
@@ -245,6 +297,20 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
   }
 
   /**
+   * {@inheritdoc}
+   */
+  public function getCacheMaxAge() {
+    return $this->cacheMaxAge;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getCacheTags() {
+    return $this->cacheTags;
+  }
+
+  /**
    * Retrieves the container.
    *
    * @return \Symfony\Component\DependencyInjection\ContainerInterface
@@ -265,6 +331,19 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
     foreach ($this->getDefinitions() as $definition) {
       if ($definition->getClass() === $className) {
         return $definition;
+      }
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getDefinitionByLibraryId($libraryId) {
+    foreach ($this->getDefinitions() as $definition) {
+      foreach ($definition->libraries as $library) {
+        if ($library->getId() === (string) $libraryId) {
+          return $definition;
+        }
       }
     }
   }
@@ -349,6 +428,15 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
   /**
    * {@inheritdoc}
    */
+  protected function handlePluginNotFound($plugin_id, array $configuration) {
+    $fallback_id = $this->getFallbackPluginId($plugin_id, $configuration);
+    $configuration['original_plugin_id'] = $plugin_id;
+    return $this->getFactory()->createInstance($fallback_id, $configuration);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function installed(array $configuration = []) {
     return array_map(function (InstallablePlugin $definition) use ($configuration) {
       $id = $definition->getId();
@@ -363,19 +451,6 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
     return array_filter($this->getDefinitions(FALSE), function ($definition) {
       return $definition->getId() !== $this->getFallbackPluginId() && $definition->isInstalled();
     });
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function labels($installed = TRUE, $version = TRUE) {
-    $labels = [];
-    $parsers = $installed ? $this->installed() : $this->all();
-    foreach ($parsers as $id => $parser) {
-      // Cast to string for Drupal 7.
-      $labels[$id] = (string) $parser->getLabel($version);
-    }
-    return $labels;
   }
 
   /**
@@ -437,6 +512,10 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
     }
   }
 
+  protected function createObjectRequirement(InstallablePlugin $definition, InstallableLibrary $library) {
+    return $library->createObjectRequirement($definition);
+  }
+
   /**
    * Processes the library definition.
    *
@@ -455,13 +534,15 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
       $preferred = TRUE;
     }
 
-    // Prepend a new requirement to ensure that the object exists before
-    // any other requirements are executed. This helps to ensure that if a
-    // requirement depends on the object existing, it doesn't fatal and
-    // instead treated as "uninstalled".
+    // Normalize the object.
     if ($library->object) {
       $library->object = static::normalizeClassName($library->object);
-      if ($requirement = $library->createObjectRequirement($definition)) {
+
+      // Prepend a new runtime requirement to ensure that the object exists
+      // before any other requirements are executed. This helps to ensure that
+      // if a requirement depends on the object existing, it doesn't fatal and
+      // instead treated as "uninstalled".
+      if ($requirement = $this->createObjectRequirement($definition, $library)) {
         array_unshift($library->requirements, $requirement);
       }
     }
@@ -489,6 +570,10 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
     $versionRequirement = NULL;
     if ($library->requirements) {
       foreach ($library->requirements as $key => $requirement) {
+        if ($requirement instanceof InstallableLibrary) {
+          $requirement = $requirement->createObjectRequirement();
+        }
+
         // Version constraints that have not explicitly specified a value
         // or callback should be validated against this library's installed
         // version which can only be determined later below; save it.
@@ -506,20 +591,17 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
           continue;
         }
 
-        foreach ($requirement->validate() as $violation) {
-          $library->requirementViolations[] = $violation->getMessage();
-
-          // Immediately stop validating if the requirement returns a
-          // violation. This ensures that further requirements which may
-          // depend on the previous ones passing don't fatal.
-          break 2;
-        }
+        // Attempt to validate all requirements. Up until the point that any
+        // errors or exceptions occur.
+        Error::suppress(function () use ($requirement, $library) {
+          foreach ($requirement->validate() as $violation) {
+            $key = (string) $violation->getMessage();
+            if (!isset($library->requirementViolations[$key])) {
+              $library->requirementViolations[$key] = $violation->getMessage();
+            }
+          }
+        });
       }
-    }
-
-    // Do not continue if there were requirement violations.
-    if (!empty($library->requirementViolations)) {
-      return;
     }
 
     // Now that requirements have been met, actually extract the version
@@ -527,7 +609,7 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
     if (isset($versionDefinition)) {
       if (!$versionRequirement) {
         $versionRequirement = new InstallableRequirement();
-        $versionRequirement->constraints = ['Version' => []];
+        $versionRequirement->constraints = ['Version' => ['name' => $definition->id()]];
       }
       if (defined($versionDefinition) && ($version = constant($versionDefinition))) {
         $versionRequirement->value = $version;
@@ -538,18 +620,23 @@ abstract class InstallablePluginManager extends DefaultPluginManager implements 
       elseif ($library->object && ($version = Composer::getVersionFromClass($library->object))) {
         $versionRequirement->value = $version;
       }
-      else {
-        throw new InvalidPluginDefinitionException($definition->getId(), 'The "version" property must either be a constant or public class constant or property that exists in code somewhere. If complex requirements are needed, add one using the "Version" constraint as a requirement.');
-      }
+
+      /** @var \Symfony\Component\Validator\ConstraintViolationListInterface $violations */
+      $violations = Error::suppress(function () use ($versionRequirement) {
+        return $versionRequirement->validate();
+      });
 
       // Now, validate the version.
-      if (!count($violations = $versionRequirement->validate())) {
-        $library->version = $versionRequirement->value;
-      }
-      else {
+      if ($violations && $violations->count()) {
         foreach ($violations as $violation) {
-          $library->requirementViolations[] = $violation->getMessage();
+          $key = (string) $violation->getMessage();
+          if (!isset($library->requirementViolations[$key])) {
+            $library->requirementViolations[$key] = $violation->getMessage();
+          }
         }
+      }
+      elseif ($violations !== null) {
+        $library->version = $versionRequirement->value;
       }
     }
   }

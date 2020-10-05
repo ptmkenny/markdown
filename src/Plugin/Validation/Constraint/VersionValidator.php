@@ -23,7 +23,6 @@ class VersionValidator extends ConstraintValidator {
    */
   private static $versionParser;
 
-
   /**
    * {@inheritdoc}
    */
@@ -31,10 +30,12 @@ class VersionValidator extends ConstraintValidator {
     /** @var \Drupal\markdown\Plugin\Validation\Constraint\Version $constraint */
     $semverConstraints = $constraint->value;
 
-    $message = $constraint->message;
+    $named = isset($constraint->name);
+    $message = $named ? $constraint->namedMessage : $constraint->message;
     $params = [
-      '@constraints' => Markup::create($semverConstraints),
-      '@version' => Markup::create($version),
+      '@name' => $named ? Markup::create($constraint->name) : 'Unknown',
+      '@constraints' => $semverConstraints ? Markup::create($semverConstraints) : '',
+      '@version' => $version ? Markup::create($version) : '',
     ];
     $validated = FALSE;
 
@@ -56,7 +57,9 @@ class VersionValidator extends ConstraintValidator {
     }
 
     if (!$validated) {
-      $this->context->addViolation($message, $params);
+      // Passing an already translated message allows markup to be preserved
+      // when it passes to the theme system.
+      $this->context->addViolation(t($message, $params));
     }
   }
 

@@ -28,6 +28,26 @@ interface MarkdownInterface extends ContainerInjectionInterface {
   public function load($id);
 
   /**
+   * Loads a cached ParsedMarkdown object based on system file.
+   *
+   * @param string $filename
+   *   The local file system path of a markdown file to parse if the cached
+   *   ParsedMarkdown object doesn't yet exist. Once parsed, its identifier
+   *   will be set to the provided $id and then cached.
+   * @param string $id
+   *   Optional. A unique identifier for caching the parsed markdown. If not
+   *   set, one will be generated automatically based on the provided $filename.
+   * @param \Drupal\Core\Language\LanguageInterface $language
+   *   Optional. The language of the markdown that is being parsed.
+   *
+   * @return \Drupal\markdown\Render\ParsedMarkdownInterface
+   *   A ParsedMarkdown object.
+   *
+   * @throws \Drupal\markdown\Exception\MarkdownFileNotExistsException
+   */
+  public function loadFile($filename, $id = NULL, LanguageInterface $language = NULL);
+
+  /**
    * Loads a cached ParsedMarkdown object based on a file system path.
    *
    * @param string $path
@@ -44,6 +64,10 @@ interface MarkdownInterface extends ContainerInjectionInterface {
    *   A ParsedMarkdown object.
    *
    * @throws \Drupal\markdown\Exception\MarkdownFileNotExistsException
+   *
+   * @deprecated in markdown:8.x-2.0 and is removed from markdown:3.0.0.
+   *   Use \Drupal\markdown\MarkdownInterface::loadFile instead.
+   * @see https://www.drupal.org/project/markdown/issues/3142418
    */
   public function loadPath($path, $id = NULL, LanguageInterface $language = NULL);
 
@@ -79,17 +103,6 @@ interface MarkdownInterface extends ContainerInjectionInterface {
    *   A ParsedMarkdown object.
    */
   public function parse($markdown, LanguageInterface $language = NULL);
-
-  /**
-   * Retrieves the site-wide default MarkdownParser plugin.
-   *
-   * @param array $configuration
-   *   An array of configuration relevant to the plugin instance.
-   *
-   * @return \Drupal\markdown\Plugin\Markdown\ParserInterface
-   *   A MarkdownParser plugin.
-   */
-  public function getDefaultParser(array $configuration = []);
 
   /**
    * Retrieves a MarkdownParser plugin.

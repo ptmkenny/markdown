@@ -26,7 +26,6 @@ use Drupal\markdown\Util\KeyValuePipeConverter;
  *       id = "michelf/php-markdown",
  *       object = "\Michelf\Markdown",
  *       url = "https://michelf.ca/projects/php-markdown",
- *       version = "\Drupal\markdown\Plugin\Markdown\PhpMarkdown\PhpMarkdown::version",
  *     ),
  *   }
  * )
@@ -72,24 +71,6 @@ class PhpMarkdown extends BaseParser implements AllowedHtmlInterface, SettingsIn
       'predef_urls' => [],
       'tab_width' => 4,
     ] + parent::defaultSettings($pluginDefinition);
-  }
-
-  /**
-   * Retrieves the version for the library.
-   *
-   * @return string
-   *   The version.
-   */
-  public static function version() {
-    if (defined('\\Michelf\\Markdown::MARKDOWNLIB_VERSION')) {
-      return \Michelf\Markdown::MARKDOWNLIB_VERSION;
-    }
-    if (defined('\\Michelf\\MARKDOWN_VERSION')) {
-      return \Michelf\MARKDOWN_VERSION;
-    }
-    if (defined('\\MARKDOWN_VERSION')) {
-      return \MARKDOWN_VERSION;
-    }
   }
 
   /**

@@ -2,13 +2,24 @@
 
 namespace Drupal\markdown\Routing;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\ParamConverter\ParamConverterInterface;
+use Drupal\markdown\Plugin\Markdown\AllowedHtmlInterface;
+use Drupal\markdown\Plugin\Markdown\ExtensionInterface;
+use Drupal\markdown\Plugin\Markdown\ParserInterface;
 use Drupal\markdown\PluginManager\AllowedHtmlManager;
 use Drupal\markdown\PluginManager\ExtensionManagerInterface;
 use Drupal\markdown\PluginManager\ParserManagerInterface;
 use Symfony\Component\Routing\Route;
 
 class MarkdownParamConverter implements ParamConverterInterface {
+
+  /**
+   * The Config Factory service.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
 
   /**
    * The Markdown Allowed HTML Plugin Manager service.
@@ -31,8 +42,20 @@ class MarkdownParamConverter implements ParamConverterInterface {
    */
   protected $parserManager;
 
-
-  public function __construct(ParserManagerInterface $parserManager, ExtensionManagerInterface $extensionManager, AllowedHtmlManager $allowedHtmlManager) {
+  /**
+   * MarkdownParamConverter constructor.
+   *
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   *   The Config Factory service.
+   * @param \Drupal\markdown\PluginManager\ParserManagerInterface $parserManager
+   *   The Markdown Parser Plugin Manager service.
+   * @param \Drupal\markdown\PluginManager\ExtensionManagerInterface $extensionManager
+   *   The Markdown Extension Plugin Manager service.
+   * @param \Drupal\markdown\PluginManager\AllowedHtmlManager $allowedHtmlManager
+   *   The Markdown Allowed HTML Plugin Manager service.
+   */
+  public function __construct(ConfigFactoryInterface $configFactory, ParserManagerInterface $parserManager, ExtensionManagerInterface $extensionManager, AllowedHtmlManager $allowedHtmlManager) {
+    $this->configFactory = $configFactory;
     $this->parserManager = $parserManager;
     $this->extensionManager = $extensionManager;
     $this->allowedHtmlManager = $allowedHtmlManager;
@@ -43,15 +66,16 @@ class MarkdownParamConverter implements ParamConverterInterface {
    */
   public function convert($value, $definition, $name, array $defaults) {
     $type = substr($definition['type'], 9);
+    $configuration = $this->configFactory->get("markdown.$type.$value")->get();
     switch ($type) {
       case 'parser':
-        return $this->parserManager->createInstance($value);
+        return $value instanceof ParserInterface ? $value : $this->parserManager->createInstance((string) $value, $configuration);
 
       case 'extension':
-        return $this->extensionManager->createInstance($value);
+        return $value instanceof ExtensionInterface ? $value : $this->extensionManager->createInstance((string) $value, $configuration);
 
       case 'allowed_html':
-        return $this->allowedHtmlManager->createInstance($value);
+        return $value instanceof AllowedHtmlInterface ? $value : $this->allowedHtmlManager->createInstance((string) $value, $configuration);
     }
   }
 

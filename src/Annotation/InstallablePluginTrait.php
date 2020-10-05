@@ -5,6 +5,7 @@ namespace Drupal\markdown\Annotation;
 use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
+use Drupal\markdown\Util\Error;
 
 /**
  * Trait for adding installable plugin properties to annotations.
@@ -84,7 +85,7 @@ trait InstallablePluginTrait {
   /**
    * An array of requirements for the plugin.
    *
-   * @var \Drupal\markdown\Annotation\InstallableRequirement[]
+   * @var \Drupal\markdown\Annotation\InstallableRequirement[]|\Drupal\markdown\Annotation\InstallableLibrary[]
    */
   public $requirements = [];
 
@@ -210,6 +211,17 @@ trait InstallablePluginTrait {
   }
 
   /**
+   * Retrieves requirements that contain "Version" constraints.
+   *
+   * @return array
+   */
+  public function getVersionRequirements() {
+    return array_filter($this->requirements, function ($requirement) {
+      return in_array('Version', array_keys($requirement->constraints));
+    });
+  }
+
+  /**
    * Validates the plugin requirements.
    *
    * @param bool $runtime
@@ -219,14 +231,58 @@ trait InstallablePluginTrait {
    *   TRUE if requirements are met, FALSE if requirement violations exist.
    */
   public function validate($runtime = FALSE) {
-    $requirements = $runtime ? $this->runtimeRequirements : $this->requirements;
-    foreach ($requirements as $requirement) {
-      /* @var \Symfony\Component\Validator\ConstraintViolationInterface $violation */
-      foreach ($requirement->validate() as $violation) {
-        $this->requirementViolations[] = $violation->getMessage();
-        break 2;
+    $library = $this->getInstalledLibrary() ?: $this->getPreferredLibrary();
+    if (!$library) {
+      $library = current($this->libraries) ?: $this;
+    }
+
+    // Validate requirements.
+    foreach ($library->requirements as $requirement) {
+      if ($requirement instanceof InstallableLibrary) {
+        $requirement = $requirement->createObjectRequirement($this);
+      }
+
+      /** @var \Symfony\Component\Validator\ConstraintViolationListInterface $violations */
+      $violations = Error::suppress(function () use ($requirement) {
+        return $requirement->validate();
+      });
+
+      if ($violations) {
+        foreach ($violations as $violation) {
+          $key = (string) $violation->getMessage();
+          if (!isset($library->requirementViolations[$key])) {
+            $library->requirementViolations[$key] = $violation->getMessage();
+          }
+          break 2;
+        }
       }
     }
+
+    // Validate runtime requirements.
+    if ($runtime) {
+      foreach ($library->runtimeRequirements as $requirement) {
+        /** @var \Symfony\Component\Validator\ConstraintViolationListInterface $violations */
+        $violations = Error::suppress(function () use ($requirement) {
+          return $requirement->validate();
+        });
+
+        if ($violations) {
+          foreach ($violations as $violation) {
+            $key = (string) $violation->getMessage();
+            if (!isset($library->requirementViolations[$key])) {
+              $library->requirementViolations[$key] = $violation->getMessage();
+            }
+            break 2;
+          }
+        }
+      }
+    }
+
+    // Replace requirements and violations with the appropriate library.
+    $this->requirements = $library->requirements;
+    $this->runtimeRequirements = $library->runtimeRequirements;
+    $this->requirementViolations = $library->requirementViolations;
+
     return empty($this->requirementViolations);
   }
 

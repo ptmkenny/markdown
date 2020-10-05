@@ -5,11 +5,14 @@ namespace Drupal\markdown\PluginManager;
 use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\markdown\Annotation\InstallableLibrary;
 use Drupal\markdown\Annotation\InstallablePlugin;
 use Drupal\markdown\Annotation\MarkdownExtension;
 use Drupal\markdown\Annotation\InstallableRequirement;
 use Drupal\markdown\Plugin\Markdown\ExtensionInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -28,8 +31,8 @@ class ExtensionManager extends InstallablePluginManager implements ExtensionMana
   /**
    * {@inheritdoc}
    */
-  public function __construct(\Traversable $namespaces, CacheBackendInterface $cache_backend, ModuleHandlerInterface $module_handler) {
-    parent::__construct('Plugin/Markdown', $namespaces, $module_handler, ExtensionInterface::class, MarkdownExtension::class);
+  public function __construct(\Traversable $namespaces, CacheBackendInterface $cache_backend, ConfigFactoryInterface $configFactory, LoggerInterface $logger, ModuleHandlerInterface $module_handler) {
+    parent::__construct('Plugin/Markdown', $namespaces, $configFactory, $logger, $module_handler, ExtensionInterface::class, MarkdownExtension::class);
     $this->setCacheBackend($cache_backend, 'markdown_extension_info');
     $this->alterInfo($this->cacheKey);
   }
@@ -44,6 +47,8 @@ class ExtensionManager extends InstallablePluginManager implements ExtensionMana
     $instance = new static(
       $container->get('container.namespaces'),
       $container->get('cache.discovery'),
+      $container->get('config.factory'),
+      $container->get('logger.channel.markdown'),
       $container->get('module_handler')
     );
     $instance->setContainer($container);
@@ -97,6 +102,23 @@ class ExtensionManager extends InstallablePluginManager implements ExtensionMana
     }
 
     parent::alterDefinition($definition, $runtime);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function createObjectRequirement(InstallablePlugin $definition, InstallableLibrary $library) {
+    $objectRequirement = parent::createObjectRequirement($definition, $library);
+    $id = $objectRequirement->constraints['Installed']['name'];
+    /* @var \Drupal\markdown\PluginManager\ParserManagerInterface $parserManager */
+    $parserManager = \Drupal::service('plugin.manager.markdown.parser');
+    $parser = $parserManager->getDefinitionByLibraryId($id);
+    foreach ($library->requirements as $requirement) {
+      if ($requirement->getId() === $id || ($parser && $requirement->getType() === 'parser' && $requirement->getTypeId() === $parser->getId())) {
+        return NULL;
+      }
+    }
+    return $objectRequirement;
   }
 
   /**

@@ -20,6 +20,7 @@ use Drupal\markdown\Traits\SettingsTrait;
  *     @ComposerPackage(
  *       id = "league/commonmark",
  *       object = "\League\CommonMark\Extension\SmartPunct\SmartPunctExtension",
+ *       customLabel = "commonmark-smart-punctuation",
  *       url = "https://commonmark.thephpleague.com/extensions/smart-punctuation/",
  *       requirements = {
  *          @InstallableRequirement(

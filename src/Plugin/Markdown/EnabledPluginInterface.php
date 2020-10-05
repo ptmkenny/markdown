@@ -7,7 +7,7 @@ namespace Drupal\markdown\Plugin\Markdown;
  *
  * @todo Move upstream to https://www.drupal.org/project/installable_plugins.
  */
-interface EnabledPluginInterface {
+interface EnabledPluginInterface extends InstallablePluginInterface {
 
   /**
    * Indicates the default "enabled" state.
