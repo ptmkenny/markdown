@@ -5,9 +5,11 @@ namespace Drupal\markdown\Annotation;
 use Drupal\Component\Serialization\Json;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Cache\CacheableResponse;
+use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Site\Settings;
 use Drupal\Core\Utility\Error;
+use Drupal\markdown\Traits\FileSystemTrait;
 use Drupal\markdown\Traits\HttpClientTrait;
 use Drupal\markdown\Util\Semver;
 use GuzzleHttp\Exception\GuzzleException;
@@ -16,6 +18,7 @@ use GuzzleHttp\Psr7\Request;
 
 class InstallableLibrary extends AnnotationObject {
 
+  use FileSystemTrait;
   use HttpClientTrait;
   use InstallablePluginTrait;
 
@@ -459,7 +462,8 @@ class InstallableLibrary extends AnnotationObject {
     $content = NULL;
     $options = [];
     $directory = 'public://installable_plugins/library';
-    file_prepare_directory($directory, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
+
+    $this->fileSystem()->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
 
     // If there's a cached file of the request, attempt to use it if its
     // modified time is still valid and acknowledged by the responding server.

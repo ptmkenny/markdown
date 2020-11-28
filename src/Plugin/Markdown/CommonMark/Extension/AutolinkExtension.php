@@ -241,7 +241,7 @@ class AutolinkExtension extends BaseExtension implements SettingsInterface, Plug
   public function mapHandleToEntity(&$handle, &$label, $symbol) {
     $name = array_search($symbol, static::$symbols, TRUE);
     $entityTypeId = $this->getSetting("$name.entity_type_id");
-    $entityManager = \Drupal::entityManager();
+    $entityManager = \Drupal::entityTypeManager();
     $storage = $entityManager->getStorage($entityTypeId);
     $entityType = $storage->getEntityType();
     $labelKey = $entityType->getKey('label') ?: $entityTypeId;
