@@ -94,7 +94,7 @@ class AutolinkExtension extends BaseExtension implements SettingsInterface, Plug
   public function buildConfigurationForm(array $element, FormStateInterface $form_state) {
     /** @var \Drupal\markdown\Form\SubformStateInterface $form_state */
 
-    $entityTypes = \Drupal::entityManager()->getEntityTypeLabels(TRUE);
+    $entityTypes = \Drupal::service('entity_type.repository')->getEntityTypeLabels(TRUE);
 
     foreach (static::$symbols as $name => $symbol) {
       $element[$name] = [

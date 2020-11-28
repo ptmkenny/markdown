@@ -2,7 +2,7 @@ name: 'Markdown'
 type: module
 description: 'Provides APIs and services to parse Markdown, a simple plain-text syntax, into valid HTML.'
 package: 'Markdown'
-core: 8.x
+core_version_requirement: ^8.8 || ^9
 php: 5.5.9
 configure: markdown.overview
 dependencies:

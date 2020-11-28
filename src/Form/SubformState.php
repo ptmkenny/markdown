@@ -48,7 +48,8 @@ class SubformState extends CoreSubformState implements SubformStateInterface {
     $element['#attached']['library'][] = 'core/drupal.states';
     $element['#attributes']['data-drupal-states'] = Json::encode($element['#states']);
 
-    return drupal_render($element);
+    $render_service = \Drupal::service('renderer');
+    return $render_service->renderPlain($element);
   }
 
   /**
