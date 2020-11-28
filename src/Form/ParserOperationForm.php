@@ -217,7 +217,7 @@ class ParserOperationForm extends ConfirmFormBase {
     ]);
 
     if ($message = $this->getSuccessMessage()) {
-      $this->messenger()->addMessage($message);
+      drupal_set_message($message);
     }
 
     // Allow the operation to override the response.
