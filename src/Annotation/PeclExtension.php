@@ -29,15 +29,15 @@ class PeclExtension extends InstallableLibrary {
     parent::__construct($values);
 
     // Add the necessary PHP requirement.
-    if (($info = $this->getPackageInfo()) && !empty($info['dependencies']['required']['php']['min'])) {
-      $this->requirements[] = InstallableRequirement::create([
-        'value' => PHP_VERSION,
-        'constraints' => ['Version' => [
-          'name' => 'PHP',
-          'value' => '>=' . $info['dependencies']['required']['php']['min'],
-        ]]
-      ]);
-    }
+    // if (($info = $this->getPackageInfo()) && !empty($info['dependencies']['required']['php']['min'])) {
+    //   $this->requirements[] = InstallableRequirement::create([
+    //     'value' => PHP_VERSION,
+    //     'constraints' => ['Version' => [
+    //       'name' => 'PHP',
+    //       'value' => '>=' . $info['dependencies']['required']['php']['min'],
+    //     ]]
+    //   ]);
+    // }
   }
 
   /**
